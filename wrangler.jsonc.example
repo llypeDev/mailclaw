@@ -1,0 +1,102 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "mailclaw",
+	"main": "./worker.ts",
+	"compatibility_date": "2026-05-20",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"assets": {
+		"binding": "ASSETS",
+		"not_found_handling": "none",
+	},
+	"images": {
+		"binding": "IMAGES",
+	},
+	"services": [
+		{
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "mailclaw",
+		},
+	],
+	"triggers": {
+		"crons": ["0 2 * * *", "*/5 * * * *"],
+	},
+	"ratelimits": [
+		{
+			"name": "LOGIN_RATE_LIMIT",
+			"namespace_id": "1001",
+			"simple": {
+				"limit": 20,
+				"period": 60,
+			},
+		},
+		{
+			"name": "AGENT_RATE_LIMIT",
+			"namespace_id": "1002",
+			"simple": { "limit": 120, "period": 60 },
+		},
+	],
+	"observability": {
+		"enabled": true,
+	},
+	"upload_source_maps": true,
+	"send_email": [
+		{
+			"name": "EMAIL",
+			"remote": true,
+		},
+	],
+	"ai": { "binding": "AI" },
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "mailclaw",
+			// Run `npx wrangler d1 create mailclaw`, then paste the id it prints below.
+			// "database_id": "<printed-id>",
+			"migrations_dir": "drizzle/migrations",
+		},
+	],
+	"r2_buckets": [
+		{
+			"binding": "BUCKET",
+			"bucket_name": "mailclaw-raw",
+		},
+	],
+	"queues": {
+		"producers": [
+			{
+				"binding": "INBOUND_QUEUE",
+				"queue": "mailclaw-inbound",
+			},
+			{
+				"binding": "OUTBOUND_QUEUE",
+				"queue": "mailclaw-outbound",
+			},
+			{
+				"binding": "AGENT_QUEUE",
+				"queue": "mailclaw-agent",
+			},
+		],
+		"consumers": [
+			{
+				"queue": "mailclaw-inbound",
+				"max_batch_size": 5,
+				// New mail should reach the inbox at once; do not wait up to 5 s for a batch to fill.
+				"max_batch_timeout": 1,
+				"max_retries": 3,
+			},
+			{
+				"queue": "mailclaw-outbound",
+				"max_batch_size": 5,
+				"max_retries": 3,
+			},
+			{
+				"queue": "mailclaw-agent",
+				"max_batch_size": 1,
+				"max_retries": 3,
+			},
+		],
+	},
+}
