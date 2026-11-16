@@ -1,9 +1,11 @@
-<img src="public/icon-192.png" alt="Mailclaw" width="96" />
-
-
-# Mailclaw
-
-A self-hosted alternative to Google Workspace. Setup **custom domain Emails**, **Calendar, Drive, Booking** and **built-in AI agents**.
+<div align="center">
+  <img src="assets/icon.png" alt="Mailclaw" width="132" />
+  <h1>Mailclaw</h1>
+  <p>
+    A self-hosted alternative to Google Workspace: <b>custom domain email</b>,
+    <b>Calendar</b>, <b>Drive</b>, <b>Booking</b> and <b>built-in AI agents</b>.
+  </p>
+</div>
 
 Run it on Cloudflare or Docker. Send and receive with Cloudflare, Resend or Amazon SES. Store files in R2, Backblaze B2 or AWS S3. Use D1, Postgres, MySQL or Turso for the database.
 
