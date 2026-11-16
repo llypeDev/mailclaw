@@ -33,12 +33,15 @@ Paste only the token secret into the `CF_TOKEN` field in step 2. Do not include 
 
 ## Step 2: Deploy mailclaw
 
-Run `npm install` and `npm run deploy` from a clone of this repository, or connect the repository to a Cloudflare Git integration. Either path builds the Worker and uploads it to the account you authenticated with.
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/llypeDev/mailclaw)
+
+Click **Deploy to Cloudflare**, or run `npm install` and `npm run deploy` from a clone, or connect the repository to a Cloudflare Git integration. Every path builds the Worker and uploads it to the account you authenticated with.
 
 1. Choose the Cloudflare account that owns the domain you want to use.
 2. Set the app name to exactly `mailclaw`. Do not rename it.
-3. Add `CF_TOKEN` as a Worker secret or runtime variable. This is different from the CF_TOKEN that Cloudflare uses to deploy the app.
-4. Wait for Cloudflare to finish provisioning and deploying the Worker.
+3. Create (or select) the D1 database `mailclaw`. From a clone, run `npx wrangler d1 create mailclaw` and paste the printed id into `wrangler.jsonc`; the button offers to create it during onboarding.
+4. Add `CF_TOKEN` as a Worker secret or runtime variable. This is different from the CF_TOKEN that Cloudflare uses to deploy the app.
+5. Wait for Cloudflare to finish provisioning and deploying the Worker.
 
 
 ### Optional Web Push configuration

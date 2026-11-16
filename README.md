@@ -5,6 +5,11 @@
     A self-hosted alternative to Google Workspace: <b>custom domain email</b>,
     <b>Calendar</b>, <b>Drive</b>, <b>Booking</b> and <b>built-in AI agents</b>.
   </p>
+  <p>
+    <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/llypeDev/mailclaw">
+      <img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare" />
+    </a>
+  </p>
 </div>
 
 Run it on Cloudflare or Docker. Send and receive with Cloudflare, Resend or Amazon SES. Store files in R2, Backblaze B2 or AWS S3. Use D1, Postgres, MySQL or Turso for the database.
@@ -41,7 +46,7 @@ New Amazon SES accounts start in a sandbox. Ask AWS for production access to lif
 
 ## Deploy
 
-1. **Deploy the app.** Deploy this repository to your own Cloudflare account with Wrangler (`npm run deploy`) or the Cloudflare dashboard. Keep the app name `mailclaw`, or it will break.
+1. **Deploy the app.** Click **Deploy to Cloudflare** above, or run `npm run deploy` from a clone. Keep the app name `mailclaw`, or it will break. The Worker needs a D1 database named `mailclaw`: the button offers to create it, and from a clone you run `npx wrangler d1 create mailclaw` and paste the id into `wrangler.jsonc`.
 2. **Finish setup.** Open the app at `/setup` and create your admin account.
 3. **Connect a domain.** Add a domain from the same Cloudflare account, then create your first mailbox.
 
@@ -57,7 +62,7 @@ More options: [deployment guide](docs/deployment.md).
 Paste this into an AI agent that has terminal access (Claude Code, Codex, Cursor and similar):
 
 ```text
-Install Mailclaw for me from this repository on my Cloudflare account.
+Install Mailclaw for me from https://github.com/llypeDev/mailclaw on my Cloudflare account.
 
 1. Read README.md, docs/deployment.md and wrangler.jsonc first.
 2. Ask me for my Cloudflare account ID and two API tokens, using a secret input:
