@@ -1,11 +1,171 @@
-// Software rasterizer + PNG/ICO encoder for the Mailclaw app icons.
-// No dependencies: signed-distance shapes give analytic anti-aliasing at any size.
+// Builds the app icon set and favicon from one piece of artwork (assets/icon.png).
+// No dependencies: a small PNG codec, a rounded-plate compositor and a Lanczos resampler.
 import zlib from "node:zlib";
 import fs from "node:fs";
 
-const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
-const cover = (distance) => clamp(0.5 - distance, 0, 1);
-const hex = (value) => [parseInt(value.slice(1, 3), 16), parseInt(value.slice(3, 5), 16), parseInt(value.slice(5, 7), 16)];
+const SOURCE = "assets/icon.png";
+const SIZES = [48, 96, 192, 512];
+const ICO_SIZES = [16, 24, 32, 48, 64, 128, 256];
+const PLATE_TOP = [255, 255, 255];
+const PLATE_BOTTOM = [234, 240, 250];
+const PLATE_RADIUS = 0.225;
+
+// ---------- PNG decode (8-bit RGBA, non-interlaced) ----------
+
+function decodePNG(file) {
+	const buffer = fs.readFileSync(file);
+	if (buffer.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a") throw new Error(`${file} is not a PNG`);
+	let offset = 8;
+	let width = 0;
+	let height = 0;
+	const idat = [];
+	while (offset < buffer.length) {
+		const length = buffer.readUInt32BE(offset);
+		const type = buffer.subarray(offset + 4, offset + 8).toString("ascii");
+		const data = buffer.subarray(offset + 8, offset + 8 + length);
+		if (type === "IHDR") {
+			width = data.readUInt32BE(0);
+			height = data.readUInt32BE(4);
+			const [depth, colour, , , interlace] = [data[8], data[9], data[10], data[11], data[12]];
+			if (depth !== 8 || colour !== 6 || interlace !== 0) {
+				throw new Error(`unsupported PNG: depth ${depth}, colour type ${colour}, interlace ${interlace}`);
+			}
+		} else if (type === "IDAT") {
+			idat.push(data);
+		} else if (type === "IEND") {
+			break;
+		}
+		offset += 12 + length;
+	}
+
+	const raw = zlib.inflateSync(Buffer.concat(idat));
+	const stride = width * 4;
+	const pixels = Buffer.alloc(width * height * 4);
+	let previous = Buffer.alloc(stride);
+	for (let y = 0; y < height; y += 1) {
+		const filter = raw[y * (stride + 1)];
+		const line = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
+		const current = Buffer.from(line);
+		for (let index = 0; index < stride; index += 1) {
+			const left = index >= 4 ? current[index - 4] : 0;
+			const up = previous[index];
+			const upLeft = index >= 4 ? previous[index - 4] : 0;
+			let value = current[index];
+			if (filter === 1) value += left;
+			else if (filter === 2) value += up;
+			else if (filter === 3) value += (left + up) >> 1;
+			else if (filter === 4) {
+				const estimate = left + up - upLeft;
+				const distanceLeft = Math.abs(estimate - left);
+				const distanceUp = Math.abs(estimate - up);
+				const distanceUpLeft = Math.abs(estimate - upLeft);
+				value += distanceLeft <= distanceUp && distanceLeft <= distanceUpLeft ? left : distanceUp <= distanceUpLeft ? up : upLeft;
+			}
+			current[index] = value & 0xff;
+		}
+		current.copy(pixels, y * stride);
+		previous = current;
+	}
+	return { width, height, pixels };
+}
+
+// ---------- Resampling ----------
+
+const LOBES = 4;
+
+function lanczos(x) {
+	if (x === 0) return 1;
+	if (x <= -LOBES || x >= LOBES) return 0;
+	const px = Math.PI * x;
+	return (LOBES * Math.sin(px) * Math.sin(px / LOBES)) / (px * px);
+}
+
+function weights(sourceLength, targetLength) {
+	const scale = targetLength / sourceLength;
+	const support = scale < 1 ? LOBES / scale : LOBES;
+	const table = [];
+	for (let index = 0; index < targetLength; index += 1) {
+		const centre = (index + 0.5) / scale - 0.5;
+		const start = Math.max(0, Math.ceil(centre - support));
+		const end = Math.min(sourceLength - 1, Math.floor(centre + support));
+		const row = [];
+		let total = 0;
+		for (let sample = start; sample <= end; sample += 1) {
+			const weight = lanczos((sample - centre) * (scale < 1 ? scale : 1));
+			if (weight === 0) continue;
+			row.push([sample, weight]);
+			total += weight;
+		}
+		table.push(row.map(([sample, weight]) => [sample, weight / total]));
+	}
+	return table;
+}
+
+/** Resizes premultiplied RGBA. Both passes keep accumulation in floats. */
+function resize(source, width, height, targetWidth, targetHeight) {
+	const horizontal = new Float32Array(targetWidth * height * 4);
+	const columns = weights(width, targetWidth);
+	for (let y = 0; y < height; y += 1) {
+		for (let x = 0; x < targetWidth; x += 1) {
+			let r = 0;
+			let g = 0;
+			let b = 0;
+			let a = 0;
+			for (const [sample, weight] of columns[x]) {
+				const index = (y * width + sample) * 4;
+				r += source[index] * weight;
+				g += source[index + 1] * weight;
+				b += source[index + 2] * weight;
+				a += source[index + 3] * weight;
+			}
+			const out = (y * targetWidth + x) * 4;
+			horizontal[out] = r;
+			horizontal[out + 1] = g;
+			horizontal[out + 2] = b;
+			horizontal[out + 3] = a;
+		}
+	}
+
+	const vertical = new Float32Array(targetWidth * targetHeight * 4);
+	const rows = weights(height, targetHeight);
+	for (let y = 0; y < targetHeight; y += 1) {
+		for (let x = 0; x < targetWidth; x += 1) {
+			let r = 0;
+			let g = 0;
+			let b = 0;
+			let a = 0;
+			for (const [sample, weight] of rows[y]) {
+				const index = (sample * targetWidth + x) * 4;
+				r += horizontal[index] * weight;
+				g += horizontal[index + 1] * weight;
+				b += horizontal[index + 2] * weight;
+				a += horizontal[index + 3] * weight;
+			}
+			const out = (y * targetWidth + x) * 4;
+			vertical[out] = Math.min(255, Math.max(0, r));
+			vertical[out + 1] = Math.min(255, Math.max(0, g));
+			vertical[out + 2] = Math.min(255, Math.max(0, b));
+			vertical[out + 3] = Math.min(255, Math.max(0, a));
+		}
+	}
+	return vertical;
+}
+
+function premultiply(pixels, count) {
+	const out = new Float32Array(count * 4);
+	for (let index = 0; index < count; index += 1) {
+		const alpha = pixels[index * 4 + 3] / 255;
+		out[index * 4] = pixels[index * 4] * alpha;
+		out[index * 4 + 1] = pixels[index * 4 + 1] * alpha;
+		out[index * 4 + 2] = pixels[index * 4 + 2] * alpha;
+		out[index * 4 + 3] = pixels[index * 4 + 3];
+	}
+	return out;
+}
+
+// ---------- Composition ----------
+
+const clamp = (value, low, high) => (value < low ? low : value > high ? high : value);
 
 function sdRoundRect(px, py, cx, cy, hw, hh, r) {
 	const qx = Math.abs(px - cx) - (hw - r);
@@ -13,125 +173,86 @@ function sdRoundRect(px, py, cx, cy, hw, hh, r) {
 	return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
 }
 
-function sdSegment(px, py, ax, ay, bx, by) {
-	const pax = px - ax;
-	const pay = py - ay;
-	const bax = bx - ax;
-	const bay = by - ay;
-	const h = clamp((pax * bax + pay * bay) / (bax * bax + bay * bay), 0, 1);
-	return Math.hypot(pax - bax * h, pay - bay * h);
+/** Crops to the artwork's visible pixels so the plate is not filled with the file's own margins. */
+function trim(source, threshold = 8) {
+	let left = source.width;
+	let right = -1;
+	let top = source.height;
+	let bottom = -1;
+	for (let y = 0; y < source.height; y += 1) {
+		for (let x = 0; x < source.width; x += 1) {
+			if (source.pixels[(y * source.width + x) * 4 + 3] <= threshold) continue;
+			if (x < left) left = x;
+			if (x > right) right = x;
+			if (y < top) top = y;
+			if (y > bottom) bottom = y;
+		}
+	}
+	if (right < left || bottom < top) return source;
+	const width = right - left + 1;
+	const height = bottom - top + 1;
+	const pixels = Buffer.alloc(width * height * 4);
+	for (let y = 0; y < height; y += 1) {
+		source.pixels.copy(pixels, y * width * 4, ((y + top) * source.width + left) * 4, ((y + top) * source.width + left + width) * 4);
+	}
+	return { width, height, pixels };
 }
 
-// Variant "a": white envelope cut by three claw slashes that expose the plate.
-// Variant "b": navy plate, white envelope, amber claw slashes laid on top.
-const VARIANTS = {
-	a: { plateTop: "#2563EB", plateBottom: "#7C3AED", slash: null },
-	b: { plateTop: "#111A2E", plateBottom: "#0A1120", slash: "#F59E0B" },
-};
+/**
+ * Artwork is drawn on a light plate so launchers and iOS do not have to invent a background;
+ * below 64px the art grows so the mailbox does not shrink into mush.
+ */
+function compose(art, artWidth, artHeight, size, rounded = true) {
+	const scale = size <= 32 ? 0.98 : size <= 64 ? 0.94 : 0.86;
+	const target = Math.max(1, Math.round(size * scale));
+	const fit = target / Math.max(artWidth, artHeight);
+	const scaledWidth = Math.max(1, Math.round(artWidth * fit));
+	const scaledHeight = Math.max(1, Math.round(artHeight * fit));
+	const scaled = resize(art, artWidth, artHeight, scaledWidth, scaledHeight);
+	const insetX = Math.round((size - scaledWidth) / 2);
+	const insetY = Math.round((size - scaledHeight) / 2);
 
-function renderIcon(size, variant = "a") {
-	const theme = VARIANTS[variant] ?? VARIANTS.a;
-	const plateTop = hex(theme.plateTop);
-	const plateBottom = hex(theme.plateBottom);
-	const slashColor = theme.slash ? hex(theme.slash) : null;
-
-	// Detail tiers: the claw has to stay readable, but below 48px the envelope carries the icon
-	// and the slashes thin out so they do not eat it.
-	const tier = size >= 96 ? "full" : size >= 48 ? "mid" : size >= 24 ? "small" : "tiny";
-	const s = (v) => v * size;
-	const radius = s(0.225);
-	const body = {
-		cx: s(0.5),
-		cy: s(0.545),
-		hw: s(tier === "full" ? 0.305 : tier === "mid" ? 0.32 : 0.34),
-		hh: s(tier === "full" ? 0.215 : tier === "mid" ? 0.225 : 0.24),
-		r: Math.max(s(0.055), size >= 48 ? 2 : 1.5),
-	};
-	const flap = {
-		visible: true,
-		a: [s(0.225), s(0.362)],
-		b: [s(0.5), s(0.552)],
-		c: [s(0.775), s(0.362)],
-		radius: Math.max(s(0.026), size >= 96 ? 1.2 : size >= 48 ? 0.9 : 0.7),
-	};
-	// Detail tiers: three claw slashes down to 48px, fewer below that, where the envelope has to
-	// carry the icon on its own.
-	// Three slashes down to 96px, then fewer: below that they collide with the flap and the
-	// envelope reads as noise.
-	const slashTiers = {
-		full: { count: 3, radius: Math.max(s(0.026), 0.9), spacing: Math.max(s(0.105), 2.2), halfLength: s(0.56), shift: s(0.045) },
-		mid: { count: 2, radius: Math.max(s(0.018), 1), spacing: Math.max(s(0.125), 2.6), halfLength: s(0.58), shift: s(0.045) },
-		small: { count: 1, radius: Math.max(s(0.034), 0.9), spacing: s(0.14), halfLength: s(0.6), shift: s(0.045) },
-		tiny: { count: 0, radius: 0, spacing: 0, halfLength: 0, shift: 0 },
-	};
-	const slashes = slashTiers[tier];
-	const offsets = Array.from({ length: slashes.count }, (_, index) => (index - (slashes.count - 1) / 2) * slashes.spacing);
-	const angle = (-34 * Math.PI) / 180;
-	const dx = Math.cos(angle);
-	const dy = Math.sin(angle);
-	const nx = -dy;
-	const ny = dx;
-
-	const pixels = Buffer.alloc(size * size * 4);
+	const canvas = Buffer.alloc(size * size * 4);
+	const radius = rounded ? size * PLATE_RADIUS : 0;
 	for (let y = 0; y < size; y += 1) {
 		for (let x = 0; x < size; x += 1) {
 			const px = x + 0.5;
 			const py = y + 0.5;
-
-			const plateAlpha = cover(sdRoundRect(px, py, size / 2, size / 2, size / 2 - 0.5, size / 2 - 0.5, radius));
-			if (plateAlpha <= 0) continue;
-
+			const plate = clamp(0.5 - sdRoundRect(px, py, size / 2, size / 2, size / 2 - 0.5, size / 2 - 0.5, radius), 0, 1);
 			const t = py / size;
-			let r = plateTop[0] + (plateBottom[0] - plateTop[0]) * t;
-			let green = plateTop[1] + (plateBottom[1] - plateTop[1]) * t;
-			let blue = plateTop[2] + (plateBottom[2] - plateTop[2]) * t;
+			let r = PLATE_TOP[0] + (PLATE_BOTTOM[0] - PLATE_TOP[0]) * t;
+			let g = PLATE_TOP[1] + (PLATE_BOTTOM[1] - PLATE_TOP[1]) * t;
+			let b = PLATE_TOP[2] + (PLATE_BOTTOM[2] - PLATE_TOP[2]) * t;
 
-			let envelope = cover(sdRoundRect(px, py, body.cx, body.cy, body.hw, body.hh, body.r));
-			if (flap.visible && envelope > 0) {
-				const flapDistance = Math.min(
-					sdSegment(px, py, flap.a[0], flap.a[1], flap.b[0], flap.b[1]),
-					sdSegment(px, py, flap.b[0], flap.b[1], flap.c[0], flap.c[1]),
-				);
-				envelope *= 1 - cover(flapDistance - flap.radius);
+			const ax = x - insetX;
+			const ay = y - insetY;
+			if (ax >= 0 && ay >= 0 && ax < scaledWidth && ay < scaledHeight) {
+				const index = (ay * scaledWidth + ax) * 4;
+				const alpha = scaled[index + 3] / 255;
+				if (alpha > 0 && plate > 0) {
+					const base = alpha * plate;
+					r = r + (scaled[index] / alpha - r) * base;
+					g = g + (scaled[index + 1] / alpha - g) * base;
+					b = b + (scaled[index + 2] / alpha - b) * base;
+				}
 			}
 
-			let slashHit = 0;
-			for (const offset of offsets) {
-				const cx = body.cx + nx * (offset - slashes.shift);
-				const cy = body.cy + ny * (offset - slashes.shift);
-				const distance = sdSegment(
-					px,
-					py,
-					cx - dx * slashes.halfLength,
-					cy - dy * slashes.halfLength,
-					cx + dx * slashes.halfLength,
-					cy + dy * slashes.halfLength,
-				);
-				slashHit = Math.max(slashHit, cover(distance - slashes.radius));
-			}
-
-			// The envelope is painted white everywhere the slashes do not cut it.
-			const white = envelope * (1 - slashHit);
-			r += (255 - r) * white;
-			green += (255 - green) * white;
-			blue += (255 - blue) * white;
-
-			if (slashColor) {
-				const painted = envelope * slashHit;
-				r += (slashColor[0] - r) * painted;
-				green += (slashColor[1] - green) * painted;
-				blue += (slashColor[2] - blue) * painted;
-			}
-
-			const index = (y * size + x) * 4;
-			pixels[index] = Math.round(clamp(r, 0, 255));
-			pixels[index + 1] = Math.round(clamp(green, 0, 255));
-			pixels[index + 2] = Math.round(clamp(blue, 0, 255));
-			pixels[index + 3] = Math.round(plateAlpha * 255);
+			const out = (y * size + x) * 4;
+			canvas[out] = Math.round(clamp(r, 0, 255));
+			canvas[out + 1] = Math.round(clamp(g, 0, 255));
+			canvas[out + 2] = Math.round(clamp(b, 0, 255));
+			canvas[out + 3] = Math.round(plate * 255);
 		}
 	}
-	return pixels;
+	return canvas;
 }
+
+function renderIcon(source, size, rounded = true) {
+	const art = premultiply(source.pixels, source.width * source.height);
+	return compose(art, source.width, source.height, size, rounded);
+}
+
+// ---------- PNG / ICO encode ----------
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, index) => {
 	let value = index;
@@ -155,8 +276,49 @@ function pngChunk(type, data) {
 }
 
 function encodePNG(width, height, pixels) {
-	const raw = Buffer.alloc((width * 4 + 1) * height);
-	for (let y = 0; y < height; y += 1) pixels.copy(raw, y * (width * 4 + 1) + 1, y * width * 4, (y + 1) * width * 4);
+	// Adaptive per-row filtering: gradients and 3D shading compress far better with Paeth/Sub than
+	// with no filter, which is the difference between a 300 KB and a 90 KB icon.
+	const stride = width * 4;
+	const raw = Buffer.alloc((stride + 1) * height);
+	const previous = Buffer.alloc(stride);
+	const current = Buffer.alloc(stride);
+	for (let y = 0; y < height; y += 1) {
+		pixels.copy(current, 0, y * stride, (y + 1) * stride);
+		let bestFilter = 0;
+		let bestScore = Infinity;
+		let bestRow = null;
+		for (let filter = 0; filter < 5; filter += 1) {
+			const row = Buffer.alloc(stride);
+			let score = 0;
+			for (let index = 0; index < stride; index += 1) {
+				const left = index >= 4 ? current[index - 4] : 0;
+				const up = previous[index];
+				const upLeft = index >= 4 ? previous[index - 4] : 0;
+				let value = current[index];
+				if (filter === 1) value -= left;
+				else if (filter === 2) value -= up;
+				else if (filter === 3) value -= (left + up) >> 1;
+				else if (filter === 4) {
+					const estimate = left + up - upLeft;
+					const distanceLeft = Math.abs(estimate - left);
+					const distanceUp = Math.abs(estimate - up);
+					const distanceUpLeft = Math.abs(estimate - upLeft);
+					value -= distanceLeft <= distanceUp && distanceLeft <= distanceUpLeft ? left : distanceUp <= distanceUpLeft ? up : upLeft;
+				}
+				value &= 0xff;
+				row[index] = value;
+				score += value < 128 ? value : 256 - value;
+			}
+			if (score < bestScore) {
+				bestScore = score;
+				bestFilter = filter;
+				bestRow = row;
+			}
+		}
+		raw[y * (stride + 1)] = bestFilter;
+		bestRow.copy(raw, y * (stride + 1) + 1);
+		current.copy(previous);
+	}
 	const header = Buffer.alloc(13);
 	header.writeUInt32BE(width, 0);
 	header.writeUInt32BE(height, 4);
@@ -191,27 +353,33 @@ function encodeICO(images) {
 	return Buffer.concat([header, ...entries, ...images.map((image) => image.png)]);
 }
 
-function writeIcons(directory = "public", variant = "a") {
+// ---------- Commands ----------
+
+function writeIcons(directory = "public") {
+	const source = trim(decodePNG(SOURCE));
+	console.log(`source ${SOURCE}: ${source.width}x${source.height} after trim`);
 	fs.mkdirSync(directory, { recursive: true });
-	for (const size of [48, 96, 192, 512]) {
-		fs.writeFileSync(`${directory}/icon-${size}.png`, encodePNG(size, size, renderIcon(size, variant)));
+	for (const size of SIZES) {
+		// 192 and 512 are launcher and apple-touch icons: a square, fully opaque plate, because iOS
+		// renders transparent corners black and every launcher applies its own mask.
+		fs.writeFileSync(`${directory}/icon-${size}.png`, encodePNG(size, size, renderIcon(source, size, size < 192)));
 	}
-	const ico = [16, 24, 32, 48, 64, 128, 256].map((size) => ({ size, png: encodePNG(size, size, renderIcon(size, variant)) }));
+	const ico = ICO_SIZES.map((size) => ({ size, png: encodePNG(size, size, renderIcon(source, size)) }));
 	fs.writeFileSync(`${directory}/favicon.ico`, encodeICO(ico));
-	console.log(`icons written to ${directory}/ (variant ${variant})`);
+	console.log(`icons written to ${directory}/ (${SIZES.join(", ")} and a ${ICO_SIZES.length}-size favicon)`);
 }
 
-function writeContactSheet(file, variant) {
+function writeContactSheet(file) {
+	const source = trim(decodePNG(SOURCE));
 	const width = 1024;
 	const height = 800;
-	const canvas = Buffer.alloc(width * height * 4, 0);
+	const canvas = Buffer.alloc(width * height * 4);
 	for (let index = 0; index < width * height; index += 1) {
 		canvas[index * 4] = 245;
 		canvas[index * 4 + 1] = 245;
 		canvas[index * 4 + 2] = 245;
 		canvas[index * 4 + 3] = 255;
 	}
-	// Top row at 1:1, bottom row zoomed so the 48px and favicon sizes can be judged.
 	const rows = [
 		{ top: 8, items: [[512, 1], [192, 1], [96, 1]] },
 		{ top: 540, items: [[48, 4], [32, 8], [16, 8]] },
@@ -219,16 +387,16 @@ function writeContactSheet(file, variant) {
 	for (const row of rows) {
 		let cursor = 8;
 		for (const [size, scale] of row.items) {
-			const pixels = renderIcon(size, variant);
+			const pixels = renderIcon(source, size);
 			const drawn = size * scale;
 			for (let y = 0; y < drawn; y += 1) {
 				for (let x = 0; x < drawn; x += 1) {
-					const source = (Math.floor(y / scale) * size + Math.floor(x / scale)) * 4;
-					const alpha = pixels[source + 3] / 255;
+					const source_index = (Math.floor(y / scale) * size + Math.floor(x / scale)) * 4;
+					const alpha = pixels[source_index + 3] / 255;
 					if (alpha === 0) continue;
 					const target = ((row.top + y) * width + cursor + x) * 4;
 					for (let channel = 0; channel < 3; channel += 1) {
-						canvas[target + channel] = Math.round(pixels[source + channel] * alpha + canvas[target + channel] * (1 - alpha));
+						canvas[target + channel] = Math.round(pixels[source_index + channel] * alpha + canvas[target + channel] * (1 - alpha));
 					}
 				}
 			}
@@ -240,11 +408,6 @@ function writeContactSheet(file, variant) {
 }
 
 const [, , command, argument] = process.argv;
-if (command === "preview") {
-	writeContactSheet(`${argument ?? "."}/sheet-a.png`, "a");
-	writeContactSheet(`${argument ?? "."}/sheet-b.png`, "b");
-} else if (command === "write") {
-	writeIcons(argument ?? "public", process.env.ICON_VARIANT ?? "a");
-} else {
-	console.log("usage: node scripts/generate-icons.mjs write [directory] | preview <directory>");
-}
+if (command === "write") writeIcons(argument ?? "public");
+else if (command === "preview") writeContactSheet(`${argument ?? "."}/sheet.png`);
+else console.log("usage: node scripts/generate-icons.mjs write [directory] | preview <directory>");

@@ -191,7 +191,7 @@ The admin overview dispatches `deploy-update.yml` (constant in `src/app/api/admi
 - API routes return `NextResponse.json({ error: "..." }, { status })` for failures; there is no shared error envelope helper.
 - UI is Tailwind v4 + shadcn/Radix primitives in `src/components/ui/`. `DialogContent` sets no max height, so a tall dialog overflows the viewport with an unreachable submit button — add `max-h-[calc(100vh-4rem)] overflow-y-auto` on any dialog with more than a few fields.
 - `cloudflare-env.d.ts` is generated (500KB) — regenerate with `cf-typegen`, never hand-edit.
-- App icons and the favicon are generated, not drawn by hand: `node scripts/generate-icons.mjs write` rewrites `public/icon-48.png`, `icon-96.png`, `icon-192.png`, `icon-512.png` and `favicon.ico` from the signed-distance renderer in that script. Change the geometry or the palette there, not in the PNGs.
+- App icons and the favicon are generated from `assets/icon.png`, never edited as PNGs: `node scripts/generate-icons.mjs write` rewrites `public/icon-48.png`, `icon-96.png`, `icon-192.png`, `icon-512.png` and `favicon.ico` (decode → Lanczos resample → plate composite → encode). `icon-192`/`icon-512` are square and fully opaque because launchers mask them and iOS paints transparent corners black; the smaller sizes keep the rounded plate for use inside the app.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
