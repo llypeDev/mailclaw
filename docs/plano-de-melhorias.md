@@ -18,7 +18,7 @@ A primeira instalação real (Cloudflare, plano Workers Free, recebimento pela C
 
 | # | Item | Estado |
 |---|---|---|
-| P1.1 | Fazer commit e push da primeira rodada de correções (2.2, 2.3, 3.1, 3.2, 4.1, 4.2, 4.5), que está só na cópia local; a produção roda sem elas. | Parcial (commit local no branch `melhorias/segunda-rodada`, junto com a segunda rodada; falta o push) |
+| P1.1 | Fazer commit e push da primeira rodada de correções (2.2, 2.3, 3.1, 3.2, 4.1, 4.2, 4.5), que está só na cópia local; a produção roda sem elas. | Feito (17/11/2026: merge no `main` e push, com as três rodadas; filas `mailclaw-inbound-dlq` e `mailclaw-outbound-dlq` criadas antes) |
 | P1.2 | Rodar `tsc`, lint e a suíte antes do push. `sweepStuckOutboundJobs`, `requeueScheduledOutboundJobs` e a nova ordem em `deliverEmail` não têm teste próprio. | Feito (`tests/outbound-delivery.test.mjs`) |
 
 ### Etapa 2: decidir se o plano gratuito aguenta
@@ -197,9 +197,9 @@ Do log de build da Cloudflare de 16/11/2026: upload de 8.028 KiB (2.122 KiB com 
 | # | Item | Onde | Esforço | Estado |
 |---|---|---|---|---|
 | 6.10 | Smart Placement desligado. Cada requisição faz várias consultas ao D1 em sequência, e o Worker roda perto do usuário, não do banco. Ligar `"placement": { "mode": "smart" }` (existe no plano gratuito, vale só para `fetch`) e comparar a latência antes e depois. | `wrangler.jsonc`, `wrangler.jsonc.example` | Pequeno | Feito |
-| 6.11 | O código de réplicas de leitura do D1 está pronto (sessão por requisição e cookie `mf-d1-bm`), mas a replicação precisa ser ligada no banco, no painel ou pela API. Sem isso toda leitura vai ao primário. Não está na documentação e não foi conferido se está ligada em produção. | `worker-utils.ts:75`, `docs/deployment.md` | Pequeno | Parcial (documentado; ligar no painel) |
+| 6.11 | O código de réplicas de leitura do D1 está pronto (sessão por requisição e cookie `mf-d1-bm`), mas a replicação precisa ser ligada no banco, no painel ou pela API. Sem isso toda leitura vai ao primário. Não está na documentação e não foi conferido se está ligada em produção. | `worker-utils.ts:75`, `docs/deployment.md` | Pequeno | Feito (replicação de leitura ligada em 17/11/2026, `read_replication: auto`) |
 | 6.12 | O deploy de 16/11/2026 publicou só o endereço `workers.dev`, onde a Cache API não funciona. Ligar um domínio próprio ao Worker libera cache na borda e regras de WAF e de limite de taxa, e permite desligar `workers_dev` (P3.7). | `wrangler.jsonc`, `docs/deployment.md` | Pequeno | Parcial (documentado; depende de domínio) |
-| 6.13 | Prefixos do bucket que só crescem: `spam-cache/` (cache das consultas de spam), além de `relay-seen/` e `sns-seen/` do item 3.6. Resolver com regras de ciclo de vida do R2 por prefixo, sem código, e documentar o equivalente para B2 e S3. | `src/lib/spam/lookup-cache.ts:37`, `docs/deployment.md` | Pequeno | Parcial (documentado; aplicar as regras na conta) |
+| 6.13 | Prefixos do bucket que só crescem: `spam-cache/` (cache das consultas de spam), além de `relay-seen/` e `sns-seen/` do item 3.6. Resolver com regras de ciclo de vida do R2 por prefixo, sem código, e documentar o equivalente para B2 e S3. | `src/lib/spam/lookup-cache.ts:37`, `docs/deployment.md` | Pequeno | Feito (regras no `mailclaw-raw` em 17/11/2026: `spam-cache/` 30 dias, `sns-seen/` 7, `relay-seen/` 1) |
 | 6.14 | O cron de 5 minutos roda cinco tarefas na mesma execução (seis com a correção 2.2), com 10 ms de CPU no plano gratuito. Retenção da lixeira não precisa rodar 288 vezes por dia: passar para o cron diário ou de hora em hora. | `worker.ts:159` | Pequeno | Feito |
 | 6.15 | Documentar as cotas da tabela acima e o que cada uma permite. É a entrada para a decisão P2.4. | `README.md`, `docs/deployment.md` | Pequeno | Feito |
 
@@ -336,6 +336,8 @@ Doze agentes em paralelo, mais a revisão do coordenador, que corrigiu à mão o
 **Encontrado e corrigido pelos testes novos (6.40):** setup em banco alheio, reserva recusada em horário oferecido como livre, backup restaurado preso em "em andamento", exportação mbox que dividia uma mensagem em duas, e transferência de conta que movia uploads incompletos.
 
 **Ficou de fora, com motivo:** o índice que tiraria a ordenação do `Email/query` sem filtro (6.35) piora a abertura de conversas sem estatísticas; o nonce na CSP do app (1.2) precisa de middleware por requisição e ficou documentado em `docs/security.md`.
+
+**Feito na conta em 17/11/2026:** filas `mailclaw-inbound-dlq` e `mailclaw-outbound-dlq` criadas; regras de ciclo de vida do R2 (6.13); replicação de leitura do D1 ligada (6.11); merge no `main` e push (P1.1). Falta aplicar as migrações 0088–0090 em Admin depois do deploy. Continuam com quem opera a conta: P2.1 e P2.2 (Observability e CPU em produção), domínio próprio (6.12) e proteção do branch `main` (P3.1, adiada).
 
 ### Nota sobre o item 2.1
 
