@@ -80,7 +80,7 @@ export function ConversationThread({
 			aria-label={position === "before" ? t("thread.earlier") : t("thread.later")}
 			className={cn(position === (latestMessagesFirst ? "before" : "after") ? "pb-6" : "")}
 		>
-			<ol className={cn(!collapsed && "divide-y divide-neutral-200/50", latestMessagesFirst ? "border-y" : "border-t", "border-neutral-200/50")}>
+			<ol className={cn(!collapsed && "divide-y divide-line-subtle", latestMessagesFirst ? "border-y" : "border-t", "border-line-subtle")}>
 				<li className={"border-t-0"}>
 					<ConversationMessageCard
 						message={firstMessage}
@@ -92,15 +92,15 @@ export function ConversationThread({
 					/>
 				</li>
 				{collapsed ? (
-					<li className="flex items-center justify-center gap-1 py-2 text-center border-y border-neutral-100 h-px my-4">
-						<span className="bg-white px-6 flex flex-row items-center gap-2">
-							<span className="text-sm font-medium text-neutral-600">{collapsedLabel}</span>
+					<li className="flex items-center justify-center gap-1 py-2 text-center border-y border-line-subtle h-px my-4">
+						<span className="bg-surface px-6 flex flex-row items-center gap-2">
+							<span className="text-sm font-medium text-fg-muted">{collapsedLabel}</span>
 							<button
 								type="button"
 								onClick={() => onExpandedAllChange(true)}
 								aria-label={t("thread.expand", { label: collapsedLabel })}
 								title={t("thread.expand", { label: collapsedLabel })}
-								className="inline-flex h-6 w-6 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+								className="inline-flex h-6 w-6 items-center justify-center border border-line text-fg-subtle hover:bg-surface-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
 							>
 								<ChevronsUpDown className="h-4 w-4" />
 							</button>
@@ -186,9 +186,9 @@ export function ConversationMessageCard({
 
 
 	return (
-		<article data-message-id={message.id} className={cn("bg-white transition-colors px-3 sm:pl-0 sm:pr-6", !expanded && "hover:bg-neutral-50")}>
+		<article data-message-id={message.id} className={cn("bg-surface transition-colors px-3 sm:ps-0 sm:pe-6", !expanded && "hover:bg-surface-hover")}>
 			<div className="w-full">
-				<div className="flex w-full flex-wrap items-start gap-x-3 py-3 sm:pl-[78px]">
+				<div className="flex w-full flex-wrap items-start gap-x-3 py-3 sm:ps-[78px]">
 					<button
 						type="button"
 						onClick={() => {
@@ -199,7 +199,7 @@ export function ConversationMessageCard({
 							void runSingleMessageAction(message.id, "read").catch(() => setLocallyRead(false));
 						}}
 						aria-expanded={expanded}
-						className="flex min-w-0 flex-1 basis-40 items-center gap-3 text-left cursor-pointer"
+						className="flex min-w-0 flex-1 basis-40 items-center gap-3 text-start cursor-pointer"
 					>
 						<ContactAvatar
 							mailboxId={mailboxId}
@@ -207,23 +207,23 @@ export function ConversationMessageCard({
 							name={sender}
 							hasManagedAvatar={message.fromContactHasAvatar}
 							managedAvatarUrl={outbound && mailboxId ? `/api/mailboxes/${mailboxId}/avatar` : undefined}
-							className={cn("sm:-ml-12", expanded && "mt-1")}
+							className={cn("sm:-ms-12", expanded && "mt-1")}
 						/>
 						<span className="min-w-0 flex-1">
 							<div className="flex flex-col">
-								<span className={cn("truncate text-sm font-semibold mt-1", locallyRead || outbound ? "text-neutral-900" : "font-semibold text-neutral-900")}>
+								<span className="truncate text-sm font-semibold mt-1 text-fg">
 									{sender}
-									{expanded && <span className="hidden sm:inline text-xs ml-1 opacity-50 font-normal">&lt;{senderEmail}&gt;</span>}
+									{expanded && <span className="hidden sm:inline text-xs ms-1 font-normal text-fg-subtle">&lt;{senderEmail}&gt;</span>}
 								</span>
-								{expanded && recipients && <span className="text-xs font-normal text-neutral-500">{t("thread.to", { recipients })}</span>}
+								{expanded && recipients && <span className="text-xs font-normal text-fg-subtle">{t("thread.to", { recipients })}</span>}
 							</div>
 							{!expanded && (
-								<span className={clsx(!locallyRead ? "font-semibold" : "text-neutral-500", "block truncate text-[13px]")}>{message.snippet || t("thread.noPreview")}</span>
+								<span className={clsx(!locallyRead ? "font-semibold text-fg" : "text-fg-subtle", "block truncate text-[13px]")}>{message.snippet || t("thread.noPreview")}</span>
 							)}
 							{!expanded && <SenderCheckBadge message={message} />}
 						</span>
 					</button>
-					<span className={clsx(!locallyRead ? "font-semibold" : "", "shrink-0 items-center gap-2 text-xs mr-2 mt-2", "hidden sm:flex")}>
+					<span className={clsx(!locallyRead ? "font-semibold text-fg" : "text-fg-muted", "shrink-0 items-center gap-2 text-xs tabular-nums me-2 mt-2", "hidden sm:flex")}>
 						{attachments.length > 0 && <Paperclip className="h-3.5 w-3.5" aria-label={t("thread.attachmentCount", { count: attachments.length })} />}
 						{formatUserDate(message.createdAt, { month: "short", day: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
 					</span>
@@ -236,7 +236,7 @@ export function ConversationMessageCard({
 						detailsOpen={detailsOpen}
 						onToggleDetails={() => setDetailsOpen((open) => !open)}
 					/>
-					<div className={clsx("sm:hidden flex w-full items-center gap-2 pl-12 text-xs", locallyRead ? "text-neutral-500" : "font-semibold text-neutral-700")}>
+					<div className={clsx("sm:hidden flex w-full items-center gap-2 ps-12 text-xs tabular-nums", locallyRead ? "text-fg-subtle" : "font-semibold text-fg")}>
 						{attachments.length > 0 && <Paperclip className="h-3.5 w-3.5" aria-label={t("thread.attachmentCount", { count: attachments.length })} />}
 						<span>{formatUserDate(message.createdAt, { month: "short", day: "2-digit", year: "numeric" })}</span>
 					</div>
@@ -246,22 +246,22 @@ export function ConversationMessageCard({
 						message={message}
 						detailsOpen={detailsOpen}
 						onViewDetails={() => setDetailsOpen((open) => !open)}
-						className="mb-3 sm:ml-[78px]"
+						className="mb-3 sm:ms-[78px]"
 					/>
 				)}
 				{detailsOpen && (
-					<div className="mb-3 sm:pl-[78px]">
+					<div className="mb-3 sm:ps-[78px]">
 						<MessageDetailsPanel message={message} onClose={() => setDetailsOpen(false)} />
 					</div>
 				)}
 				{expanded && body && (
-					<div className="pb-4 pt-2 sm:pl-[78px]">
+					<div className="pb-4 pt-2 sm:ps-[78px]">
 						{outbound && <MessageOpenStatus messageId={message.id} />}
 						{outbound && message.status !== "draft" && <MessageFollowUpStatus messageId={message.id} />}
 						{body.html ? (
 							<EmailHtmlRenderer html={body.html} autoAllowRemote={remote.autoAllow} onAllowRemote={remote.allowSender} />
 						) : (
-							<pre className="whitespace-pre-wrap font-sans text-sm text-neutral-900">{body.text}</pre>
+							<pre className="whitespace-pre-wrap font-sans text-sm text-fg">{body.text}</pre>
 						)}
 						{body.quotedHtml && <QuotedEmailToggle html={body.quotedHtml} autoAllowRemote={remote.autoAllow} onAllowRemote={remote.allowSender} />}
 						{attachments.length > 0 && (
@@ -270,7 +270,7 @@ export function ConversationMessageCard({
 									<li key={attachment.id}>
 										<a
 											href={`/api/messages/${message.id}/attachments/${attachment.id}`}
-											className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-2.5 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+											className="inline-flex items-center gap-1.5 border border-line bg-surface px-2.5 py-1 text-xs text-fg-muted hover:bg-surface-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
 										>
 											<Paperclip className="h-3 w-3" />
 											<span className="max-w-48 truncate">{attachment.filename}</span>

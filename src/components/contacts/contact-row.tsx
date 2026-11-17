@@ -15,7 +15,7 @@ export function ContactRow({ mailboxId, contact, onEmail, onEdit, onDelete }: Co
 	const label = contact.displayName ?? contact.email;
 
 	return (
-		<ListRow className={`${CONTACT_COLUMNS} group px-5 py-4 transition-colors hover:bg-blue-50/40`}>
+		<ListRow className={`${CONTACT_COLUMNS} group px-5 py-4 transition-colors hover:bg-surface-hover`}>
 			<ContactAvatar
 				mailboxId={mailboxId}
 				address={contact.email}
@@ -23,18 +23,18 @@ export function ContactRow({ mailboxId, contact, onEmail, onEdit, onDelete }: Co
 				hasManagedAvatar={contact.hasAvatar}
 			/>
 			<div className="min-w-0">
-				<p className="flex items-center gap-2 truncate text-sm font-semibold text-neutral-900">
+				<p className="flex items-center gap-2 truncate text-sm font-semibold text-fg">
 					<span className="truncate">{label}</span>
 					{contact.blocked && (
-						<span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+						<span className="inline-flex shrink-0 items-center gap-1 bg-danger-subtle px-2 py-0.5 text-xs font-medium text-danger-text">
 							<Ban className="h-3 w-3" />
 							{t("contact.blocked")}
 						</span>
 					)}
 				</p>
-				{contact.displayName && <p className="truncate no-font-mono text-sm text-neutral-500">{contact.email}</p>}
+				{contact.displayName && <p className="truncate no-font-mono text-sm text-fg-subtle">{contact.email}</p>}
 			</div>
-			<span className="hidden text-sm text-neutral-500 md:block">
+			<span className="hidden text-sm tabular-nums text-fg-subtle md:block">
 				{contact.lastSeenAt
 					? formatUserDate(contact.lastSeenAt, { month: "short", day: "numeric", year: "numeric" })
 					: "—"}
@@ -69,7 +69,7 @@ export function ContactRow({ mailboxId, contact, onEmail, onEdit, onDelete }: Co
 						size="sm"
 						onClick={() => onDelete(contact)}
 						aria-label={t("contacts.delete")}
-						className="hover:text-red-600"
+						className="hover:bg-danger-subtle hover:text-danger-text"
 					>
 						<Trash2 className="h-4 w-4" />
 					</Button>

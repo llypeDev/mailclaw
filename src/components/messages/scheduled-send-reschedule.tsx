@@ -8,7 +8,7 @@ import { ScheduleSendSheet } from "@/components/compose/schedule-send-sheet";
 import { formatDateTimeLocal, formatScheduledSend, getScheduleSendOptions, isPastSchedule, parseDateTimeLocal } from "@/components/compose/schedule-send-utils";
 import { getUserTimeZone } from "@/lib/time/utils";
 
-const buttonClass = "shrink-0 font-medium text-blue-600 hover:underline disabled:opacity-50";
+const buttonClass = "shrink-0 font-medium text-accent-text hover:underline disabled:opacity-50";
 
 /** Reschedule control on a scheduled message: the bottom sheet on phones, a
  * dropdown with preset times and a date picker on desktop. */
@@ -57,19 +57,19 @@ export function ScheduledSendReschedule({ scheduledAt, disabled, onPick }: { sch
 				{t("schedule.reschedule")}
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Portal>
-				<DropdownMenu.Content align="end" sideOffset={6} className="z-50 min-w-56 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg">
+				<DropdownMenu.Content align="end" sideOffset={6} className="z-50 min-w-56 border border-line bg-surface-raised p-1 text-sm text-fg shadow-lg">
 					{options.map((option) => (
 						<DropdownMenu.Item
 							key={option.labelKey}
 							onSelect={() => { if (option.value) onPick(option.value); }}
-							className="cursor-pointer rounded-md px-3 py-2 outline-none hover:bg-neutral-100 focus:bg-neutral-100"
+							className="cursor-pointer px-3 py-2 outline-none hover:bg-surface-hover focus:bg-surface-hover"
 						>
 							{t(option.labelKey)}
-							<span className="ml-2 text-xs text-neutral-500">{option.value && formatScheduledSend(option.value)}</span>
+							<span className="ms-2 text-xs tabular-nums text-fg-subtle">{option.value && formatScheduledSend(option.value)}</span>
 						</DropdownMenu.Item>
 					))}
-					<DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
-					<DropdownMenu.Label className="px-3 pb-1 pt-2 text-xs font-medium text-neutral-500">
+					<DropdownMenu.Separator className="my-1 h-px bg-line-subtle" />
+					<DropdownMenu.Label className="px-3 pb-1 pt-2 font-display text-xs font-medium uppercase tracking-wider text-fg-subtle">
 						{t("schedule.pick", { timeZone: getUserTimeZone() })}
 					</DropdownMenu.Label>
 					<input
@@ -84,9 +84,9 @@ export function ScheduledSendReschedule({ scheduledAt, disabled, onPick }: { sch
 						}}
 						aria-invalid={pastPicked}
 						aria-describedby={pastPicked ? "schedule-past-time" : undefined}
-						className="mx-2 mb-2 h-9 rounded-md border border-neutral-200 px-2 text-sm outline-none focus:border-blue-400"
+						className="mx-2 mb-2 h-9 border border-line-control bg-surface px-2 text-sm text-fg outline-none focus:border-focus focus-visible:ring-2 focus-visible:ring-focus aria-[invalid=true]:border-danger"
 					/>
-					{pastPicked && <p id="schedule-past-time" role="alert" className="mx-2 mb-2 text-xs text-red-600">{t("schedule.pastTime")}</p>}
+					{pastPicked && <p id="schedule-past-time" role="alert" className="mx-2 mb-2 text-xs text-danger-text">{t("schedule.pastTime")}</p>}
 				</DropdownMenu.Content>
 			</DropdownMenu.Portal>
 		</DropdownMenu.Root>

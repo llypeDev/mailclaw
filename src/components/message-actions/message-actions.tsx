@@ -344,7 +344,7 @@ export function MessageActions({
 				<span className="relative inline-flex">
 					<Note size={iconSize} />
 					{noteCount > 0 && (
-						<span aria-hidden="true" className="absolute -right-2 -top-2 min-w-4 rounded-full bg-blue-600 px-1 text-center text-[10px] font-semibold leading-4 text-white">
+						<span aria-hidden="true" className="absolute -end-2 -top-2 min-w-4 rounded-full bg-surface-inverse px-1 text-center text-[10px] font-semibold leading-4 tabular-nums text-fg-inverse">
 							{noteCount}
 						</span>
 					)}
@@ -403,8 +403,8 @@ export function MessageActions({
 	}, [actionKey, actionGroups]);
 
 	return (
-		<div className="ml-4 flex min-w-0 flex-1 items-center gap-2 text-neutral-600">
-			{error && <span role="alert" className="text-xs text-red-600">{error}</span>}
+		<div className="ms-4 flex min-w-0 flex-1 items-center gap-2 text-fg-muted">
+			{error && <span role="alert" className="text-xs text-danger-text">{error}</span>}
 
 			<div ref={actionsRef} className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
 				{inlineActions.slice(0, visibleCount).map((action, index) => {
@@ -412,14 +412,14 @@ export function MessageActions({
 					return (
 						<Fragment key={action.id}>
 							{index === dividerIndex && (
-								<span className="mx-2 h-5 w-px shrink-0 bg-gray-200/60" aria-hidden="true" />
+								<span className="mx-2 h-5 w-px shrink-0 bg-line" aria-hidden="true" />
 							)}
 							<Tooltip label={tooltip}>
 								<Button
 									type="button"
 									variant="ghost"
 									size="roundedSM"
-									className={cn("h-8 w-8 shrink-0 p-0", action.destructive && "text-red-600 hover:text-red-700")}
+									className={cn("h-8 w-8 shrink-0 p-0", action.destructive && "text-danger-text hover:bg-danger-subtle hover:text-danger-text")}
 									aria-label={action.label}
 									disabled={disabled}
 									onClick={action.onSelect}

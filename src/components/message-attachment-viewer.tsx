@@ -122,12 +122,12 @@ export function MessageAttachmentViewer({
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="flex h-[min(88vh,900px)] w-[min(1100px,calc(100vw-32px))] flex-col overflow-hidden">
-				<DialogHeader className="shrink-0 pr-10">
+				<DialogHeader className="shrink-0 pe-10">
 					<DialogTitle className="truncate">{attachment.filename}</DialogTitle>
 					<DialogDescription>{attachment.type}</DialogDescription>
 				</DialogHeader>
 
-				<div className="flex min-h-0 flex-1 items-center justify-center overflow-auto rounded-lg bg-neutral-100">
+				<div className="flex min-h-0 flex-1 items-center justify-center overflow-auto border border-line bg-canvas-subtle">
 					{previewKind === "image" && (
 						// eslint-disable-next-line @next/next/no-img-element -- attachment served by an authenticated API route, shown at its own size
 						<img
@@ -140,7 +140,7 @@ export function MessageAttachmentViewer({
 						<iframe
 							src={previewUrl}
 							title={attachment.filename}
-							className="h-full w-full border-0 bg-white"
+							className="h-full w-full border-0 bg-surface"
 						/>
 					)}
 					{previewKind === "audio" && (
@@ -151,11 +151,11 @@ export function MessageAttachmentViewer({
 					)}
 					{previewKind === "text" && (
 						textError || textContent ? (
-							<pre className="h-full w-full overflow-auto whitespace-pre-wrap p-5 text-sm text-neutral-800">
+							<pre className="h-full w-full overflow-auto whitespace-pre-wrap bg-surface p-5 font-mono text-sm text-fg">
 								{textError || textContent}
 							</pre>
 						) : (
-							<div className="h-full w-full space-y-3 bg-white p-5">
+							<div className="h-full w-full space-y-3 bg-surface p-5">
 								<Skeleton className="h-4 w-full" />
 								<Skeleton className="h-4 w-11/12" />
 								<Skeleton className="h-4 w-4/5" />
@@ -164,8 +164,8 @@ export function MessageAttachmentViewer({
 					)}
 					{previewKind === "unsupported" && (
 						<div className="flex flex-col items-center gap-3 px-6 text-center">
-							<FileWarning className="h-10 w-10 text-neutral-400" />
-							<p className="text-sm text-neutral-600">
+							<FileWarning className="h-10 w-10 text-fg-subtle" />
+							<p className="text-sm text-fg-muted">
 								{t("attachment.unsupported")}
 							</p>
 						</div>
@@ -173,9 +173,9 @@ export function MessageAttachmentViewer({
 				</div>
 
 				{risk && flagged && (
-					<div role="alert" className={`shrink-0 rounded-lg border p-3 text-sm ${risk.level === "blocked" ? "border-red-300 bg-red-50 text-red-900" : "border-amber-300 bg-amber-50 text-amber-900"}`}>
-						<p className="font-medium">{risk.level === "blocked" ? t("attachment.risk.blocked") : t("attachment.risk.warning")}</p>
-						<ul className="mt-1 list-disc pl-5">
+					<div role="alert" className={`shrink-0 border border-line border-s-[3px] p-3 text-sm text-fg ${risk.level === "blocked" ? "border-s-danger bg-danger-subtle" : "border-s-warning bg-warning-subtle"}`}>
+						<p className={`font-medium ${risk.level === "blocked" ? "text-danger-text" : "text-warning-text"}`}>{risk.level === "blocked" ? t("attachment.risk.blocked") : t("attachment.risk.warning")}</p>
+						<ul className="mt-1 list-disc ps-5">
 							{risk.reasons.map((reason) => <li key={reason}>{reason}</li>)}
 						</ul>
 						<label className="mt-2 flex items-center gap-2">
@@ -186,8 +186,8 @@ export function MessageAttachmentViewer({
 				)}
 
 				<div className="flex shrink-0 items-center justify-end gap-3">
-					{risk && !flagged && <span className="text-xs text-neutral-500">{t("attachment.risk.ok")}</span>}
-					{saveState === "error" && <span className="text-xs text-red-600">{t("attachment.saveToDriveFailed")}</span>}
+					{risk && !flagged && <span className="text-xs text-fg-subtle">{t("attachment.risk.ok")}</span>}
+					{saveState === "error" && <span className="text-xs text-danger-text">{t("attachment.saveToDriveFailed")}</span>}
 					{user?.driveEnabled !== false && (
 						<Button
 							variant="outline"

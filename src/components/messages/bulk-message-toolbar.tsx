@@ -11,9 +11,9 @@ import { supportsPermanentDelete } from "@/lib/messages/permanent-delete-utils";
 import type { BulkMessageAction } from "@/app/api/messages/bulk/types";
 import type { BulkMessageToolbarProps } from "./types";
 
-const menuItemClass = "flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-700 outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-neutral-100";
-const menuLabelClass = "mt-1 px-3 pb-1 pt-2 text-sm font-medium text-neutral-500";
-const menuContentClass = "z-[130] max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] w-54 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-2 shadow-lg";
+const menuItemClass = "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-fg outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-surface-hover";
+const menuLabelClass = "mt-1 px-3 pb-1 pt-2 font-display text-xs font-medium uppercase tracking-wider text-fg-subtle";
+const menuContentClass = "z-[130] max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] w-54 overflow-y-auto border border-line bg-surface-raised p-1 shadow-lg";
 
 export function BulkMessageToolbar({
 	selectedCount,
@@ -46,9 +46,9 @@ export function BulkMessageToolbar({
 	const { selectedMailbox } = useSelectedMailbox();
 	const folders = useMailboxFolders(selectedMailbox?.id);
 	return (
-		<div className="flex min-w-0 items-center gap-2 text-neutral-600 w-full">
+		<div className="flex min-w-0 items-center gap-2 text-fg-muted w-full">
 			{!hideSelectedCount && (
-				<span className="mr-2 text-sm font-medium text-neutral-800">
+				<span className="me-2 text-sm font-medium tabular-nums text-fg">
 					{t("common.selectedCount", { count: selectedCount })}
 				</span>
 			)}
@@ -70,7 +70,7 @@ export function BulkMessageToolbar({
 			</Tooltip>
 			{canDeleteForever && (
 				<Tooltip label={t("common.deleteForever")}>
-					<Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => onAction("delete")} disabled={pending} aria-label={t("common.deleteForever")}>
+					<Button variant="ghost" size="sm" className="text-danger-text hover:bg-danger-subtle hover:text-danger-text" onClick={() => onAction("delete")} disabled={pending} aria-label={t("common.deleteForever")}>
 						<Trash2 className="h-4 w-4" />
 					</Button>
 				</Tooltip>
@@ -90,10 +90,10 @@ export function BulkMessageToolbar({
 			<DropdownMenu.Root>
 				<Tooltip label={t("common.moveSelected")} className="max-md:hidden">
 					<DropdownMenu.Trigger asChild>
-						<Button variant="ghost" size="sm" className="max-md:hidden gap-1.5 bg-white text-xs font-medium text-neutral-700" disabled={pending}>
+						<Button variant="outline" size="sm" className="max-md:hidden gap-1.5 text-xs font-medium" disabled={pending}>
 							<FolderInput className="h-4 w-4" />
 							{t("common.moveTo")}
-							<ChevronDown className="h-3.5 w-3.5 text-neutral-500" />
+							<ChevronDown className="h-3.5 w-3.5 text-fg-subtle" />
 						</Button>
 					</DropdownMenu.Trigger>
 				</Tooltip>
@@ -104,7 +104,7 @@ export function BulkMessageToolbar({
 						))}
 						{folders.length > 0 && (
 							<>
-								<DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
+								<DropdownMenu.Separator className="my-1 h-px bg-line-subtle" />
 								<DropdownMenu.Label className={menuLabelClass}>{t("navigation.folders")}</DropdownMenu.Label>
 								{folders.map((item) => (
 									<DropdownMenu.Item key={item.id} className={menuItemClass} onSelect={() => onAction("folder", item.id)}>
@@ -129,13 +129,13 @@ export function BulkMessageToolbar({
 					</Button>
 				</DropdownMenu.Trigger>
 				<DropdownMenu.Portal>
-					<DropdownMenu.Content align="end" sideOffset={4} className="z-[130] min-w-44 rounded-xl border border-neutral-200 bg-white p-1 shadow-xl md:hidden">
+					<DropdownMenu.Content align="end" sideOffset={4} className="z-[130] min-w-44 border border-line bg-surface-raised p-1 shadow-lg md:hidden">
 						<DropdownMenu.Item className={menuItemClass} onSelect={() => onAction(archive.action as BulkMessageAction)}><archive.Icon className="h-4 w-4" />{archive.label}</DropdownMenu.Item>
 						<DropdownMenu.Item className={menuItemClass} onSelect={() => onAction(spam.action as BulkMessageAction)}><spam.Icon className="h-4 w-4" />{spam.label}</DropdownMenu.Item>
 						{canDeleteForever && (
-							<DropdownMenu.Item className={`${menuItemClass} text-red-600`} onSelect={() => onAction("delete")}><Trash2 className="h-4 w-4" />{t("common.deleteForever")}</DropdownMenu.Item>
+							<DropdownMenu.Item className={`${menuItemClass} text-danger-text data-[highlighted]:bg-danger-subtle`} onSelect={() => onAction("delete")}><Trash2 className="h-4 w-4" />{t("common.deleteForever")}</DropdownMenu.Item>
 						)}
-						<DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
+						<DropdownMenu.Separator className="my-1 h-px bg-line-subtle" />
 						<DropdownMenu.Item className={menuItemClass} onSelect={onClearSelection}><X className="h-4 w-4" />{t("common.clearSelection")}</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Portal>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Kbd } from "@orangesys/ui";
 import { X } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
 import { HeaderSearch } from "@/components/header-search";
@@ -38,7 +39,7 @@ export function MailSearchInput({ mobileEnd }: { mobileEnd?: boolean }) {
 						setInput("");
 						setQuery("");
 					}}
-					className="rounded-full p-1 text-neutral-500 hover:bg-blue-100 hover:text-neutral-800"
+					className="p-1 text-fg-subtle hover:bg-surface-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
 					aria-label={t("search.clear")}
 				>
 					<X className="h-4 w-4" />
@@ -47,10 +48,10 @@ export function MailSearchInput({ mobileEnd }: { mobileEnd?: boolean }) {
 				<button
 					type="button"
 					onClick={openCommandPalette}
-					className="hidden sm:flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-neutral-500 bg-white/70 hover:bg-white border border-neutral-200/80 rounded-md shadow-2xs transition-colors"
+					className="hidden sm:flex items-center p-0.5 transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
 					title={t("search.openPalette")}
 				>
-					<span className="text-[11px] font-mono">⌘K</span>
+					<Kbd size="sm">⌘K</Kbd>
 				</button>
 			) : null}
 		/>

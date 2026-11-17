@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import clsx from "clsx";
+import { Eyebrow } from "@orangesys/ui";
 import toast from "react-hot-toast";
 import { CalendarDays, Check, X } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
@@ -47,13 +48,13 @@ export function MessageInviteCard({ messageId, hasCalendarAttachment, className 
 		const answer = invite.attendees?.[0];
 		const key = { ACCEPTED: "invite.reply.accepted", TENTATIVE: "invite.reply.tentative", DECLINED: "invite.reply.declined" }[answer?.status ?? ""];
 		return (
-			<section className={clsx("rounded-xl bg-[#f0f4f8] p-4", className)}>
+			<section className={clsx("border border-line bg-canvas-subtle p-4", className)}>
 				<div className="flex items-start gap-3">
-					<CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+					<CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-fg-muted" />
 					<div className="min-w-0 flex-1">
-						<p className="text-[11px] font-medium uppercase text-neutral-500">{t("invite.reply.heading")}</p>
-						<h2 className="mt-0.5 break-words text-sm font-semibold text-neutral-900">{invite.title}</h2>
-						{answer && key && <p className="mt-1 text-xs text-neutral-700">{t(key as Parameters<typeof t>[0], { guest: answer.email })}</p>}
+						<Eyebrow>{t("invite.reply.heading")}</Eyebrow>
+						<h2 className="mt-0.5 break-words text-sm font-semibold text-fg">{invite.title}</h2>
+						{answer && key && <p className="mt-1 text-xs text-fg-muted">{t(key as Parameters<typeof t>[0], { guest: answer.email })}</p>}
 					</div>
 				</div>
 			</section>
@@ -86,18 +87,18 @@ export function MessageInviteCard({ messageId, hasCalendarAttachment, className 
 	}
 
 	return (
-		<section className={clsx("rounded-xl bg-[#f0f4f8] p-4", className)}>
+		<section className={clsx("border border-line bg-canvas-subtle p-4", className)}>
 			<div className="flex items-start gap-3">
-				<CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+				<CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-fg-muted" />
 				<div className="min-w-0 flex-1">
-					<p className="text-[11px] font-medium uppercase text-neutral-500">{cancelled ? t("invite.cancelled") : t("invite.heading")}</p>
-					<h2 className="mt-0.5 break-words text-sm font-semibold text-neutral-900">{invite.title}</h2>
-					<p className="mt-1 text-xs text-neutral-700">{when}</p>
-					{invite.location && <p className="mt-0.5 break-words text-xs text-neutral-600">{invite.location}</p>}
-					{invite.organizer && <p className="mt-0.5 text-xs text-neutral-600">{t("invite.organizer", { organizer: invite.organizer })}</p>}
+					<Eyebrow>{cancelled ? t("invite.cancelled") : t("invite.heading")}</Eyebrow>
+					<h2 className="mt-0.5 break-words text-sm font-semibold text-fg">{invite.title}</h2>
+					<p className="mt-1 text-xs tabular-nums text-fg-muted">{when}</p>
+					{invite.location && <p className="mt-0.5 break-words text-xs text-fg-subtle">{invite.location}</p>}
+					{invite.organizer && <p className="mt-0.5 text-xs text-fg-subtle">{t("invite.organizer", { organizer: invite.organizer })}</p>}
 					<div className="mt-3 flex flex-wrap items-center gap-2">
 						{cancelled ? (
-							<Button size="sm" disabled={pending !== null || !eventId} onClick={() => void respond("declined")} variant="outline" className="rounded-full border-0 bg-white text-neutral-700 hover:bg-neutral-50">{t("invite.removeFromCalendar")}</Button>
+							<Button size="sm" disabled={pending !== null || !eventId} onClick={() => void respond("declined")} variant="outline">{t("invite.removeFromCalendar")}</Button>
 						) : (
 							<>
 								{(["accepted", "tentative", "declined"] as const).map((option) => {
@@ -107,12 +108,12 @@ export function MessageInviteCard({ messageId, hasCalendarAttachment, className 
 										tentative: t("invite.maybe"),
 										declined: selected ? t("invite.declinedLabel") : t("invite.decline"),
 									}[option];
-									const selectedColor = { accepted: "text-green-600", tentative: "text-orange-400", declined: "text-red-600" }[option];
-									return <Button key={option} size="sm" disabled={pending !== null} onClick={() => void respond(option)} variant={answered === null && option === "accepted" ? "default" : "outline"} aria-pressed={selected} className={clsx("rounded-full", !(answered === null && option === "accepted") && "border-0 bg-white hover:bg-neutral-50", selected ? clsx("font-semibold", selectedColor) : "text-neutral-700", answered !== null && !selected && "opacity-50")}>{selected && option === "accepted" && <Check className="h-4 w-4" />}{selected && option === "declined" && <X className="h-4 w-4" />}{label}</Button>;
+									const selectedColor = { accepted: "text-success-text", tentative: "text-warning-text", declined: "text-danger-text" }[option];
+									return <Button key={option} size="sm" disabled={pending !== null} onClick={() => void respond(option)} variant={answered === null && option === "accepted" ? "default" : "outline"} aria-pressed={selected} className={clsx(selected && clsx("font-semibold", selectedColor), answered !== null && !selected && "opacity-50")}>{selected && option === "accepted" && <Check className="h-4 w-4" />}{selected && option === "declined" && <X className="h-4 w-4" />}{label}</Button>;
 								})}
 							</>
 						)}
-						{eventId && answered !== "declined" && <a href={`/calendar?event=${eventId}`} className="ml-auto text-xs font-medium text-blue-700 hover:underline">{t("invite.viewOnCalendar")}</a>}
+						{eventId && answered !== "declined" && <a href={`/calendar?event=${eventId}`} className="ms-auto text-xs font-medium text-accent-text hover:underline">{t("invite.viewOnCalendar")}</a>}
 					</div>
 				</div>
 			</div>

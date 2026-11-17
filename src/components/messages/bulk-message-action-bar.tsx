@@ -46,7 +46,7 @@ export function BulkMessageActionBar({
 		<div
 			role="region"
 			aria-label={t("common.selectedCount", { count: selectedMessages.length })}
-			className="shrink-0 border-b border-blue-100 bg-blue-50/50 px-3 py-2"
+			className="shrink-0 border-b border-line bg-accent-subtle px-3 py-2"
 		>
 			<div className="min-w-0 overflow-x-auto">
 				<BulkMessageToolbar
@@ -58,7 +58,7 @@ export function BulkMessageActionBar({
 					folder={folder}
 				/>
 			</div>
-			{error && <p role="alert" className="mt-1 text-sm font-medium text-red-700">{error}</p>}
+			{error && <p role="alert" className="mt-1 text-sm font-medium text-danger-text">{error}</p>}
 		</div>
 	);
 }

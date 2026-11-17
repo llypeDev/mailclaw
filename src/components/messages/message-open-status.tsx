@@ -28,7 +28,7 @@ export function MessageOpenStatus({ messageId }: { messageId: string }) {
 
 	if (tracking.openCount === 0) {
 		return (
-			<p className="mb-3 flex items-center gap-1.5 text-xs text-neutral-500">
+			<p className="mb-3 flex items-center gap-1.5 text-xs text-fg-subtle">
 				<EyeOff className="h-3.5 w-3.5" aria-hidden />
 				{tracking.onlyAutomated ? t("message.opens.onlyAutomated") : t("message.opens.notYet")}
 			</p>
@@ -36,19 +36,19 @@ export function MessageOpenStatus({ messageId }: { messageId: string }) {
 	}
 
 	return (
-		<details className="mb-3 text-xs text-neutral-600">
-			<summary className="flex cursor-pointer list-none items-center gap-1.5 text-blue-700 [&::-webkit-details-marker]:hidden">
+		<details className="mb-3 text-xs text-fg-muted">
+			<summary className="flex cursor-pointer list-none items-center gap-1.5 text-accent-text [&::-webkit-details-marker]:hidden">
 				<Eye className="h-3.5 w-3.5" aria-hidden />
 				{t("message.opens.opened", {
 					count: tracking.openCount,
 					date: tracking.lastOpenedAt ? formatUserDate(tracking.lastOpenedAt, DATE_FORMAT) : "",
 				})}
 			</summary>
-			<ul className="mt-2 space-y-1 border-l border-neutral-200 pl-3">
+			<ul className="mt-2 space-y-1 border-s border-line ps-3 tabular-nums">
 				{tracking.opens.map((event) => {
 					const description = describeOpenEvent(event, locale);
 					return (
-						<li key={event.openedAt} className={event.automated ? "text-neutral-400" : undefined}>
+						<li key={event.openedAt} className={event.automated ? "text-fg-subtle" : undefined}>
 							<time dateTime={event.openedAt}>{formatUserDate(event.openedAt, DATE_FORMAT)}</time>
 							{description && <span> · {description}</span>}
 							{event.automated && <span> · {t("message.opens.automated")}</span>}
@@ -56,7 +56,7 @@ export function MessageOpenStatus({ messageId }: { messageId: string }) {
 					);
 				})}
 			</ul>
-			<p className="mt-2 text-neutral-400">{t("message.opens.caveat")}</p>
+			<p className="mt-2 text-fg-subtle">{t("message.opens.caveat")}</p>
 		</details>
 	);
 }
@@ -66,6 +66,6 @@ export function OpenedIndicator({ count }: { count?: number }) {
 	const { t } = useLanguage();
 	if (!count) return null;
 	return (
-		<Eye className="mr-1 inline h-3 w-3 align-[-1px] text-blue-600" role="img" aria-label={t("list.opened", { count })} />
+		<Eye className="me-1 inline h-3 w-3 align-[-1px] text-info-text" role="img" aria-label={t("list.opened", { count })} />
 	);
 }

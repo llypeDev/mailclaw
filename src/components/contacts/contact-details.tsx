@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Eyebrow } from "@orangesys/ui";
 import { useLanguage } from "@/components/language-provider";
 import { formatUserDate } from "@/lib/time/utils";
 import { Button } from "@/components/ui/button";
@@ -94,7 +95,7 @@ export function ContactDetailsTrigger({
 			<button
 				type="button"
 				onClick={() => handleOpenChange(true)}
-				className={`${className ?? ""} rounded-sm text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200`}
+				className={`${className ?? ""} text-start hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus`}
 			>
 				{shownName}
 			</button>
@@ -131,22 +132,22 @@ export function ContactDetailsTrigger({
 								disabled
 							/>
 						</div>
-						<div className="grid gap-3 rounded-lg bg-neutral-50 p-3 text-sm sm:grid-cols-2">
+						<div className="grid gap-3 border border-line bg-canvas-subtle p-3 text-sm sm:grid-cols-2">
 							<div>
-								<p className="text-xs font-medium uppercase text-neutral-500">{t("contact.source")}</p>
-								<p className="mt-1 capitalize text-neutral-700">{contact?.source ?? t("contact.sourceEmail")}</p>
+								<Eyebrow>{t("contact.source")}</Eyebrow>
+								<p className="mt-1 capitalize text-fg-muted">{contact?.source ?? t("contact.sourceEmail")}</p>
 							</div>
 							<div>
-								<p className="text-xs font-medium uppercase text-neutral-500">{t("contact.lastSeen")}</p>
-								<p className="mt-1 text-neutral-700">
+								<Eyebrow>{t("contact.lastSeen")}</Eyebrow>
+								<p className="mt-1 tabular-nums text-fg-muted">
 									{contact?.lastSeenAt ? formatUserDate(contact.lastSeenAt, { month: "short", day: "2-digit", year: "numeric" }) : t("contact.unknown")}
 								</p>
 							</div>
 							{contact?.blocked && (
-								<p className="text-sm font-medium text-red-600">{t("contact.blocked")}</p>
+								<p className="text-sm font-medium text-danger-text">{t("contact.blocked")}</p>
 							)}
 						</div>
-						{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+						{error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
 						<Button
 							type="button"
 							onClick={saveContact}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Alert, EmptyState } from "@orangesys/ui";
 import { Plus, Search, UsersRound } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
 import { useCompose } from "@/components/compose/compose-context";
@@ -59,7 +60,7 @@ export function ContactsPage() {
 		<div className="px-6 py-10 lg:px-12">
 		<div className="w-full max-w-3xl space-y-6">
 			<div className="flex items-center justify-between gap-4">
-				<h1 className="text-2xl font-medium md:text-3xl">{t("contacts.title")}</h1>
+				<h1 className="font-display text-2xl font-semibold text-fg md:text-3xl">{t("contacts.title")}</h1>
 				<Button type="button" className={mobilePrimaryActionClass} onClick={openCreate} disabled={!mailboxId}>
 					<Plus className="h-4 w-4" />
 					{t("contacts.add")}
@@ -67,36 +68,37 @@ export function ContactsPage() {
 			</div>
 
 			<div className="relative">
-				<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+				<Search className="pointer-events-none absolute start-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
 				<Input
 					type="search"
 					value={input}
 					onChange={(event) => setInput(event.target.value)}
 					placeholder={t("contacts.search")}
 					aria-label={t("contacts.search")}
-					className="bg-white pl-9"
+					className="bg-surface ps-9"
 				/>
 			</div>
 
 			<section className="space-y-3">
 				{contacts.isLoading && <SectionRowSkeleton />}
 				{contacts.isError && (
-					<p role="alert" className="rounded-2xl bg-white px-5 py-4 text-sm text-red-600">
+					<Alert live tone="danger">
 						{t("contacts.loadFailed")}
-					</p>
+					</Alert>
 				)}
 				{!contacts.isLoading && !contacts.isError && items.length === 0 && (
-					<div className="flex flex-col items-center gap-2 rounded-2xl bg-white px-5 py-12 text-center">
-						<UsersRound className="h-8 w-8 text-neutral-300" />
-						<p className="text-sm font-medium text-neutral-700">
-							{query ? t("contacts.emptySearch") : t("contacts.empty")}
-						</p>
-						{!query && <p className="text-xs text-neutral-500">{t("contacts.emptyHint")}</p>}
-					</div>
+					<EmptyState
+						animated={false}
+						headingLevel={2}
+						icon={query ? <Search className="h-6 w-6" aria-hidden="true" /> : <UsersRound className="h-6 w-6" aria-hidden="true" />}
+						title={query ? t("contacts.emptySearch") : t("contacts.empty")}
+						description={query ? undefined : t("contacts.emptyHint")}
+						className="border border-line bg-surface"
+					/>
 				)}
 				{items.length > 0 && (
 					<List>
-						<div className={`${CONTACT_COLUMNS} bg-white px-5 py-3 text-xs font-medium uppercase text-neutral-500`}>
+						<div className={`${CONTACT_COLUMNS} bg-canvas-subtle px-5 py-3 font-display text-xs font-medium uppercase tracking-wider text-fg-subtle`}>
 							<span className="w-10" />
 							<span>{t("common.name")}</span>
 							<span className="hidden md:block">{t("contact.lastSeen")}</span>

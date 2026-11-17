@@ -55,15 +55,15 @@ export function ScheduledSendBanner({ messageId, scheduledAt, onRescheduled }: {
 	}
 
 	return (
-		<div className="mx-6 mb-2 flex items-center gap-3 rounded-lg bg-neutral-100 px-4 py-3 text-sm text-neutral-600">
-			<CalendarClock className="h-5 w-5 shrink-0 text-neutral-500" />
+		<div className="mx-6 mb-2 flex items-center gap-3 border border-line border-s-[3px] border-s-info bg-canvas-subtle px-4 py-3 text-sm text-fg-muted">
+			<CalendarClock className="h-5 w-5 shrink-0 text-info-text" />
 			<span className="min-w-0 flex-1">{t("schedule.sendScheduledFor", { when: formatScheduledSendTime(scheduledAt, t) })}</span>
 			<ScheduledSendReschedule scheduledAt={scheduledAt} disabled={cancelling || rescheduling} onPick={(date) => void reschedule(date)} />
 			<button
 				type="button"
 				onClick={() => void cancelSend(true)}
 				disabled={cancelling || rescheduling}
-				className="shrink-0 font-medium text-blue-600 hover:underline disabled:opacity-50"
+				className="shrink-0 font-medium text-accent-text hover:underline disabled:opacity-50"
 			>
 				{t("agent.activity.editDraft")}
 			</button>
@@ -71,7 +71,7 @@ export function ScheduledSendBanner({ messageId, scheduledAt, onRescheduled }: {
 				type="button"
 				onClick={() => void cancelSend(false)}
 				disabled={cancelling || rescheduling}
-				className="shrink-0 font-medium text-blue-600 hover:underline disabled:opacity-50"
+				className="shrink-0 font-medium text-accent-text hover:underline disabled:opacity-50"
 			>
 				{t("schedule.cancelSend")}
 			</button>

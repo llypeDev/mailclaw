@@ -154,9 +154,9 @@ export function MessageDetailNavigation({ messageId, unread }: MessageDetailNavi
 	}
 
 	return (
-		<div className="ml-auto flex shrink-0 items-center gap-2 text-neutral-500">
+		<div className="ms-auto flex shrink-0 items-center gap-2 text-fg-subtle">
 			{totalUnread > 0 && (
-			<span className="mr-2 whitespace-nowrap text-xs" aria-live="polite">
+			<span className="me-2 whitespace-nowrap text-xs tabular-nums" aria-live="polite">
 				{t("message.nav.unreadPosition", { position: unreadOrder, total: totalUnread })}
 			</span>
 			)}

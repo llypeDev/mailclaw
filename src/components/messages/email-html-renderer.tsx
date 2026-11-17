@@ -142,7 +142,7 @@ export function EmailHtmlRenderer({ html, className, dense = false, preserveLead
 	return <div className={`min-w-0 max-w-full ${className ?? ""}`}>
 		{hasRemote && <div className="mb-2 flex justify-end">
 			{/* The label names the action, so it is not also an aria-pressed toggle. */}
-			<button type="button" className="rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+			<button type="button" className="px-2 py-1 text-xs font-medium text-accent-text hover:bg-accent-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
 				onClick={() => {
 					if (!allowRemote) onAllowRemote?.();
 					setChoice({ source: html, allow: !allowRemote });

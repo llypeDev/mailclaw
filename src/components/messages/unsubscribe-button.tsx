@@ -48,7 +48,7 @@ export function MessageUnsubscribeButton({ messageId, variant = "header" }: { me
 	const row = variant === "row";
 	if (done) {
 		return (
-			<span role="status" className="flex items-center gap-1 px-1 text-xs font-medium text-green-700">
+			<span role="status" className="flex items-center gap-1 px-1 text-xs font-medium text-success-text">
 				<MailCheck className="h-3.5 w-3.5" aria-hidden="true" />
 				{t("actions.unsubscribed")}
 			</span>
@@ -60,7 +60,7 @@ export function MessageUnsubscribeButton({ messageId, variant = "header" }: { me
 				type="button"
 				variant="ghost"
 				size="sm"
-				className={row ? "h-5 border border-neutral-300 px-2 text-xs" : "h-5 px-2 text-xs text-[var(--primary)] hover:text-[var(--primary)]"}
+				className={row ? "h-5 border border-line-strong px-2 text-xs" : "h-5 px-2 text-xs text-accent-text hover:text-accent-text"}
 				disabled={pending}
 				onClick={(event) => {
 					event.preventDefault();

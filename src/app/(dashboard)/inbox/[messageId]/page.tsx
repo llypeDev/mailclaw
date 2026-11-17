@@ -18,6 +18,7 @@ import { MessageInviteCard } from "@/components/message-invite-card";
 import { MessageDetailSkeleton } from "@/components/page-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Alert, Eyebrow } from "@orangesys/ui";
 import { usePageLoading } from "@/components/page-loading";
 import { PreviousMessage } from "@/components/previous-message";
 import { ConversationThread } from "@/components/messages/conversation-thread";
@@ -241,7 +242,7 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
 
   if (!message) {
     return (
-      <p className="px-6 py-4 text-sm text-neutral-500">
+      <p className="px-6 py-4 text-sm text-fg-subtle">
         {data?.error ?? t("message.notFound")}
       </p>
     );
@@ -276,7 +277,7 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
       : { month: "short", day: "2-digit", year: "numeric" });
   return (<ConversationNotesProvider key={message.threadId ?? message.id} messageId={message.id} emails={noteEmails}>
 
-    <div className={clsx("flex py-2 h-12 items-center px-2 border-b sticky top-0 bg-white z-40 gap-3", scrolled ? "border-neutral-200" : "border-transparent")}>
+    <div className={clsx("flex py-2 h-12 items-center px-2 border-b sticky top-0 bg-surface z-40 gap-3", scrolled ? "border-line" : "border-transparent")}>
       <MessageReadingHeaderButton assistantVisible={assistantVisible} />
       {/* <div className="min-w-0 flex-1" /> */}
       {/* <div className="flex items-center flex-row gap-6">
@@ -307,12 +308,12 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
     </div>
 
     <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto overscroll-contain scrollbar-gutter-stable flex-1 min-h-0">
-      <h1 className={clsx("sm:pl-[78px] px-4 pb-2 pt-2 text-2xl text-neutral-900 sm:pr-6")} title={message.subject ?? t("list.noSubject")}>
+      <h1 className={clsx("sm:ps-[78px] px-4 pb-2 pt-2 font-display text-2xl font-semibold text-fg sm:pe-6")} title={message.subject ?? t("list.noSubject")}>
         {message.subject ?? t("list.noSubject")}
       </h1>
-      <MessageInviteCard key={message.id} messageId={message.id} hasCalendarAttachment={!!findInviteAttachment(attachments)} className={clsx("sm:ml-[78px] mx-4 mb-3 sm:mr-6")} />
+      <MessageInviteCard key={message.id} messageId={message.id} hasCalendarAttachment={!!findInviteAttachment(attachments)} className={clsx("sm:ms-[78px] mx-4 mb-3 sm:me-6")} />
       <ConversationNotes
-        className={clsx("sm:pl-[78px] px-4 sm:pr-6")}
+        className={clsx("sm:ps-[78px] px-4 sm:pe-6")}
       />
       {/* <div className="px-6">
         <div className="mx-auto w-full max-w-[640px]">
@@ -337,12 +338,12 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
         expandedAll={threadExpanded}
         onExpandedAllChange={setThreadExpanded}
       />
-      <article data-message-id={message.id} className={"pb-4 sm:pl-0 sm:pr-6"}>
+      <article data-message-id={message.id} className={"pb-4 sm:ps-0 sm:pe-6"}>
         <div className="w-full">
           {canUnsubscribe && !unsubBannerDismissed && (
             <MailingListBanner messageId={message.id} onDismiss={dismissUnsubBanner} />
           )}
-          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 px-4 pb-2 sm:px-0 sm:pl-[78px]">
+          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 px-4 pb-2 sm:px-0 sm:ps-[78px]">
             <div className="flex min-w-0 items-start gap-3">
               <ContactAvatar
                 mailboxId={message.mailboxId}
@@ -352,10 +353,10 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
                 managedAvatarUrl={message.direction === "outbound" && message.mailboxId
                   ? `/api/mailboxes/${message.mailboxId}/avatar`
                   : undefined}
-                className="mt-2 sm:-ml-12"
+                className="mt-2 sm:-ms-12"
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-neutral-900 mt-1.25 flex flex-row items-center gap-1 w-full  overflow-hidden">
+                <p className="text-sm text-fg mt-1.25 flex flex-row items-center gap-1 w-full  overflow-hidden">
                   <b className="whitespace-nowrap">
                     {message.direction === "inbound" ? (
                       <ContactDetailsTrigger
@@ -367,12 +368,12 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
                       fromName
                     )}
                   </b>{" "}
-                  <span className="hidden sm:block text-neutral-500 text-xs flex-1 overflow-hidden text-ellipsis min-w-0">&lt;{fromAddress}&gt;</span>
+                  <span className="hidden sm:block text-fg-subtle text-xs flex-1 overflow-hidden text-ellipsis min-w-0">&lt;{fromAddress}&gt;</span>
                   {canUnsubscribe && unsubBannerDismissed && (
                     <MessageUnsubscribeButton key={message.id} messageId={message.id} />
                   )}
                 </p>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-fg-subtle">
                   {t("source.to").toLowerCase()}{" "}
                   <RecipientList
                     entries={toEntries}
@@ -380,23 +381,23 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
                     style={showFullRecipientAddresses ? "full" : "address"}
                   />
                 </p>
-                <div className="sm:hidden flex items-center gap-2 text-xs text-neutral-500">
+                <div className="sm:hidden flex items-center gap-2 text-xs tabular-nums text-fg-subtle">
                   <span>{messageDate(false)}</span>
                 </div>
                 {ccEntries.length > 0 && (
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-fg-subtle">
                     {t("message.cc")} <RecipientList entries={ccEntries} mailboxId={message.mailboxId} style={showFullRecipientAddresses ? "full" : "address"} />
                   </p>
                 )}
                 {bccEntries.length > 0 && (
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-fg-subtle">
                     {t("message.bcc")} <RecipientList entries={bccEntries} mailboxId={message.mailboxId} style={showFullRecipientAddresses ? "full" : "address"} />
                   </p>
                 )}
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <p className="hidden text-xs sm:block">{messageDate(true)}</p>
+              <p className="hidden text-xs tabular-nums text-fg-muted sm:block">{messageDate(true)}</p>
               <ThreadMessageActions
                 message={currentThreadMessage}
                 mailboxId={message.mailboxId}
@@ -414,23 +415,29 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
             detailsOpen={detailsOpen}
             onViewDetails={() => setDetailsOpen((open) => !open)}
             announce
-            className="mb-4 px-4 sm:px-0 sm:pl-[78px] sm:pr-4"
+            className="mb-4 px-4 sm:px-0 sm:ps-[78px] sm:pe-4"
           />
 
           {detailsOpen && (
-            <div className="mb-4 px-4 sm:px-0 sm:pl-[78px] sm:pr-4">
+            <div className="mb-4 px-4 sm:px-0 sm:ps-[78px] sm:pe-4">
               <MessageDetailsPanel message={message} onClose={() => setDetailsOpen(false)} />
             </div>
           )}
-          {scheduledAt && <div className="px-4 sm:px-0 sm:pl-[78px]"><ScheduledSendBanner messageId={message.id} scheduledAt={scheduledAt} onRescheduled={(next) => setData((current) => current ? { ...current, scheduledAt: next } : current)} /></div>}
-          <div className="prose max-w-none px-4 text-neutral-900 sm:px-0 sm:pl-[78px]">
+          {scheduledAt && <div className="px-4 sm:px-0 sm:ps-[78px]"><ScheduledSendBanner messageId={message.id} scheduledAt={scheduledAt} onRescheduled={(next) => setData((current) => current ? { ...current, scheduledAt: next } : current)} /></div>}
+          <div className="prose max-w-none px-4 text-fg sm:px-0 sm:ps-[78px]">
             {bodyError ? (
-              <div role="alert" className="not-prose rounded-lg border border-neutral-200 bg-neutral-50 p-4">
-                <p className="text-sm text-neutral-700">{t("source.loadFailed")}</p>
-                <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => void retryBody()}>
-                  {t("webhooks.retry")}
-                </Button>
-              </div>
+              <Alert
+                live
+                tone="danger"
+                className="not-prose"
+                action={
+                  <Button type="button" variant="outline" size="sm" onClick={() => void retryBody()}>
+                    {t("webhooks.retry")}
+                  </Button>
+                }
+              >
+                {t("source.loadFailed")}
+              </Alert>
             ) : bodyPending ? (
               <div aria-busy="true" aria-label={t("common.loading")} className="space-y-3">
                 <Skeleton className="h-4 w-full" />
@@ -454,10 +461,10 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
             ))}
           </div>
           {cloudAttachmentResult.attachments.length > 0 && (
-            <section className="mt-8 border-t border-neutral-100 px-4 py-6 sm:px-0 sm:pl-[78px]">
-              <h2 className="mb-3 text-sm font-semibold text-neutral-900">
+            <section className="mt-8 border-t border-line-subtle px-4 py-6 sm:px-0 sm:ps-[78px]">
+              <Eyebrow as="h2" className="mb-3">
                 {t("message.cloudFiles", { count: cloudAttachmentResult.attachments.length })}
-              </h2>
+              </Eyebrow>
               <div className="grid gap-2 sm:grid-cols-2">
                 {cloudAttachmentResult.attachments.map((attachment) => (
                   <a
@@ -465,18 +472,18 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
                     href={attachment.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-3 rounded-lg border border-neutral-200 p-3 text-left hover:border-blue-200 hover:bg-blue-50/40"
+                    className="flex items-center gap-3 border border-line p-3 text-start transition-colors hover:border-line-strong hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   >
-                    <Cloud className="h-5 w-5 shrink-0 text-blue-600" />
+                    <Cloud className="h-5 w-5 shrink-0 text-fg-muted" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-neutral-900">
+                      <span className="block truncate text-sm font-medium text-fg">
                         {attachment.filename}
                       </span>
-                      <span className="block text-xs text-neutral-500">
+                      <span className="block text-xs text-fg-subtle">
                         {t("message.openFrom", { provider: attachment.provider })}
                       </span>
                     </span>
-                    <ExternalLink className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden="true" />
+                    <ExternalLink className="h-4 w-4 shrink-0 text-fg-subtle" aria-hidden="true" />
                     <span className="sr-only"> ({t("common.opensInNewTab")})</span>
                   </a>
                 ))}
@@ -484,14 +491,14 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
             </section>
           )}
           {attachments.length > 0 && (
-            <section className="mt-8 border-t border-neutral-100 px-4 py-6 sm:px-0 sm:pl-[78px]">
+            <section className="mt-8 border-t border-line-subtle px-4 py-6 sm:px-0 sm:ps-[78px]">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold text-neutral-900">
+                <Eyebrow as="h2">
                   {t("message.attachments", { count: attachments.length })}
-                </h2>
+                </Eyebrow>
                 <button
                   type="button"
-                  className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700"
+                  className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-accent-text hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   onClick={() => void onDownloadAllAttachments()}
                 >
                   <ArrowDownToLine className="h-3.5 w-3.5" />

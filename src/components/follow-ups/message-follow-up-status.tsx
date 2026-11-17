@@ -9,7 +9,7 @@ import { FollowUpMenu } from "./follow-up-menu";
 import { clearMessageFollowUp, fetchMessageFollowUp, FOLLOW_UPS_CHANGED_EVENT, setMessageFollowUp } from "./follow-up-client-utils";
 
 const DATE_FORMAT: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" };
-const LINK_CLASS = "font-medium text-blue-600 hover:underline disabled:opacity-50";
+const LINK_CLASS = "font-medium text-accent-text hover:underline disabled:opacity-50";
 
 /** Reminder state of a sent message, with a way to set, move or remove it. */
 export function MessageFollowUpStatus({ messageId }: { messageId: string }) {
@@ -36,7 +36,7 @@ export function MessageFollowUpStatus({ messageId }: { messageId: string }) {
 	const open = followUp?.status === "pending" || followUp?.status === "due";
 
 	return (
-		<p className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-500">
+		<p className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-subtle">
 			{followUp?.status === "replied" ? (
 				<>
 					<Check className="h-3.5 w-3.5" aria-hidden />
@@ -44,7 +44,7 @@ export function MessageFollowUpStatus({ messageId }: { messageId: string }) {
 				</>
 			) : open ? (
 				<>
-					<BellRing className="h-3.5 w-3.5 text-amber-600" aria-hidden />
+					<BellRing className="h-3.5 w-3.5 text-warning-text" aria-hidden />
 					{followUp.status === "due"
 						? t("followUp.noReplyYet")
 						: t("followUp.scheduledFor", { date: formatUserDate(followUp.dueAt, DATE_FORMAT) })}
@@ -57,7 +57,7 @@ export function MessageFollowUpStatus({ messageId }: { messageId: string }) {
 			) : (
 				<FollowUpMenu
 					trigger={
-						<button type="button" className="inline-flex items-center gap-1.5 hover:text-neutral-900">
+						<button type="button" className="inline-flex items-center gap-1.5 hover:text-fg">
 							<BellRing className="h-3.5 w-3.5" aria-hidden />
 							{t("followUp.remindMe")}
 						</button>
@@ -65,7 +65,7 @@ export function MessageFollowUpStatus({ messageId }: { messageId: string }) {
 					onPick={(days) => run(setMessageFollowUp(messageId, days))}
 				/>
 			)}
-			{failed && <span role="alert" className="text-red-600">{t("followUp.failed")}</span>}
+			{failed && <span role="alert" className="text-danger-text">{t("followUp.failed")}</span>}
 		</p>
 	);
 }

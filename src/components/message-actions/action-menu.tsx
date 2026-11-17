@@ -6,7 +6,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export const messageActionMenuItemClass =
-	"flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-neutral-700 outline-none data-[disabled]:cursor-not-allowed data-[disabled]:text-neutral-400 data-[highlighted]:bg-neutral-100";
+	"flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-start text-sm text-fg outline-none data-[disabled]:cursor-not-allowed data-[disabled]:text-fg-disabled data-[highlighted]:bg-surface-hover";
 
 type MessageActionMenuProps = {
 	/** Tooltip and accessible name for the trigger. */
@@ -35,7 +35,7 @@ export function MessageActionMenu({ label, trigger, children, className }: Messa
 					sideOffset={6}
 					collisionPadding={8}
 					className={cn(
-						"z-[130] max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] w-56 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-2 text-sm shadow-lg",
+						"z-[130] max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] w-56 overflow-y-auto border border-line bg-surface-raised p-1 text-sm shadow-lg",
 						className,
 					)}
 				>
@@ -61,7 +61,7 @@ export function MessageActionMenuItem({ icon, children, onSelect, disabled, dest
 			onSelect={onSelect}
 			className={cn(
 				messageActionMenuItemClass,
-				destructive && "text-red-600 data-[highlighted]:bg-red-50",
+				destructive && "text-danger-text data-[highlighted]:bg-danger-subtle",
 			)}
 		>
 			<span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden="true">{icon}</span>
@@ -71,9 +71,9 @@ export function MessageActionMenuItem({ icon, children, onSelect, disabled, dest
 }
 
 export function MessageActionMenuSeparator() {
-	return <DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />;
+	return <DropdownMenu.Separator className="my-1 h-px bg-line-subtle" />;
 }
 
 export function MessageActionMenuLabel({ children }: { children: ReactNode }) {
-	return <DropdownMenu.Label className="mt-1 px-3 pb-1 pt-2 text-sm font-medium text-neutral-500">{children}</DropdownMenu.Label>;
+	return <DropdownMenu.Label className="mt-1 px-3 pb-1 pt-2 font-display text-xs font-medium uppercase tracking-wider text-fg-subtle">{children}</DropdownMenu.Label>;
 }

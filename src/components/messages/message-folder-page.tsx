@@ -4,7 +4,8 @@ import Link from "next/link";
 import { confirmDestructive, alertDialog } from "@/components/ui/confirm-dialog";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
-import { Archive, ChevronLeft, ChevronRight, ListFilter, Mail, MailOpen, Trash2 } from "@/components/icons";
+import { EmptyState } from "@orangesys/ui";
+import { Archive, ChevronLeft, ChevronRight, ListFilter, Mail, MailOpen, Search, Trash2 } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -56,6 +57,8 @@ import { DueFollowUps } from "@/components/follow-ups/due-follow-ups";
 import { getUserTimeZone, zonedDateFields } from "@/lib/time/utils";
 
 const pageSize = 25;
+// The open message's row: a 2px accent bar on the start edge, over the accent-subtle fill.
+const ROW_ACCENT_BAR = "before:absolute before:inset-y-0 before:start-0 before:w-0.5 before:bg-accent";
 
 function getRowMessageIds(message: Message): string[] {
 	return message.threadMessageIds ?? [message.id];
@@ -166,12 +169,15 @@ function MessageListRowComponent({
 		const compactRow = (
 			<div
 				role={swipeable ? undefined : "listitem"}
-				className={`group grid grid-cols-[20px_minmax(0,1fr)] gap-3 border-l-2 px-4 py-3 transition-colors ${active || opening
-					? "border-l-blue-600 bg-blue-50"
-					: selected
-						? "border-l-transparent bg-neutral-50"
-						: "border-l-transparent hover:bg-neutral-50"
-					} ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
+				className={clsx(
+					"group relative grid grid-cols-[24px_minmax(0,1fr)] gap-3 px-4 py-3 transition-colors",
+					active || opening
+						? clsx("bg-accent-subtle", ROW_ACCENT_BAR)
+						: selected
+							? "bg-accent-subtle"
+							: "hover:bg-surface-hover",
+					draggable && "cursor-grab active:cursor-grabbing",
+				)}
 				draggable={draggable}
 				onDragStart={(event) => {
 					if (!draggable) return;
@@ -181,7 +187,6 @@ function MessageListRowComponent({
 				<Checkbox
 					checked={selected}
 					onChange={(event) => onSelectedChange(message.id, event.target.checked)}
-					className="mt-1 h-4 w-4 rounded border-neutral-300"
 					aria-label={t("list.selectFrom", { sender: party })}
 				/>
 				<Link
@@ -201,22 +206,21 @@ function MessageListRowComponent({
 							{party}
 
 							{(message.threadCount ?? 1) > 1 && (
-								<span className="ml-2 text-xs font-normal text-neutral-500">{message.threadCount}</span>
+								<span className="ms-2 text-xs font-normal tabular-nums text-fg-subtle">{message.threadCount}</span>
 							)}
-							<NoteBadge count={message.noteCount} className="ml-2" />
+							<NoteBadge count={message.noteCount} className="ms-2" />
 						</span>
-						<span className={clsx(unread ?"font-medium":"text-neutral-500","shrink-0 text-[11px]")}>
+						<span className={clsx(unread ? "font-semibold text-fg" : "text-fg-subtle", "shrink-0 text-[11px] tabular-nums")}>
 							<OpenedIndicator count={message.openCount} />
 							{message.scheduledAt ? formatScheduledSendTime(message.scheduledAt, t) : formatMessageListTimestamp(message.createdAt, todayKey)}
 						</span>
 					</span>
 					<span
-						className={`mt-1 block truncate text-sm ${unread ? "font-semibold text-neutral-900" : "text-neutral-700"
-							}`}
+						className={clsx("mt-1 block truncate text-sm", unread ? "font-semibold text-fg" : "text-fg-muted")}
 					>
 						{message.subject ?? t("list.noSubject")}
 					</span>
-					<span className="mt-0.5 block truncate text-xs leading-5 text-neutral-500">
+					<span className="mt-0.5 block truncate text-xs leading-5 text-fg-subtle">
 						{preview}
 					</span>
 				</Link>
@@ -229,13 +233,13 @@ function MessageListRowComponent({
 				startAction={{
 					label: read ? t("list.markUnread") : t("list.markRead"),
 					icon: read ? Mail : MailOpen,
-					className: "bg-blue-600",
+					className: "bg-accent text-on-accent",
 					onTrigger: () => void runRowAction(read ? "unread" : "read").catch(() => undefined),
 				}}
 				endAction={{
 					label: t("common.archive"),
 					icon: Archive,
-					className: "bg-emerald-600",
+					className: "bg-success text-on-success",
 					onTrigger: () => void runRowAction("archive").catch(() => undefined),
 				}}
 			>
@@ -244,9 +248,12 @@ function MessageListRowComponent({
 		);
 	}
 
-	const className =
-		`group relative grid min-h-12 w-full grid-cols-[24px_32px_minmax(160px,80px)_1fr_auto] items-center gap-3 px-6 text-left text-sm hover:z-10 hover:bg-[#f2f6fc] hover:shadow-sm has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-inset has-[a:focus-visible]:ring-blue-600 ${active || selected || opening ? "bg-blue-50" : ""
-		} ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`;
+	const className = clsx(
+		"group relative grid min-h-12 w-full grid-cols-[24px_32px_minmax(160px,80px)_1fr_auto] items-center gap-3 px-6 text-start text-sm hover:z-10 hover:bg-surface-hover has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-inset has-[a:focus-visible]:ring-focus",
+		(active || selected || opening) && "bg-accent-subtle",
+		(active || opening) && ROW_ACCENT_BAR,
+		draggable && "cursor-grab active:cursor-grabbing",
+	);
 	const content = (
 		<>
 			{config.folder === "inbox" && message.direction === "inbound" && (
@@ -262,22 +269,22 @@ function MessageListRowComponent({
 						aria-label={t("message.star")}
 						aria-pressed={starred}
 					>
-						<Icon className={`h-4 w-4 ${starred ? "fill-amber-400 text-amber-400" : "text-neutral-300"}`} />
+						<Icon className={`h-4 w-4 ${starred ? "fill-warning text-warning-text" : "text-fg-disabled"}`} />
 					</Button>
 				</Tooltip>
 			)}
 			{(config.folder !== "inbox" || message.direction !== "inbound") && (
-				<Icon className="h-4 w-4 text-neutral-300" />
+				<Icon className="h-4 w-4 text-fg-disabled" />
 			)}
 			<span className={clsx(unread && "font-semibold", getMessagePartyClassName(rowMessage, config.folder))}>
 				{unread && <span className="sr-only">{t("list.unread")} </span>}
 				{party}
 
 				{(message.threadCount ?? 1) > 1 && (
-					<span className="ml-2 text-xs text-neutral-500">{message.threadCount}</span>
+					<span className="ms-2 text-xs tabular-nums text-fg-subtle">{message.threadCount}</span>
 				)}
 			</span>
-			<span className="flex min-w-0 items-center text-neutral-700">
+			<span className="flex min-w-0 items-center text-fg-muted">
 				{/* A fixed slot keeps every subject aligned, with or without notes. */}
 				<span className="w-11 shrink-0">
 					{message.noteCount ? <MessageNotesPopover messageId={message.id} count={message.noteCount} preview={message.notePreview} /> : null}
@@ -293,16 +300,15 @@ function MessageListRowComponent({
 					aria-current={active ? "true" : undefined}
 					className="min-w-0 truncate focus-visible:outline-none after:absolute after:inset-0"
 				>
-					<span className={unread ? "font-semibold text-neutral-900" : ""}>
+					<span className={unread ? "font-semibold text-fg" : ""}>
 						{rowMessage.subject ?? t("list.noSubject")}
 					</span>
-					<span className="text-neutral-500"> - {getMessagePreview(rowMessage, config.folder, t)}</span>
+					<span className="text-fg-subtle"> - {getMessagePreview(rowMessage, config.folder, t)}</span>
 				</Link>
 			</span>
 			<time
 				dateTime={message.createdAt}
-				className={`min-w-[96px] whitespace-nowrap text-right text-xs group-hover:opacity-0 ${unread ? "font-semibold text-neutral-800" : "text-neutral-500"
-					}`}
+				className={clsx("min-w-[96px] whitespace-nowrap text-end text-xs tabular-nums group-hover:opacity-0", unread ? "font-semibold text-fg" : "text-fg-subtle")}
 			>
 				<OpenedIndicator count={message.openCount} />
 				{message.scheduledAt ? formatScheduledSendTime(message.scheduledAt, t) : formatMessageListTimestamp(message.createdAt, todayKey)}
@@ -316,7 +322,7 @@ function MessageListRowComponent({
 				<Checkbox
 					checked={selected}
 					onChange={(event) => onSelectedChange(message.id, event.target.checked)}
-					className="relative z-10 h-4 w-4 rounded border-neutral-300"
+					className="relative z-10"
 					aria-label={t("list.selectMessage")}
 				/>
 				{content}
@@ -337,7 +343,7 @@ function MessageListRowComponent({
 			<Checkbox
 				checked={selected}
 				onChange={(event) => onSelectedChange(message.id, event.target.checked)}
-				className="relative z-10 h-4 w-4 rounded border-neutral-300"
+				className="relative z-10"
 				aria-label={t("list.selectFrom", { sender: party })}
 			/>
 			{content}
@@ -405,6 +411,7 @@ export function MessageFolderPage({
 	const { counts } = useMessageCounts(selectedMailbox?.id, !mailboxesLoading);
 	usePageLoading(mailboxesLoading || isLoading, true);
 	const headerIcons = config.headerIcons ?? [];
+	const EmptyIcon = config.icon;
 	const hasActiveFilters = !!query.trim();
 	const folderCount = config.folderId
 		? counts.customFolders[config.folderId]
@@ -584,7 +591,7 @@ export function MessageFolderPage({
 
 	return (
 		<div className="flex h-full min-h-0 flex-col">
-			<div className={`flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 ${compact ? "px-4" : "px-4.5 md:px-6"}`}>
+			<div className={`flex h-14 shrink-0 items-center justify-between border-b border-line ${compact ? "px-4" : "px-4.5 md:px-6"}`}>
 				{selectedMessageId ? <h2 className="sr-only">{title}</h2> : <h1 className="sr-only">{title}</h1>}
 				<div className="flex items-center gap-3 w-full">
 					<Tooltip label={t("list.selectAll")}>
@@ -592,7 +599,6 @@ export function MessageFolderPage({
 							checked={allVisibleSelected}
 							disabled={messages.length === 0}
 							onChange={(event) => toggleAllVisible(event.target.checked)}
-							className="h-4 w-4 rounded border-neutral-300"
 							aria-label={t("list.selectAll")}
 						/>
 					</Tooltip>
@@ -607,13 +613,13 @@ export function MessageFolderPage({
 						/>
 					) : (
 						(compact || isMobile) && (
-							<p aria-hidden="true" className="truncate font-semibold text-neutral-900 pl-1">{title}</p>
+							<p aria-hidden="true" className="truncate font-display font-semibold text-fg ps-1">{title}</p>
 						)
 					)}
 				</div>
 				{(selectedIds.length === 0 || compact) && (
-					<div className="flex items-center gap-2 text-neutral-500">
-						<span className="text-xs text-neutral-500 whitespace-nowrap">
+					<div className="flex items-center gap-2 text-fg-subtle">
+						<span className="text-xs tabular-nums text-fg-subtle whitespace-nowrap">
 							{t("list.range", { start: pageRange.start, end: pageRange.end, total: pageRange.total })}
 						</span>
 						<Tooltip label={t("list.previousPage")}>
@@ -647,7 +653,7 @@ export function MessageFolderPage({
 									aria-label={t("list.showUnreadOnly")}
 									aria-pressed={unreadOnly}
 									onClick={() => setUnreadOnly((current) => !current)}
-									className={unreadOnly ? "bg-blue-100 text-blue-700 hover:bg-blue-100" : undefined}
+									className={unreadOnly ? "bg-accent-subtle text-accent-text hover:bg-accent-subtle" : undefined}
 								>
 									<ListFilter className="h-4 w-4" />
 								</Button>
@@ -662,7 +668,7 @@ export function MessageFolderPage({
 									aria-label={getEmptyFolderLabel(permanentDeleteFolder, t)}
 									disabled={emptyingFolder || isLoading || total === 0}
 									onClick={() => void emptyFolder()}
-									className="gap-1.5 text-xs font-medium text-red-600 hover:text-red-700"
+									className="gap-1.5 text-xs font-medium text-danger-text hover:bg-danger-subtle hover:text-danger-text"
 								>
 									<Trash2 className="h-4 w-4" />
 									{!compact && <span className="max-md:hidden">{emptyingFolder ? t("list.emptying") : getEmptyFolderLabel(permanentDeleteFolder, t)}</span>}
@@ -677,14 +683,14 @@ export function MessageFolderPage({
 			</div>
 
 			{actionError && (
-				<p role="alert" className="shrink-0 border-b border-red-100 bg-red-50 px-6 py-2 text-sm font-medium text-red-700">
+				<p role="alert" className="shrink-0 border-b border-line border-s-2 border-s-danger bg-danger-subtle px-6 py-2 text-sm font-medium text-danger-text">
 					{actionError}
 				</p>
 			)}
 
 			<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-gutter-stable">
 				{config.folder === "inbox" && !config.folderId && offset === 0 && !mailboxesLoading && <DueFollowUps mailboxId={selectedMailbox?.id} />}
-				<div role="list" aria-label={title} className="divide-y divide-neutral-100">
+				<div role="list" aria-label={title} className="divide-y divide-line-subtle">
 					{messages.map((message) => (
 						<MessageListRow
 							key={message.id}
@@ -704,9 +710,13 @@ export function MessageFolderPage({
 					))}
 				</div>
 				{!isLoading && messages.length === 0 && (
-					<p className="px-6 py-4 text-sm text-neutral-500">
-						{hasActiveFilters ? t("list.noMatch") : config.emptyTextKey ? t(config.emptyTextKey) : config.emptyText}
-					</p>
+					<EmptyState
+						variant={compact || isMobile ? "compact" : "default"}
+						animated={false}
+						headingLevel={selectedMessageId ? 3 : 2}
+						icon={hasActiveFilters ? <Search className="h-6 w-6" aria-hidden="true" /> : <EmptyIcon className="h-6 w-6" aria-hidden="true" />}
+						title={hasActiveFilters ? t("list.noMatch") : config.emptyTextKey ? t(config.emptyTextKey) : config.emptyText}
+					/>
 				)}
 			</div>
 		</div>

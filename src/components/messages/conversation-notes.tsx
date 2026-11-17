@@ -55,28 +55,28 @@ export function ConversationNotes({ className }: ConversationNotesProps) {
 			<div inert={!visible} className={rowClass} style={{ gridTemplateRows: visible ? "1fr" : "0fr" }}>
 				<div className="min-h-0 overflow-hidden">
 					<div className={className}>
-						<section ref={sectionRef} tabIndex={-1} aria-label={t("note.title")} className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50 outline-none">
+						<section ref={sectionRef} tabIndex={-1} aria-label={t("note.title")} className="overflow-hidden border border-line border-s-2 border-s-warning bg-warning-subtle outline-none">
 							<button
 								ref={headerRef}
 								type="button"
 								onClick={() => notes.setOpen(!open)}
 								aria-expanded={open}
 								aria-label={open ? t("note.collapse") : t("note.count", { count: notes.notes.length })}
-								className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-amber-900/80 transition-colors hover:bg-amber-100/70 active:bg-amber-100"
+								className="flex w-full items-center gap-2 px-3 py-2 text-start text-xs text-fg-muted transition-colors hover:bg-warning-subtle active:bg-warning-subtle"
 							>
-								<Note className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-								<span className="shrink-0 font-medium text-amber-950">
+								<Note className="h-3.5 w-3.5 shrink-0 text-warning-text" aria-hidden="true" />
+								<span className="shrink-0 font-medium text-fg">
 									{open ? t("note.title") : t("note.count", { count: notes.notes.length })}
 								</span>
-								{open && notes.notes.length > 0 && <span className="shrink-0">{notes.notes.length}</span>}
+								{open && notes.notes.length > 0 && <span className="shrink-0 tabular-nums">{notes.notes.length}</span>}
 								{!open && last && (
 									<>
 										<span className="min-w-0 truncate">{last.authorName ?? t("note.formerMember")}</span>
-										<time dateTime={last.createdAt} className="ml-auto shrink-0">{formatUserDate(last.createdAt, NOTE_DATE_FORMAT)}</time>
+										<time dateTime={last.createdAt} className="ms-auto shrink-0 tabular-nums">{formatUserDate(last.createdAt, NOTE_DATE_FORMAT)}</time>
 									</>
 								)}
 								<ChevronDown
-									className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-200 motion-reduce:transition-none", open ? "rotate-180" : "", open && "ml-auto")}
+									className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-200 motion-reduce:transition-none", open ? "rotate-180" : "", open && "ms-auto")}
 									aria-hidden="true"
 								/>
 							</button>
@@ -100,7 +100,7 @@ export function NotesBody({ bare = false }: { bare?: boolean }) {
 	return (
 		<div>
 			{notes.notes.length > 0 && (
-				<ul className={cn("divide-y divide-amber-200/70", !bare && "border-t border-amber-200/70")}>
+				<ul className={cn("divide-y divide-line", !bare && "border-t border-line")}>
 					{notes.notes.map((note) => <NoteItem key={note.id} note={note} />)}
 				</ul>
 			)}
@@ -166,10 +166,10 @@ function NoteItem({ note }: { note: ConversationNote }) {
 			<NoteAvatar note={note} author={author} />
 			<div className="min-w-0 flex-1">
 				<div className="flex flex-wrap items-center gap-x-2">
-					<span className="text-sm font-medium text-amber-950">{author}</span>
-					<span className="ml-auto flex items-center gap-x-2">
-						<time dateTime={note.createdAt} className="text-xs text-amber-900/70">{formatUserDate(note.createdAt, NOTE_DATE_FORMAT)}</time>
-						{note.updatedAt !== note.createdAt && <span className="text-xs text-amber-900/50">{t("note.edited")}</span>}
+					<span className="text-sm font-medium text-fg">{author}</span>
+					<span className="ms-auto flex items-center gap-x-2">
+						<time dateTime={note.createdAt} className="text-xs tabular-nums text-fg-subtle">{formatUserDate(note.createdAt, NOTE_DATE_FORMAT)}</time>
+						{note.updatedAt !== note.createdAt && <span className="text-xs text-fg-subtle">{t("note.edited")}</span>}
 					</span>
 				</div>
 				{note.messageId && <NoteEmailChip messageId={note.messageId} />}
@@ -196,7 +196,7 @@ function NoteItem({ note }: { note: ConversationNote }) {
 							editableClassName="min-h-9 py-2"
 							toolbarClassName="border-t-0"
 							toolbarEnd={
-								<span className="ml-auto flex items-center gap-2">
+								<span className="ms-auto flex items-center gap-2">
 									<Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => notes.setEditDraft(note.id, null)} className="h-7">
 										{t("common.cancel")}
 									</Button>
@@ -208,12 +208,12 @@ function NoteItem({ note }: { note: ConversationNote }) {
 						/>
 					</div>
 				) : (
-					<EmailHtmlRenderer html={note.html} dense className="mt-0.5 text-sm text-neutral-900" />
+					<EmailHtmlRenderer html={note.html} dense className="mt-0.5 text-sm text-fg" />
 				)}
-				{error && <p role="alert" className="mt-1 text-xs text-red-600">{error}</p>}
+				{error && <p role="alert" className="mt-1 text-xs text-danger-text">{error}</p>}
 			</div>
 			{!editing && (note.canEdit || note.canDelete) && (
-				<span className="absolute bottom-2 right-3 flex gap-0.5 rounded-md bg-amber-50/90 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
+				<span className="absolute bottom-2 end-3 flex gap-0.5 border border-line bg-surface-raised transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
 					{note.canEdit && (
 						<Tooltip label={t("note.edit")}>
 							<Button
@@ -238,7 +238,7 @@ function NoteItem({ note }: { note: ConversationNote }) {
 								disabled={pending}
 								aria-label={t("note.delete")}
 								onClick={() => void remove()}
-								className="h-6 w-6 px-0 hover:bg-red-50 hover:text-red-600 active:bg-red-100"
+								className="h-6 w-6 px-0 hover:bg-danger-subtle hover:text-danger-text active:bg-danger-subtle"
 							>
 								<Trash2 className="h-3.5 w-3.5" />
 							</Button>
@@ -260,11 +260,11 @@ function NoteEmailChip({ messageId, onRemove }: { messageId: string; onRemove?: 
 			? t("note.aboutEmailTo", { name: email.recipient, date: formatUserDate(email.createdAt, NOTE_DATE_FORMAT) })
 			: t("note.aboutEmail", { name: email.sender, date: formatUserDate(email.createdAt, NOTE_DATE_FORMAT) })
 		: t("note.aboutAnEmail");
-	const chipClass = "inline-flex min-w-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900";
+	const chipClass = "inline-flex min-w-0 items-center gap-1 border border-line bg-surface px-2 py-0.5 text-xs text-fg-muted";
 	return (
 		<span className="mt-1 flex max-w-full items-center gap-1">
 			{email ? (
-				<button type="button" onClick={() => scrollToEmail(messageId)} className={cn(chipClass, "transition-colors hover:bg-amber-200/70 active:bg-amber-200")}>
+				<button type="button" onClick={() => scrollToEmail(messageId)} className={cn(chipClass, "transition-colors hover:bg-surface-hover hover:text-fg active:bg-surface-active")}>
 					<Mail className="h-3 w-3 shrink-0" aria-hidden="true" />
 					<span className="truncate">{label}</span>
 				</button>
@@ -275,7 +275,7 @@ function NoteEmailChip({ messageId, onRemove }: { messageId: string; onRemove?: 
 				</span>
 			)}
 			{onRemove && (
-				<button type="button" onClick={onRemove} aria-label={t("note.detach")} className="rounded-full p-0.5 text-neutral-500 transition-colors hover:bg-neutral-100 active:bg-neutral-200">
+				<button type="button" onClick={onRemove} aria-label={t("note.detach")} className="p-0.5 text-fg-subtle transition-colors hover:bg-surface-hover hover:text-fg active:bg-surface-active">
 					<X className="h-3 w-3" aria-hidden="true" />
 				</button>
 			)}
@@ -326,7 +326,7 @@ function NoteComposer() {
 			onKeyDown={onKeyDown}
 			onFocus={() => setFocused(true)}
 			onBlur={(event) => { if (!containerRef.current?.contains(event.relatedTarget as Node | null)) setFocused(false); }}
-			className="border-t border-amber-200/70 px-3 p-2"
+			className="border-t border-line px-3 p-2"
 		>
 			{notes.attachTo && (
 				<div className="mb-2 mt-3">
@@ -343,8 +343,8 @@ function NoteComposer() {
 				toolbarVisible={active}
 				toolbarClassName="border-t-0"
 				toolbarEnd={
-					<span className="ml-auto flex items-center gap-2">
-						{failed && <span role="alert" className="text-xs text-red-600">{t("note.saveFailed")}</span>}
+					<span className="ms-auto flex items-center gap-2">
+						{failed && <span role="alert" className="text-xs text-danger-text">{t("note.saveFailed")}</span>}
 						{(!empty || notes.adding) && (
 							<Button type="button" size="sm" disabled={notes.adding || empty} onClick={() => void submit()} className="h-7">
 								{notes.adding ? t("common.saving") : t("note.add")}

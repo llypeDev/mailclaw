@@ -24,7 +24,7 @@ export function SenderCheckBadge({ message, className }: SenderCheckBadgeProps) 
 	return (
 		<span
 			title={warning.reasons.map((reason) => t(reasonKeys[reason])).join(" ")}
-			className={cn("mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800", className)}
+			className={cn("mt-1 inline-flex items-center gap-1 bg-warning-subtle px-2 py-0.5 text-[11px] font-medium text-warning-text", className)}
 		>
 			<ShieldAlert className="h-3 w-3 shrink-0" aria-hidden="true" />
 			{t("message.senderCheckShort")}
@@ -53,14 +53,13 @@ export function SenderCheckNotice({
 					aria-expanded={detailsOpen}
 					aria-label={t("message.senderCheckTitle")}
 					className={cn(
-						"flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-[13px] font-medium transition-colors",
-						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600",
-						detailsOpen
-							? "border-amber-300 bg-amber-100 text-amber-950 hover:bg-amber-200/40"
-							: "border-amber-200/80 bg-amber-50/70 text-amber-900 hover:bg-amber-100/70",
+						"flex w-full items-center gap-2 border border-line border-s-[3px] border-s-warning px-3 py-2 text-start text-[13px] font-medium text-fg transition-colors",
+						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+						"bg-warning-subtle",
+						!detailsOpen && "hover:bg-surface-hover",
 					)}
 				>
-					<ShieldAlert className="h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
+					<ShieldAlert className="h-4 w-4 shrink-0 text-warning-text" aria-hidden="true" />
 					<span className="min-w-0 flex-1 break-words">{t("message.senderCheckTitle")}</span>
 					<ChevronDown
 						aria-hidden="true"

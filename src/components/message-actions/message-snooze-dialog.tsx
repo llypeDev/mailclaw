@@ -45,10 +45,10 @@ export function MessageSnoozeDialog({ messageId, open, onOpenChange }: MessageSn
 						))}
 					</div>
 					<div className="space-y-2">
-						<label htmlFor={`header-snooze-until-${messageId}`} className="text-sm font-medium text-neutral-700">{t("snooze.selectDateTime", { timeZone: getUserTimeZone() })}</label>
+						<label htmlFor={`header-snooze-until-${messageId}`} className="text-sm font-medium text-fg-muted">{t("snooze.selectDateTime", { timeZone: getUserTimeZone() })}</label>
 						<Input id={`header-snooze-until-${messageId}`} type="datetime-local" value={snoozedUntil} onChange={(event) => setSnoozedUntil(event.target.value)} />
 					</div>
-					{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+					{error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
 					<Button type="button" onClick={() => void handleSnooze()} disabled={snoozing}>
 						{snoozing ? t("common.snoozing") : t("common.snooze")}
 					</Button>

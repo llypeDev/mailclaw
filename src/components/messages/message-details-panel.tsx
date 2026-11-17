@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
+import { Eyebrow } from "@orangesys/ui";
 import { AlertTriangle, CheckCircle2, ExternalLink, LoaderCircle, ShieldAlert, ShieldCheck, X } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
@@ -25,11 +26,11 @@ import {
 function DetailRow({ label, children, warning }: { label: string; children: ReactNode; warning?: string | null }) {
 	return (
 		<div className="grid gap-0.5 sm:grid-cols-[92px_minmax(0,1fr)] sm:gap-3">
-			<dt className="text-neutral-500">{label}</dt>
-			<dd className="min-w-0 break-words text-neutral-900">
+			<dt className="text-fg-subtle">{label}</dt>
+			<dd className="min-w-0 break-words text-fg">
 				{children}
 				{warning && (
-					<span className="mt-0.5 flex items-start gap-1 text-amber-700">
+					<span className="mt-0.5 flex items-start gap-1 text-warning-text">
 						<AlertTriangle className="mt-px h-3 w-3 shrink-0" aria-hidden="true" />
 						<span>{warning}</span>
 					</span>
@@ -40,10 +41,10 @@ function DetailRow({ label, children, warning }: { label: string; children: Reac
 }
 
 function statusTone(status: string | null): string {
-	if (status === "PASS") return "text-green-700";
-	if (status === "FAIL" || status === "SOFTFAIL" || status === "PERMERROR") return "text-red-700";
-	if (status === "TEMPERROR" || status === "NEUTRAL" || status === "NONE") return "text-amber-700";
-	return "text-neutral-800";
+	if (status === "PASS") return "text-success-text";
+	if (status === "FAIL" || status === "SOFTFAIL" || status === "PERMERROR") return "text-danger-text";
+	if (status === "TEMPERROR" || status === "NEUTRAL" || status === "NONE") return "text-warning-text";
+	return "text-fg";
 }
 
 function AuthenticationRow({
@@ -61,14 +62,14 @@ function AuthenticationRow({
 	const Icon = status === "PASS" ? CheckCircle2 : status === "FAIL" || status === "SOFTFAIL" || status === "PERMERROR" ? AlertTriangle : null;
 	return (
 		<li className="flex items-baseline gap-2">
-			<span className="text-neutral-300" aria-hidden="true">•</span>
-			<span className="w-10 shrink-0 font-medium text-neutral-700">{method}</span>
+			<span className="text-fg-disabled" aria-hidden="true">•</span>
+			<span className="w-10 shrink-0 font-mono font-medium text-fg-muted">{method}</span>
 			<span className="min-w-0 flex-1 break-words">
 				<span className={cn("inline-flex items-center gap-1 font-medium", statusTone(status))}>
 					{Icon && <Icon className="h-3 w-3 shrink-0 self-center" aria-hidden="true" />}
 					{status ?? noResult}
 				</span>
-				{result && detail && <span className="text-neutral-500"> · {detail}</span>}
+				{result && detail && <span className="text-fg-subtle"> · {detail}</span>}
 			</span>
 		</li>
 	);
@@ -97,18 +98,18 @@ export function MessageDetailsPanel({ message, onClose, className }: MessageDeta
 	return (
 		<section
 			aria-label={t("message.detailsTitle")}
-			className={cn("overflow-hidden rounded-xl border border-neutral-200 bg-white text-xs", className)}
+			className={cn("overflow-hidden border border-line bg-surface text-xs", className)}
 		>
-			<header className="flex items-center justify-between gap-2 border-b border-neutral-100 bg-neutral-50/80 px-3 py-2">
-				<h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
+			<header className="flex items-center justify-between gap-2 border-b border-line bg-canvas-subtle px-3 py-2">
+				<Eyebrow as="h2">
 					{t("message.detailsTitle")}
-				</h2>
+				</Eyebrow>
 				{onClose && (
 					<button
 						type="button"
 						onClick={onClose}
 						aria-label={t("navigation.close")}
-						className="rounded p-0.5 text-neutral-400 transition-colors hover:bg-neutral-200/60 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+						className="p-0.5 text-fg-subtle transition-colors hover:bg-surface-hover hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
 					>
 						<X className="h-3.5 w-3.5" aria-hidden="true" />
 					</button>
@@ -122,9 +123,9 @@ export function MessageDetailsPanel({ message, onClose, className }: MessageDeta
 				)}
 			>
 				<section aria-labelledby={messageSectionId}>
-					<h3 id={messageSectionId} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
+					<Eyebrow as="h3" id={messageSectionId} className="text-[10px]">
 						{t("message.detailsMessageSection")}
-					</h3>
+					</Eyebrow>
 					<dl className="mt-2 space-y-2">
 						<DetailRow
 							label={t("message.detailsFrom")}
@@ -133,7 +134,7 @@ export function MessageDetailsPanel({ message, onClose, className }: MessageDeta
 							{original.name ? (
 								<>
 									<span className="font-medium">{original.name}</span>{" "}
-									<span className="text-neutral-500">&lt;{original.address}&gt;</span>
+									<span className="text-fg-subtle">&lt;{original.address}&gt;</span>
 								</>
 							) : original.address}
 						</DetailRow>
@@ -162,19 +163,19 @@ export function MessageDetailsPanel({ message, onClose, className }: MessageDeta
 
 				{message.direction === "inbound" && (
 					<section>
-						<h3 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
+						<Eyebrow as="h3" className="flex items-center gap-1.5 text-[10px]">
 							<ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
 							{t("message.detailsAuthentication")}
-						</h3>
+						</Eyebrow>
 						{authenticationFailed ? (
-							<p className="mt-2 text-neutral-500">{t("message.detailsAuthenticationError")}</p>
+							<p className="mt-2 text-fg-subtle">{t("message.detailsAuthenticationError")}</p>
 						) : loading ? (
-							<p className="mt-2 flex items-center gap-1.5 text-neutral-500">
+							<p className="mt-2 flex items-center gap-1.5 text-fg-subtle">
 								<LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
 								{t("message.detailsChecking")}
 							</p>
 						) : !authentication || !authentication.available ? (
-							<p className="mt-2 text-neutral-500">{t("message.detailsAuthenticationUnavailable")}</p>
+							<p className="mt-2 text-fg-subtle">{t("message.detailsAuthenticationUnavailable")}</p>
 						) : (
 							<>
 								<ul className="mt-2 space-y-1">
@@ -183,22 +184,22 @@ export function MessageDetailsPanel({ message, onClose, className }: MessageDeta
 									<AuthenticationRow method="DMARC" result={authentication.dmarc} detail={authentication.dmarc?.detail ?? null} noResult={t("source.noResult")} />
 								</ul>
 								{authentication.encryption && (
-									<p className="mt-2 text-neutral-500">
-										{t("message.detailsEncryption")} <span className="text-neutral-900">{authentication.encryption}</span>
+									<p className="mt-2 text-fg-subtle">
+										{t("message.detailsEncryption")} <span className="font-mono text-fg">{authentication.encryption}</span>
 									</p>
 								)}
 								{hasDomainMismatchWarning(authentication) && (
-									<p className="mt-2 flex items-start gap-1.5 text-amber-800">
+									<p className="mt-2 flex items-start gap-1.5 text-warning-text">
 										<ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
 										<span>{t("message.detailsDomainMismatch")}</span>
 									</p>
 								)}
 								{(hasPassingCheck || hasFailingCheck) && (
-									<div className="mt-3 rounded-lg bg-neutral-100/70 px-2.5 py-2">
-										<h4 className="text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
+									<div className="mt-3 border-s-2 border-line-strong bg-canvas-subtle px-2.5 py-2">
+										<Eyebrow as="h4" className="text-[10px]">
 											{t("message.detailsExplanationTitle")}
-										</h4>
-										<div className="mt-1 space-y-1 text-[11px] leading-snug text-neutral-600">
+										</Eyebrow>
+										<div className="mt-1 space-y-1 text-[11px] leading-snug text-fg-muted">
 											{hasPassingCheck && <p>{t("message.detailsAuthenticationNote")}</p>}
 											{hasFailingCheck && <p>{t("message.detailsAuthenticationFailureNote")}</p>}
 										</div>
@@ -210,8 +211,8 @@ export function MessageDetailsPanel({ message, onClose, className }: MessageDeta
 				)}
 			</div>
 
-			<footer className="flex justify-end border-t border-neutral-100 px-3 py-2">
-				<Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-blue-600 hover:text-blue-700" onClick={() => setSourceOpen(true)}>
+			<footer className="flex justify-end border-t border-line-subtle px-3 py-2">
+				<Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-accent-text hover:text-accent-text" onClick={() => setSourceOpen(true)}>
 					<ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
 					{t("message.showOriginal")}
 				</Button>

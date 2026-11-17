@@ -118,7 +118,7 @@ export function MessageNotesPopover({ messageId, count, preview }: { messageId: 
 				onKeyDown={contain}
 				onDragStart={contain}
 				onContextMenu={contain}
-				className="fixed z-[100] flex flex-col overflow-hidden rounded-lg border border-amber-200 bg-amber-50 text-left text-sm font-normal shadow-lg"
+				className="fixed z-[100] flex flex-col overflow-hidden border border-line border-t-2 border-t-warning bg-surface-raised text-start text-sm font-normal text-fg shadow-lg"
 				style={{
 					left: placement?.left ?? 0,
 					top: placement?.top,
@@ -175,7 +175,7 @@ function TriggerButton({ count, label, expanded, onToggle }: { count: number; la
 			onClick={onToggle}
 			aria-label={label}
 			aria-expanded={expanded}
-			className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-xs font-normal text-amber-700 transition-colors hover:bg-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
+			className="inline-flex items-center gap-0.5 px-1 py-0.5 text-xs font-normal tabular-nums text-warning-text transition-colors hover:bg-warning-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
 		>
 			<Note className="h-3.5 w-3.5" aria-hidden="true" />
 			{count}
@@ -189,17 +189,17 @@ function PopoverBody({ fallback, onEmpty }: { fallback?: string; onEmpty: () => 
 	useEffect(() => {
 		if (empty) onEmpty();
 	}, [empty, onEmpty]);
-	const preview = <p className="whitespace-pre-line px-3 py-2 text-xs text-amber-900/80">{fallback}</p>;
+	const preview = <p className="whitespace-pre-line px-3 py-2 text-xs text-fg-muted">{fallback}</p>;
 	if (!notes || notes.loading) return preview;
 	return <LazyNotesBody bare fallback={preview} />;
 }
 
 /** Static note icon and count for rows that cannot hover, such as the stacked mobile row. */
-export function NoteBadge({ count, className = "mr-1.5" }: { count?: number; className?: string }) {
+export function NoteBadge({ count, className = "me-1.5" }: { count?: number; className?: string }) {
 	const { t } = useLanguage();
 	if (!count) return null;
 	return (
-		<span className={`${className} inline-flex items-center gap-0.5 align-middle text-xs font-normal text-amber-700`} role="img" aria-label={t("note.count", { count })}>
+		<span className={`${className} inline-flex items-center gap-0.5 align-middle text-xs font-normal tabular-nums text-warning-text`} role="img" aria-label={t("note.count", { count })}>
 			<Note className="h-3 w-3" aria-hidden="true" />
 			{count}
 		</span>

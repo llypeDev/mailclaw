@@ -75,8 +75,8 @@ function DeleteConfirm({
 
 	return (
 		<>
-			{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-			<div className="flex justify-end gap-2 border-t border-neutral-200 pt-4">
+			{error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
+			<div className="flex justify-end gap-2 border-t border-line pt-4">
 				<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
 					{t("common.cancel")}
 				</Button>

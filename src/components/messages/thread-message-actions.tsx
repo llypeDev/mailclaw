@@ -136,14 +136,14 @@ export function ThreadMessageActions({
 
 	return (
 		<div className="flex items-center gap-0.5">
-			{error && <span role="alert" className="mr-1 max-w-32 truncate text-xs text-red-600" title={error}>{error}</span>}
+			{error && <span role="alert" className="me-1 max-w-32 truncate text-xs text-danger-text" title={error}>{error}</span>}
 			{onToggleDetails && (
 				<Tooltip label={t("message.details")}>
 					<Button
 						type="button"
 						variant="ghost"
 						size="sm"
-						className={cn("h-8 w-8 px-0", detailsOpen && "bg-neutral-100 text-neutral-900")}
+						className={cn("h-8 w-8 px-0", detailsOpen && "bg-surface-active text-fg")}
 						aria-label={t("message.details")}
 						aria-expanded={detailsOpen}
 						onClick={onToggleDetails}
@@ -158,7 +158,7 @@ export function ThreadMessageActions({
 						type="button"
 						variant="ghost"
 						size="sm"
-						className="h-8 gap-1 px-2 text-xs text-neutral-600"
+						className="h-8 gap-1 px-2 text-xs tabular-nums text-fg-muted"
 						aria-label={t("note.count", { count: noteCount })}
 						onClick={() => notes.setOpen(true)}
 					>
@@ -178,7 +178,7 @@ export function ThreadMessageActions({
 					disabled={pending}
 					onClick={() => void onToggleStar()}
 				>
-					<Star className={starred ? "h-4 w-4 fill-amber-400 text-amber-400" : "h-4 w-4"} />
+					<Star className={starred ? "h-4 w-4 fill-warning text-warning-text" : "h-4 w-4"} />
 				</Button>
 			</Tooltip>
 			{!starOnly && (

@@ -72,7 +72,7 @@ export function ContactAvatarForm({
 					type="button"
 					onClick={() => inputRef.current?.click()}
 					disabled={busy}
-					className="group relative h-14 w-14 overflow-hidden rounded-full outline-none ring-blue-500 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-wait"
+					className="group relative h-14 w-14 overflow-hidden rounded-full outline-none ring-focus ring-offset-surface focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-wait"
 					aria-label={hasAvatar ? t("avatar.change", { name }) : t("avatar.upload", { name })}
 				>
 					<ContactAvatar
@@ -82,21 +82,22 @@ export function ContactAvatarForm({
 						hasManagedAvatar={hasAvatar}
 						className="h-14 w-14 text-lg"
 					/>
-					<span className="absolute inset-0 flex items-center justify-center bg-neutral-950/55 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-						{busy ? <LoaderCircle className="h-5 w-5 animate-spin text-white" /> : <Camera className="h-5 w-5 text-white" />}
+					{/* A scrim over the picture: the icon stays white in every theme. */}
+					<span className="absolute inset-0 flex items-center justify-center bg-black/55 text-[white] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+						{busy ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
 					</span>
 				</button>
 				<div>
-					<p className="text-sm font-medium text-neutral-900">{t("avatar.title")}</p>
-					<p className="text-xs text-neutral-500">{t("avatar.contactHint")}</p>
+					<p className="text-sm font-medium text-fg">{t("avatar.title")}</p>
+					<p className="text-xs text-fg-subtle">{t("avatar.contactHint")}</p>
 					{hasAvatar && (
-						<button type="button" onClick={() => void onRemove()} disabled={busy} className="mt-1 text-xs font-medium text-blue-600 hover:underline disabled:text-neutral-400">
+						<button type="button" onClick={() => void onRemove()} disabled={busy} className="mt-1 text-xs font-medium text-accent-text hover:underline disabled:text-fg-disabled">
 							{t("avatar.remove")}
 						</button>
 					)}
 				</div>
 			</div>
-			{status && <p role="alert" className="text-xs text-red-600">{status}</p>}
+			{status && <p role="alert" className="text-xs text-danger-text">{status}</p>}
 		</div>
 	);
 }

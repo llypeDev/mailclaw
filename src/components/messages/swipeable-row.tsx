@@ -7,6 +7,7 @@ import type { LucideIcon } from "@/components/icons";
 type SwipeAction = {
 	label: string;
 	icon: LucideIcon;
+	/** The revealed fill and its text colour, e.g. `bg-accent text-on-accent`. */
 	className: string;
 	onTrigger: () => void;
 };
@@ -79,7 +80,7 @@ export function SwipeableRow({ children, startAction, endAction, disabled, role 
 			{action && Icon && (
 				<div
 					aria-hidden="true"
-					className={clsx("absolute inset-0 flex items-center px-6 text-white", offset > 0 ? "justify-start" : "justify-end", action.className)}
+					className={clsx("absolute inset-0 flex items-center px-6", offset > 0 ? "justify-start" : "justify-end", action.className)}
 				>
 					<span className={clsx("flex items-center gap-2 text-sm font-medium transition-transform", armed && "scale-110")}>
 						<Icon className="h-5 w-5" />
@@ -98,7 +99,7 @@ export function SwipeableRow({ children, startAction, endAction, disabled, role 
 					event.preventDefault();
 					event.stopPropagation();
 				}}
-				className={clsx("relative bg-white", !dragging && "transition-transform duration-200 ease-out motion-reduce:transition-none")}
+				className={clsx("relative bg-surface", !dragging && "transition-transform duration-200 ease-out motion-reduce:transition-none")}
 				style={{ transform: offset ? `translateX(${offset}px)` : undefined, touchAction: "pan-y" }}
 			>
 				{children}

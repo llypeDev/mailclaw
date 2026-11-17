@@ -23,7 +23,7 @@ export function getAttachmentVisual(
 	if (previewKind === "image") {
 		return {
 			icon: Image,
-			iconClassName: "bg-blue-50 text-blue-700",
+			iconClassName: "text-[var(--or-color-viz-2)]",
 			labelKey: "attachment.image",
 			thumbnail: "image",
 		};
@@ -31,7 +31,7 @@ export function getAttachmentVisual(
 	if (previewKind === "video") {
 		return {
 			icon: FileVideoCamera,
-			iconClassName: "bg-rose-50 text-rose-700",
+			iconClassName: "text-[var(--or-color-viz-5)]",
 			labelKey: "attachment.video",
 			thumbnail: "video",
 		};
@@ -39,7 +39,7 @@ export function getAttachmentVisual(
 	if (previewKind === "audio") {
 		return {
 			icon: Music,
-			iconClassName: "bg-orange-50 text-orange-700",
+			iconClassName: "text-[var(--or-color-viz-4)]",
 			labelKey: "attachment.audio",
 			thumbnail: null,
 		};
@@ -47,7 +47,7 @@ export function getAttachmentVisual(
 	if (previewKind === "pdf") {
 		return {
 			icon: FileText,
-			iconClassName: "bg-red-50 text-red-700",
+			iconClassName: "text-[var(--or-color-viz-5)]",
 			labelKey: "attachment.pdf",
 			thumbnail: null,
 		};
@@ -60,7 +60,7 @@ export function getAttachmentVisual(
 	) {
 		return {
 			icon: FileSpreadsheet,
-			iconClassName: "bg-emerald-50 text-emerald-700",
+			iconClassName: "text-[var(--or-color-viz-1)]",
 			labelKey: "attachment.spreadsheet",
 			thumbnail: null,
 		};
@@ -72,7 +72,7 @@ export function getAttachmentVisual(
 	) {
 		return {
 			icon: Presentation,
-			iconClassName: "bg-amber-50 text-amber-700",
+			iconClassName: "text-[var(--or-color-viz-3)]",
 			labelKey: "attachment.presentation",
 			thumbnail: null,
 		};
@@ -85,7 +85,7 @@ export function getAttachmentVisual(
 	) {
 		return {
 			icon: FileArchive,
-			iconClassName: "bg-violet-50 text-violet-700",
+			iconClassName: "text-[var(--or-color-viz-2)]",
 			labelKey: "attachment.archive",
 			thumbnail: null,
 		};
@@ -99,7 +99,7 @@ export function getAttachmentVisual(
 	) {
 		return {
 			icon: FileCode,
-			iconClassName: "bg-cyan-50 text-cyan-700",
+			iconClassName: "text-[var(--or-color-viz-1)]",
 			labelKey: "attachment.code",
 			thumbnail: null,
 		};
@@ -107,7 +107,7 @@ export function getAttachmentVisual(
 	if (previewKind === "text" || type.includes("word") || /\.(doc|docx|odt|rtf|txt)$/.test(filename)) {
 		return {
 			icon: FileType,
-			iconClassName: "bg-sky-50 text-sky-700",
+			iconClassName: "text-[var(--or-color-viz-2)]",
 			labelKey: "attachment.document",
 			thumbnail: null,
 		};
@@ -115,7 +115,7 @@ export function getAttachmentVisual(
 
 	return {
 		icon: FileText,
-		iconClassName: "bg-neutral-100 text-neutral-600",
+		iconClassName: "text-fg-subtle",
 		labelKey: "attachment.file",
 		thumbnail: null,
 	};
