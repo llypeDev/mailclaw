@@ -49,16 +49,15 @@ export default function DomainDnsDetails({
 			<li key={record} className={`${ROW_GRID} ${getDnsAuthItemClass(item.status)}`}>
 				<StatusBadge ok={ok} tone={item.status === "missing" ? "red" : "neutral"} />
 				<span className="min-w-0">
-					<span className="block font-medium text-neutral-900">{t("domains.recordLabel", { label: item.label })}</span>
-					<span className="block text-xs text-neutral-500">{t(dnsAuthDescriptions[record])}</span>
+					<span className="block font-display font-medium text-fg">{t("domains.recordLabel", { label: item.label })}</span>
+					<span className="block text-xs text-fg-muted">{t(dnsAuthDescriptions[record])}</span>
 				</span>
 				{ok ? (
-					<span className="min-w-0 break-all text-neutral-500">{item.found.length > 0 ? item.found.join(", ") : item.name}</span>
+					<span className="min-w-0 break-all font-mono text-xs leading-5 text-fg-muted">{item.found.length > 0 ? item.found.join(", ") : item.name}</span>
 				) : (
 					<Button
 						variant="outline"
 						size="sm"
-						className="shrink-0 bg-white"
 						disabled={manual || setupRecord === record}
 						title={manual ? t("domains.manualDns") : t("domains.createRecord", { label: item.label })}
 						onClick={() => onSetup?.(record)}
@@ -82,22 +81,22 @@ export default function DomainDnsDetails({
 	);
 
 	return (
-		<div className="px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
+		<div className="space-y-8 border-t border-line pt-5">
 			{audit && (
 				<section>
-					<h2 className="text-base font-semibold text-neutral-900">{t("domains.setupTitle")}</h2>
-					<p className="mt-0.5 text-sm text-neutral-500">
+					<h2 className="font-display text-base font-semibold text-fg">{t("domains.setupTitle")}</h2>
+					<p className="mt-0.5 text-sm text-fg-muted">
 						{t("domains.setupDescription")}
 					</p>
 					<ul className="mt-3 space-y-2">
 						{(["mx", "spf", "dmarc"] as DnsAuthRecord[]).map(auditRow)}
 					</ul>
 					{manual && (
-						<p className="text-xs text-neutral-500">
+						<p className="mt-2 text-xs text-fg-muted">
 							{t("domains.manualDnsNote")}
 						</p>
 					)}
-					{setupMessage && <p role="alert" className="text-xs text-red-600">{setupMessage}</p>}
+					{setupMessage && <p role="alert" className="mt-2 text-xs text-danger-text">{setupMessage}</p>}
 				</section>
 			)}
 			<ReceivingSetupSection

@@ -84,24 +84,24 @@ export default function ReceivingProviderConfig({ domainId, provider, onReady }:
 				)}
 			{credentials && (
 				<ul className="space-y-2">
-					{loading && !view && <li className="list-none text-sm text-neutral-500">{t("domains.checking")}</li>}
+					{loading && !view && <li className="list-none text-sm text-fg-muted">{t("domains.checking")}</li>}
 					{view?.steps.filter((step) => provider !== "resend" || step.key !== "key").map((step) => (
 						<StatusRow key={step.key} ok={step.ok} title={step.label} hint="">{step.detail ?? (step.ok ? t("domains.ok") : t("domains.notSetUp"))}</StatusRow>
 					))}
 				</ul>
 			)}
-			{credentials && view?.restrictedKey && <p className="text-xs text-neutral-500">{t("domains.restrictedKey", { webhook: "\u0001" }).split("\u0001").flatMap((part, index) => index === 0 ? [part] : [<code key={index}>email.received</code>, part])}</p>}
+			{credentials && view?.restrictedKey && <p className="text-xs text-fg-muted">{t("domains.restrictedKey", { webhook: "\u0001" }).split("\u0001").flatMap((part, index) => index === 0 ? [part] : [<code key={index} className="font-mono text-fg">email.received</code>, part])}</p>}
 			{credentials && !view?.restrictedKey && (
 				<div className="flex flex-wrap items-center justify-between gap-2">
-					<p className="text-xs text-neutral-500">{t(COPY[provider].hint)}</p>
+					<p className="text-xs text-fg-muted">{t(COPY[provider].hint)}</p>
 					<span className="flex gap-2">
-						<Button size="sm" variant="outline" className="bg-white" disabled={busy || loading} onClick={refresh}>{loading ? t("domains.checking") : t("domains.checkAgain")}</Button>
+						<Button size="sm" variant="outline" disabled={busy || loading} onClick={refresh}>{loading ? t("domains.checking") : t("domains.checkAgain")}</Button>
 						{needsSetup && <Button size="sm" disabled={busy || loading} onClick={() => void setup()}>{busy ? t("domains.working") : t("domains.setupReceivingButton")}</Button>}
 					</span>
 				</div>
 			)}
-			{notice && <p role="status" className="text-xs text-green-700">{notice}</p>}
-			{error && <p role="alert" className="text-xs text-red-600">{error}</p>}
+			{notice && <p role="status" className="text-xs text-success-text">{notice}</p>}
+			{error && <p role="alert" className="text-xs text-danger-text">{error}</p>}
 		</div>
 	);
 }

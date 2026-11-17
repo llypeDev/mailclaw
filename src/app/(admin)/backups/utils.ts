@@ -1,3 +1,4 @@
+import type { TagTone } from "@orangesys/ui";
 import { authFetch } from "@/lib/auth/client";
 import { formatUserDate } from "@/lib/time/utils";
 import type { BackupItem, BackupsResponse, BackupSettings } from "./types";
@@ -81,9 +82,10 @@ export function formatBackupSize(value: number | null): string {
 	return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function getStatusClass(status: BackupItem["status"]): string {
-	if (status === "completed") return "border-green-200 bg-green-50 text-green-700";
-	if (status === "failed") return "border-red-200 bg-red-50 text-red-700";
-	if (status === "running") return "border-blue-200 bg-blue-50 text-blue-700";
-	return "border-amber-200 bg-amber-50 text-amber-700";
+/** The Orange Tag tone a backup status is shown in. */
+export function getStatusTone(status: BackupItem["status"]): TagTone {
+	if (status === "completed") return "success";
+	if (status === "failed") return "danger";
+	if (status === "running") return "info";
+	return "warning";
 }

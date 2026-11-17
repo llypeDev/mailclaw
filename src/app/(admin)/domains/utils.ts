@@ -23,14 +23,43 @@ export function getDnsAuthStatusLabel(status: DnsAuthStatus, t: Translator = def
 	}
 }
 
+export type StatusTone = "success" | "danger" | "warning" | "neutral";
+
+/** The start-edge colour of a status row (`ROW_GRID`) for each tone. */
+export const STATUS_ROW_TONE: Record<StatusTone, string> = {
+	success: "border-s-success",
+	danger: "border-s-danger",
+	warning: "border-s-warning",
+	neutral: "border-s-line-strong",
+};
+
+/** The fill and icon colour of a status row's icon tile for each tone. */
+export const STATUS_TILE_TONE: Record<StatusTone, string> = {
+	success: "bg-success-subtle text-success-text",
+	danger: "bg-danger-subtle text-danger-text",
+	warning: "bg-warning-subtle text-warning-text",
+	neutral: "bg-canvas-subtle text-fg-subtle",
+};
+
+/** The Tag tone for a Resend DNS record status (verified, pending, not_started, failed, temporary_failure). */
+export function getResendRecordTone(status: string): "success" | "warning" | "danger" | "neutral" {
+	if (status === "verified") return "success";
+	if (status === "failed" || status === "temporary_failure") return "danger";
+	if (status === "pending") return "warning";
+	return "neutral";
+}
+
+/** A list of DNS records drawn as Orange's table: a 1px frame, rows on the surface split by 1px rules. */
+export const DNS_RECORD_LIST = "divide-y divide-line-subtle border border-line bg-surface text-xs text-fg";
+
 export function getDnsAuthItemClass(status: DnsAuthStatus): string {
 	switch (status) {
 		case "ok":
-			return "bg-green-50 text-green-800";
+			return STATUS_ROW_TONE.success;
 		case "missing":
-			return "bg-red-50 text-red-800";
+			return STATUS_ROW_TONE.danger;
 		default:
-			return "bg-neutral-100 text-neutral-600";
+			return STATUS_ROW_TONE.neutral;
 	}
 }
 

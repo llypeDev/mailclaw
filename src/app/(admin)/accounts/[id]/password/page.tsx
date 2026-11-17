@@ -52,20 +52,20 @@ export default function AccountPasswordPage() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("account.password.title")}</h1>
-				<p className="mt-2 text-sm text-neutral-500">{t("account.password.resetFor", { name: account?.name ?? t("account.password.thisAccount") })}</p>
+				<h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-fg md:text-3xl">{t("account.password.title")}</h1>
+				<p className="mt-2 text-sm text-fg-muted">{t("account.password.resetFor", { name: account?.name ?? t("account.password.thisAccount") })}</p>
 			</div>
 			<form
 				onSubmit={(event) => {
 					event.preventDefault();
 					if (account && password.trim().length >= 8) setPendingReset(true);
 				}}
-				className="space-y-5 rounded-3xl bg-white p-6"
+				className="space-y-5 border border-line bg-surface p-6"
 			>
 				{account && !account.editable ? (
-					<p className="text-sm text-neutral-500">{t("account.password.onlyPrimary")}</p>
+					<p className="text-sm text-fg-subtle">{t("account.password.onlyPrimary")}</p>
 				) : account && !account.passwordSet ? (
-					<p className="text-sm text-neutral-500">{t("account.recovery.usesPasskeys")}</p>
+					<p className="text-sm text-fg-subtle">{t("account.recovery.usesPasskeys")}</p>
 				) : (
 					<>
 						<div className="space-y-2">
@@ -82,7 +82,7 @@ export default function AccountPasswordPage() {
 								onChange={(event) => setPassword(event.target.value)}
 								placeholder={t("account.password.placeholder")}
 							/>
-							<p className="text-xs leading-5 text-neutral-500">
+							<p className="text-xs leading-5 text-fg-subtle">
 								{t("account.password.hint")}
 							</p>
 						</div>
@@ -92,13 +92,13 @@ export default function AccountPasswordPage() {
 					</>
 				)}
 			</form>
-			{message && <p role="status" className="text-sm text-neutral-500">{message}</p>}
+			{message && <p role="status" className="text-sm text-fg-muted">{message}</p>}
 
 			{account?.editable && (
-				<div className="space-y-3 rounded-3xl border border-neutral-100 bg-white p-6">
+				<div className="space-y-3 border border-line bg-surface p-6">
 					<div>
-						<h2 className="text-lg font-semibold text-neutral-900">{t("account.recovery.title")}</h2>
-						<p className="mt-1 text-sm text-neutral-500">{t("account.recovery.description")}</p>
+						<h2 className="font-display text-lg font-semibold text-fg">{t("account.recovery.title")}</h2>
+						<p className="mt-1 text-sm text-fg-subtle">{t("account.recovery.description")}</p>
 					</div>
 					<Button type="button" variant="outline" onClick={() => setRecoveryOpen(true)}>
 						<KeyRound className="h-4 w-4" />
@@ -160,7 +160,7 @@ export default function AccountPasswordPage() {
 						<DialogTitle>{t("account.recovery.createdTitle")}</DialogTitle>
 						<DialogDescription>{t("account.recovery.createdDescription")}</DialogDescription>
 					</DialogHeader>
-					<code className="block break-all rounded-xl bg-neutral-50 p-3 font-mono text-xs text-neutral-800">{recoveryLink}</code>
+					<code className="block break-all border border-line bg-canvas-subtle p-3 font-mono text-xs text-fg">{recoveryLink}</code>
 					<div className="flex items-center gap-3">
 						<Button
 							type="button"

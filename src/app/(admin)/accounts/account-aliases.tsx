@@ -12,40 +12,40 @@ export function AccountAliases({ domains, domainId, username, useAllDomains, onU
 	const { t } = useLanguage();
 	const availableDomains = domains.filter((domain) => domain.status === "active");
 	return (
-		<div className="space-y-4 border-t border-neutral-100 pt-4">
-			<label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
+		<div className="space-y-4 border-t border-line pt-4">
+			<label className="flex items-start gap-3 border border-line bg-canvas-subtle p-4">
 				<Checkbox checked={useAllDomains} onChange={(event) => onUseAllDomainsChange(event.target.checked)} />
 				<span>
 					<span className="block text-sm font-medium">{t("aliases.useAll")}</span>
-					<span className="mt-1 block text-sm text-neutral-500">
+					<span className="mt-1 block text-sm text-fg-subtle">
 						{t("aliases.useAllHint")}
 					</span>
 				</span>
 			</label>
 			<div className="space-y-3">
 				<div>
-					<p className="text-sm font-medium">{t("aliases.additional")} <span className="font-normal text-neutral-500">{t("aliases.optional")}</span></p>
-					<p className="mt-1 text-sm text-neutral-500">{t("aliases.hint")}</p>
+					<p className="text-sm font-medium">{t("aliases.additional")} <span className="font-normal text-fg-subtle">{t("aliases.optional")}</span></p>
+					<p className="mt-1 text-sm text-fg-subtle">{t("aliases.hint")}</p>
 				</div>
 				{aliases.map((alias, index) => (
 					<div key={alias.id} className="flex items-center gap-2">
-						<div className="flex min-w-0 flex-1 items-center gap-1 rounded-md border border-neutral-200 bg-white">
+						<div className="flex min-w-0 flex-1 items-center gap-1 border border-line-control bg-surface transition-[border-color,box-shadow] duration-150 focus-within:border-accent focus-within:shadow-[0_0_0_1px_var(--or-color-accent)]">
 							<Input
 								aria-label={t("aliases.usernameLabel", { n: index + 1 })}
 								value={alias.localPart}
 								onChange={(event) => onAliasesChange(aliases.map((item) => item.id === alias.id ? { ...item, localPart: event.target.value } : item))}
 								placeholder={t("accounts.username")}
-								className="min-w-0 flex-1 rounded-none border-0 shadow-none"
+								className="min-w-0 flex-1 border-0 focus:shadow-none"
 								pattern="[a-zA-Z0-9._%+\-]+"
 								maxLength={64}
 								required
 							/>
-							<span className="text-sm text-neutral-500">@</span>
+							<span className="text-sm text-fg-subtle">@</span>
 							<Select
 								aria-label={t("aliases.domainLabel", { n: index + 1 })}
 								value={alias.domainId}
 								onChange={(event) => onAliasesChange(aliases.map((item) => item.id === alias.id ? { ...item, domainId: event.target.value } : item))}
-								containerClassName="min-w-0 flex-1 self-stretch rounded-none border-0 px-0"
+								containerClassName="min-w-0 flex-1 self-stretch border-0 px-0"
 								className="min-w-0 bg-transparent px-2 text-sm"
 								required
 							>

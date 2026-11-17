@@ -4,6 +4,7 @@ import { mobilePrimaryActionClass } from "@/components/page-header-utils";
 import { confirmDestructive } from "@/components/ui/confirm-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { EmptyState } from "@orangesys/ui";
 import { Copy, KeyRound, Plus, Trash2 } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
@@ -77,7 +78,7 @@ export default function ApiKeysPage() {
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center justify-between gap-4">
-				<h1 className="text-2xl md:text-3xl font-medium">{t("admin.section.apiKeysTitle")}</h1>
+				<h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-fg md:text-3xl">{t("admin.section.apiKeysTitle")}</h1>
 				<Dialog open={createOpen} onOpenChange={(open) => { if (create.isPending) return; setCreateOpen(open); if (!open) { setNewKey(null); setCopied(false); } }}>
 					<DialogTrigger asChild>
 						<Button className={mobilePrimaryActionClass}>
@@ -95,9 +96,9 @@ export default function ApiKeysPage() {
 							<Label htmlFor="admin-key-name">{t("apiKeys.keyName")}</Label>
 							<Input id="admin-key-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} placeholder={t("adminKeys.namePlaceholder")} />
 						</div>
-						<label className="flex items-start gap-3 text-sm"><Checkbox checked={mcpAllowed} onChange={(event) => setMcpAllowed(event.target.checked)} /><span><strong>{t("apiKeys.allowMcp")}</strong><span className="mt-1 block text-neutral-500">{t("adminKeys.allowMcpHint")}</span></span></label>
+						<label className="flex items-start gap-3 text-sm"><Checkbox checked={mcpAllowed} onChange={(event) => setMcpAllowed(event.target.checked)} /><span><strong>{t("apiKeys.allowMcp")}</strong><span className="mt-1 block text-fg-subtle">{t("adminKeys.allowMcpHint")}</span></span></label>
 						<fieldset className="space-y-2">
-							<legend className="text-sm font-medium">{t("apiKeys.permissions")}</legend>
+							<legend className="font-display text-sm font-semibold text-fg">{t("apiKeys.permissions")}</legend>
 							<div className="space-y-2">
 								{ADMIN_KEY_PERMISSIONS.map((scope) => (
 									<label key={scope.value} className="flex items-start gap-3 text-sm">
@@ -112,13 +113,13 @@ export default function ApiKeysPage() {
 												)
 											}
 										/>
-										<span><strong>{t(scope.labelKey)}</strong><span className="block text-neutral-500">{t(scope.descriptionKey)}</span></span>
+										<span><strong>{t(scope.labelKey)}</strong><span className="block text-fg-subtle">{t(scope.descriptionKey)}</span></span>
 									</label>
 								))}
 							</div>
 						</fieldset>
 						{create.isError && (
-							<p role="alert" className="text-sm text-red-600">{(create.error as Error).message}</p>
+							<p role="alert" className="text-sm text-danger-text">{(create.error as Error).message}</p>
 						)}
 						<Button
 							onClick={() => create.mutate()}
@@ -127,32 +128,42 @@ export default function ApiKeysPage() {
 							{create.isPending ? t("accounts.creating") : t("adminKeys.createKey")}
 						</Button>
 						</div>}
-						{newKey && <div className="space-y-3 rounded-xl border border-blue-200 bg-blue-50 p-4"><code className="block break-all rounded bg-white p-2 text-xs">{newKey}</code>{createdMcpAllowed && <McpAgentInstructions mode="admin" apiKey={newKey} />}<div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => void navigator.clipboard.writeText(newKey).then(() => setCopied(true))}><Copy className="h-4 w-4" />{copied ? t("common.copied") : t("apiKeys.copyKey")}</Button><Button type="button" size="sm" variant="ghost" onClick={() => { setCreateOpen(false); setNewKey(null); setCopied(false); }}>{t("common.done")}</Button></div></div>}
+						{newKey && <div className="space-y-3 border border-accent-border bg-accent-subtle p-4"><code className="block break-all border border-line bg-surface p-2 font-mono text-xs text-fg">{newKey}</code>{createdMcpAllowed && <McpAgentInstructions mode="admin" apiKey={newKey} />}<div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => void navigator.clipboard.writeText(newKey).then(() => setCopied(true))}><Copy className="h-4 w-4" />{copied ? t("common.copied") : t("apiKeys.copyKey")}</Button><Button type="button" size="sm" variant="ghost" onClick={() => { setCreateOpen(false); setNewKey(null); setCopied(false); }}>{t("common.done")}</Button></div></div>}
 					</DialogContent>
 				</Dialog>
 			</div>
 			<section className="space-y-3">
-				{revoke.isError && <p role="alert" className="text-sm text-red-600">{revoke.error.message}</p>}
+				{revoke.isError && <p role="alert" className="text-sm text-danger-text">{revoke.error.message}</p>}
 				{isLoading && (
 					<SectionRowSkeleton />
 				)}
 				{!isLoading && (data?.apiKeys ?? []).length === 0 && (
-					<p className="rounded-2xl bg-white px-5 py-4 text-sm text-neutral-500">
-						{t("apiKeys.none")}
-					</p>
+					<div className="border border-line bg-surface">
+						<EmptyState
+							headingLevel={2}
+							icon={<KeyRound className="h-6 w-6" />}
+							title={t("apiKeys.none")}
+							action={
+								<Button onClick={() => setCreateOpen(true)}>
+									<Plus className="h-4 w-4" />
+									{t("apiKeys.new")}
+								</Button>
+							}
+						/>
+					</div>
 				)}
-				<List>
+				{(data?.apiKeys ?? []).length > 0 && <List>
 					{(data?.apiKeys ?? []).map((key) => (
 						<ListRow
 							key={key.id}
 							className="px-5 py-4"
 						>
-							<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+							<span className="flex h-10 w-10 shrink-0 items-center justify-center border border-line bg-canvas-subtle text-fg-muted">
 								<KeyRound className="h-5 w-5" />
 							</span>
 							<span className="min-w-0 flex-1 space-y-2">
-								<span className="flex min-w-0 flex-wrap items-center gap-2"><strong className="truncate text-sm font-semibold text-neutral-900">{key.name}</strong>{key.kind === "mcp" && <Badge variant="outline">MCP</Badge>}</span>
-								<span className="block truncate no-font-mono text-sm text-neutral-500">{key.prefix}...</span>
+								<span className="flex min-w-0 flex-wrap items-center gap-2"><strong className="truncate text-sm font-semibold text-fg">{key.name}</strong>{key.kind === "mcp" && <Badge variant="outline">MCP</Badge>}</span>
+								<span className="block truncate no-font-mono text-sm text-fg-subtle">{key.prefix}...</span>
 								<span className="flex flex-wrap gap-1">
 									{parseApiKeyScopes(key.scopes).map((scope) => (
 										<Badge key={scope} variant="outline">
@@ -164,7 +175,7 @@ export default function ApiKeysPage() {
 						<Button type="button" size="sm" variant="outline" disabled={revoke.isPending} onClick={async () => { if (await confirmDestructive(t("apiKeys.revokeConfirm", { name: key.name }))) revoke.mutate(key.id); }}><Trash2 className="h-4 w-4" />{t("common.revoke")}</Button>
 						</ListRow>
 					))}
-				</List>
+				</List>}
 			</section>
 		</div>
 	);

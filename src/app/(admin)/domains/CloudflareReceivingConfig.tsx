@@ -38,7 +38,7 @@ export default function CloudflareReceivingConfig({ domainId, routingOk, routing
 					title={t("domains.emailRouting")}
 					hint={t("domains.emailRoutingHint")}
 					action={!routingOk ? (
-						<Button size="sm" variant="outline" className="bg-white" disabled={busy || manual} title={manual ? t("domains.manualDns") : undefined} onClick={() => void setup()}>
+						<Button size="sm" variant="outline" disabled={busy || manual} title={manual ? t("domains.manualDns") : undefined} onClick={() => void setup()}>
 							{busy ? t("domains.settingUp") : t("domains.setup")}
 						</Button>
 					) : undefined}
@@ -46,7 +46,7 @@ export default function CloudflareReceivingConfig({ domainId, routingOk, routing
 					{routingLabel}
 				</StatusRow>
 			</ul>
-			{error && <p role="alert" className="text-xs text-red-600">{error}</p>}
+			{error && <p role="alert" className="text-xs text-danger-text">{error}</p>}
 		</div>
 	);
 }

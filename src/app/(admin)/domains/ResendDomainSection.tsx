@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Tag } from "@orangesys/ui";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/components/language-provider";
 import { authFetch } from "@/lib/auth/client";
 import type { ResendDomainView } from "@/lib/domains/resend-domain-types";
 import ResendKeyRow from "./ResendKeyRow";
 import { StatusRow } from "./status-row";
+import { DNS_RECORD_LIST, getResendRecordTone } from "./utils";
 
 type ResendResponse = { keyConfigured?: boolean; canManageDomains?: boolean; resend?: ResendDomainView | null; error?: string };
 
@@ -112,12 +114,11 @@ export default function ResendDomainSection({ domainId, onStatus }: { domainId: 
 						title={t("resend.domain")}
 						hint={t("resend.domainHint")}
 						action={verified ? (
-							<Button size="sm" variant="outline" className="bg-white" disabled={busy !== null} onClick={() => void sendTest()}>{busy === "test" ? t("resend.sending") : t("resend.sendTest")}</Button>
+							<Button size="sm" variant="outline" disabled={busy !== null} onClick={() => void sendTest()}>{busy === "test" ? t("resend.sending") : t("resend.sendTest")}</Button>
 						) : domainButton && !loading ? (
 							<Button
 								size="sm"
 								variant="outline"
-								className="bg-white"
 								disabled={!canManage || busy !== null}
 								title={canManage ? undefined : needsFullKey}
 								onClick={() => void domainAction(view?.registered && (!view.dnsManaged || view.missingDns === 0) ? "verify" : "setup")}
@@ -131,24 +132,24 @@ export default function ResendDomainSection({ domainId, onStatus }: { domainId: 
 				)}
 			</ul>
 
-			{!loading && !canManage && keyConfigured && <p className="text-xs text-neutral-500">{t("resend.manualHint")}</p>}
-			{view && view.registered && !verified && !view.dnsManaged && <p className="text-xs text-neutral-500">{t("resend.addRecords")}</p>}
-			{view && view.registered && !verified && view.dnsManaged && view.missingDns === 0 && <p className="text-xs text-neutral-500">{t("resend.propagate")}</p>}
+			{!loading && !canManage && keyConfigured && <p className="text-xs text-fg-muted">{t("resend.manualHint")}</p>}
+			{view && view.registered && !verified && !view.dnsManaged && <p className="text-xs text-fg-muted">{t("resend.addRecords")}</p>}
+			{view && view.registered && !verified && view.dnsManaged && view.missingDns === 0 && <p className="text-xs text-fg-muted">{t("resend.propagate")}</p>}
 
 			{view && view.records.length > 0 && !verified && (
-				<ul className="space-y-1 text-xs text-neutral-600">
+				<ul className={DNS_RECORD_LIST}>
 					{view.records.map((record) => (
-						<li key={`${record.type}-${record.name}-${record.value}`} className="grid gap-1 rounded-lg bg-white px-3 py-2 sm:grid-cols-[4rem_minmax(8rem,14rem)_minmax(0,1fr)_auto]">
-							<span className="font-medium">{record.type}</span>
-							<span className="break-all">{record.name}</span>
-							<span className="break-all">{record.priority !== null ? `${record.priority} ` : ""}{record.value}</span>
-							<span className="uppercase text-neutral-500">{record.status.replace(/_/g, " ")}</span>
+						<li key={`${record.type}-${record.name}-${record.value}`} className="grid gap-1 px-3 py-2 sm:grid-cols-[4rem_minmax(8rem,14rem)_minmax(0,1fr)_auto] sm:items-center sm:gap-3">
+							<span className="font-mono font-semibold">{record.type}</span>
+							<span className="break-all font-mono">{record.name}</span>
+							<span className="break-all font-mono text-fg-muted">{record.priority !== null ? `${record.priority} ` : ""}{record.value}</span>
+							<span><Tag size="sm" tone={getResendRecordTone(record.status)}>{record.status.replace(/_/g, " ")}</Tag></span>
 						</li>
 					))}
 				</ul>
 			)}
-			{notice && <p role="status" className="text-xs text-green-700">{notice}</p>}
-			{error && <p role="alert" className="text-xs text-red-600">{error}</p>}
+			{notice && <p role="status" className="text-xs text-success-text">{notice}</p>}
+			{error && <p role="alert" className="text-xs text-danger-text">{error}</p>}
 		</div>
 	);
 }

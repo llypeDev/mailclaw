@@ -17,7 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { List } from "@/components/ui/list";
-import { CheckCircle2, LoaderCircle, Plus } from "@/components/icons";
+import { Alert, EmptyState } from "@orangesys/ui";
+import { Globe2, LoaderCircle, Plus } from "@/components/icons";
 import { authFetch } from "@/lib/auth/client";
 import { fetchSessionInfo } from "@/hooks/use-current-user";
 import type { DnsAuthRecord, DnsStatusSummary, Domain, DomainDnsCache, DomainDnsView, DomainPreflight, ReceivingProvider, SendingProvider } from "./types";
@@ -279,8 +280,8 @@ export default function DomainsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-medium">{t("domains.title")}</h1>
-          <p className="mt-1 text-sm text-neutral-500">
+          <h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-fg md:text-3xl">{t("domains.title")}</h1>
+          <p className="mt-2 text-sm text-fg-muted">
             {managesDns
               ? t("domains.descriptionManaged")
               : t("domains.descriptionManual")}
@@ -316,10 +317,10 @@ export default function DomainsPage() {
                   placeholder="example.com"
                 />
               </div>
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-neutral-50 px-4 py-3">
+              <div className="flex items-center justify-between gap-4 border border-line bg-canvas-subtle px-4 py-3">
                 <div>
                   <Label htmlFor="skip-dns">{t("setup.skipDns")}</Label>
-                  <p className="mt-1 text-xs leading-5 text-neutral-500">
+                  <p className="mt-1 text-xs leading-5 text-fg-muted">
                     {skipDns ? t("setup.skipDnsOn") : t("setup.skipDnsHint")}
                   </p>
                 </div>
@@ -334,10 +335,10 @@ export default function DomainsPage() {
               </div>
               {!skipDns && (
                 <>
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-neutral-50 px-4 py-3">
+              <div className="flex items-center justify-between gap-4 border border-line bg-canvas-subtle px-4 py-3">
                 <div>
                   <Label htmlFor="receiving-provider">{t("domains.receiveWith")}</Label>
-                  <p className="mt-1 text-xs leading-5 text-neutral-500">
+                  <p className="mt-1 text-xs leading-5 text-fg-muted">
                     {receivingProvider === "cloudflare"
                       ? t("domains.receiveHintCloudflare")
                       : receivingProvider === "none"
@@ -349,7 +350,7 @@ export default function DomainsPage() {
                   id="receiving-provider"
                   value={receivingProvider}
                   onChange={(e) => setReceivingProvider(e.target.value as ReceivingProvider)}
-                  containerClassName="h-9 shrink-0 rounded-md bg-white px-0"
+                  containerClassName="h-9 shrink-0 px-0"
                   className="px-3 text-sm"
                 >
                   <option value="cloudflare">{t("domains.cloudflareRouting")}</option>
@@ -358,10 +359,10 @@ export default function DomainsPage() {
                   <option value="none">{t("domains.notSelected")}</option>
                 </Select>
               </div>
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-neutral-50 px-4 py-3">
+              <div className="flex items-center justify-between gap-4 border border-line bg-canvas-subtle px-4 py-3">
                 <div>
                   <Label htmlFor="sending-provider">{t("domains.sendWith")}</Label>
-                  <p className="mt-1 text-xs leading-5 text-neutral-500">
+                  <p className="mt-1 text-xs leading-5 text-fg-muted">
                     {domainChecking
                       ? t("setup.checkingCloudflare")
                       : sendingProvider === "cloudflare"
@@ -371,12 +372,12 @@ export default function DomainsPage() {
                           : t("domains.providerHintLater")}
                   </p>
                 </div>
-                {domainChecking && <LoaderCircle className="h-4 w-4 shrink-0 animate-spin text-neutral-500" />}
+                {domainChecking && <LoaderCircle className="h-4 w-4 shrink-0 animate-spin text-fg-muted" />}
                 <Select
                   id="sending-provider"
                   value={sendingProvider}
                   onChange={(e) => setSendingProvider(e.target.value as SendingProvider)}
-                  containerClassName="h-9 shrink-0 rounded-md bg-white px-0"
+                  containerClassName="h-9 shrink-0 px-0"
                   className="px-3 text-sm"
                 >
                   <option value="cloudflare">{t("domains.cloudflareSending")}</option>
@@ -388,25 +389,24 @@ export default function DomainsPage() {
                 </>
               )}
               {domainCheck && !skipDns && (
-                <div className="flex items-center gap-3 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
-                  <CheckCircle2 className="h-4 w-4" />
+                <Alert tone="success" live>
                   {t("setup.domainFound", { zone: domainCheck.zone.name })}
-                </div>
+                </Alert>
               )}
               {domainCheckError && (
-                <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                <Alert tone="danger" live>
                   {domainCheckError}
-                </p>
+                </Alert>
               )}
               {create.isError && (
-                <div className="space-y-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                <Alert tone="danger" live>
                   <p>{(create.error as Error).message}</p>
                   {!isMxConflictError(create.error) && (
-                    <div className="space-y-2">
+                    <div className="mt-3 space-y-2">
                       <p className="font-medium">
                         {t("domains.tokenPermissions")}
                       </p>
-                      <ul className="list-disc space-y-1 pl-5">
+                      <ul className="list-disc space-y-1 ps-5">
                         <li>
                           {t("domains.tokenAccounts")}
                         </li>
@@ -416,7 +416,7 @@ export default function DomainsPage() {
                       </ul>
                     </div>
                   )}
-                </div>
+                </Alert>
               )}
               <Button
                 onClick={() => create.mutate()}
@@ -430,15 +430,19 @@ export default function DomainsPage() {
       </div>
       <section className="space-y-3">
         {/* <div className="flex items-center justify-between">
-					<span className="text-sm text-neutral-500">{(data?.domains ?? []).length} total</span>
+					<span className="text-sm text-fg-subtle">{(data?.domains ?? []).length} total</span>
 				</div> */}
         {isLoading && (
           <SectionRowSkeleton />
         )}
         {!isLoading && (data?.domains ?? []).length === 0 && (
-          <p className="rounded-2xl bg-white px-5 py-4 text-sm text-neutral-500">
-            {t("domains.none")}
-          </p>
+          <EmptyState
+            variant="compact"
+            headingLevel={2}
+            icon={<Globe2 className="h-5 w-5" />}
+            title={t("domains.none")}
+            className="border border-line bg-surface px-5 py-4"
+          />
         )}
         <List>
           {(data?.domains ?? []).map((d) => {

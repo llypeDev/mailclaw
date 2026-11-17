@@ -22,24 +22,24 @@ export default function RoutingPage() {
 	return (
 		<div className="space-y-8">
 			<div>
-				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("routingAdmin.title")}</h1>
-				<p className="mt-1 text-sm text-neutral-500">
+				<h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-fg md:text-3xl">{t("routingAdmin.title")}</h1>
+				<p className="mt-2 text-sm text-fg-muted">
 					{t("routingAdmin.description")}
 				</p>
 			</div>
 
 			<section className="space-y-4">
 				<div>
-					<h2 className="text-xl font-semibold text-neutral-900">{t("routingAdmin.domain")}</h2>
-					<p className="mt-1 text-sm text-neutral-500">{t("routingAdmin.chooseDomain")}</p>
+					<h2 className="font-display text-xl font-semibold text-fg">{t("routingAdmin.domain")}</h2>
+					<p className="mt-1 text-sm text-fg-muted">{t("routingAdmin.chooseDomain")}</p>
 				</div>
-				<div className="rounded-3xl bg-white p-6">
+				<div className="border border-line bg-surface p-6">
 					{domains.isLoading ? (
 						<Skeleton className="h-10 w-full" />
 					) : domains.isError ? (
-						<p role="alert" className="text-sm text-red-600">{domains.error.message}</p>
+						<p role="alert" className="text-sm text-danger-text">{domains.error.message}</p>
 					) : availableDomains.length === 0 ? (
-						<p className="text-sm text-neutral-500">{t("routingAdmin.addDomainFirst")}</p>
+						<p className="text-sm text-fg-muted">{t("routingAdmin.addDomainFirst")}</p>
 					) : (
 						<div className="grid gap-2">
 							<Label htmlFor="routing-domain">{t("routingAdmin.managedDomain")}</Label>

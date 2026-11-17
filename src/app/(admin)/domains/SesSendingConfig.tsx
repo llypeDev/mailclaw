@@ -7,6 +7,7 @@ import type { SesSendingView } from "@/lib/aws/ses-sending-types";
 import AwsCredentialsPanel from "./AwsCredentialsPanel";
 import { requestJson } from "./api";
 import { StatusRow } from "./status-row";
+import { DNS_RECORD_LIST } from "./utils";
 
 type SesResponse = { credentials?: boolean; ses?: SesSendingView | null; error?: string };
 
@@ -78,9 +79,9 @@ export default function SesSendingConfig({ domainId, onStatus }: { domainId: str
 						title={t("resend.domain")}
 						hint={t("ses.domainHint")}
 						action={view?.verified ? (
-							<Button size="sm" variant="outline" className="bg-white" disabled={busy !== null} onClick={() => void sendTest()}>{busy === "test" ? t("resend.sending") : t("resend.sendTest")}</Button>
+							<Button size="sm" variant="outline" disabled={busy !== null} onClick={() => void sendTest()}>{busy === "test" ? t("resend.sending") : t("resend.sendTest")}</Button>
 						) : buttonLabel && !loading ? (
-							<Button size="sm" variant="outline" className="bg-white" disabled={busy !== null} onClick={() => void domainAction(view?.registered && (!view.dnsManaged || view.missingDns === 0) ? "verify" : "setup")}>
+							<Button size="sm" variant="outline" disabled={busy !== null} onClick={() => void domainAction(view?.registered && (!view.dnsManaged || view.missingDns === 0) ? "verify" : "setup")}>
 								{busy === "verify" ? t("domains.checking") : busy === "setup" ? t("domains.working") : buttonLabel}
 							</Button>
 						) : undefined}
@@ -94,21 +95,21 @@ export default function SesSendingConfig({ domainId, onStatus }: { domainId: str
 					)}
 				</ul>
 			)}
-			{view && view.registered && !view.verified && !view.dnsManaged && <p className="text-xs text-neutral-500">{t("ses.addCnames")}</p>}
-			{view && view.registered && !view.verified && view.dnsManaged && view.missingDns === 0 && <p className="text-xs text-neutral-500">{t("resend.propagate")}</p>}
+			{view && view.registered && !view.verified && !view.dnsManaged && <p className="text-xs text-fg-muted">{t("ses.addCnames")}</p>}
+			{view && view.registered && !view.verified && view.dnsManaged && view.missingDns === 0 && <p className="text-xs text-fg-muted">{t("resend.propagate")}</p>}
 			{view && view.registered && !view.verified && view.records.length > 0 && (
-				<ul className="space-y-1 text-xs text-neutral-600">
+				<ul className={DNS_RECORD_LIST}>
 					{view.records.map((record) => (
-						<li key={record.name} className="grid gap-1 rounded-lg bg-white px-3 py-2 sm:grid-cols-[4rem_minmax(8rem,18rem)_minmax(0,1fr)]">
-							<span className="font-medium">{record.type}</span>
-							<span className="break-all">{record.name}</span>
-							<span className="break-all">{record.value}</span>
+						<li key={record.name} className="grid gap-1 px-3 py-2 sm:grid-cols-[4rem_minmax(8rem,18rem)_minmax(0,1fr)] sm:gap-3">
+							<span className="font-mono font-semibold">{record.type}</span>
+							<span className="break-all font-mono">{record.name}</span>
+							<span className="break-all font-mono text-fg-muted">{record.value}</span>
 						</li>
 					))}
 				</ul>
 			)}
-			{notice && <p role="status" className="text-xs text-green-700">{notice}</p>}
-			{error && <p role="alert" className="text-xs text-red-600">{error}</p>}
+			{notice && <p role="status" className="text-xs text-success-text">{notice}</p>}
+			{error && <p role="alert" className="text-xs text-danger-text">{error}</p>}
 		</div>
 	);
 }

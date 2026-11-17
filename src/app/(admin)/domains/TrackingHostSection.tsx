@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { requestJson } from "./api";
 import { ROW_GRID, StatusBadge } from "./status-row";
 import { probeTrackingHost } from "./tracking-host-utils";
+import { STATUS_ROW_TONE } from "./utils";
 import type { Domain } from "./types";
 
 type TrackingHostResponse = { hostname: string | null; available: boolean };
@@ -67,17 +68,17 @@ export default function TrackingHostSection({ domain }: { domain: Domain }) {
 				: t("domains.checking");
 
 	return (
-		<section className="mt-6">
-			<h2 className="text-base font-semibold text-neutral-900">{t("domains.tracking.title")}</h2>
-			<p className="mt-0.5 text-sm text-neutral-500">{t("domains.tracking.description")}</p>
+		<section>
+			<h2 className="font-display text-base font-semibold text-fg">{t("domains.tracking.title")}</h2>
+			<p className="mt-0.5 text-sm text-fg-muted">{t("domains.tracking.description")}</p>
 			<ul className="mt-3 space-y-2">
-				<li className={`${ROW_GRID} ${ok ? "bg-green-50" : failed ? "bg-amber-50" : "bg-neutral-50"}`}>
-					<StatusBadge ok={ok} tone="neutral" />
+				<li className={`${ROW_GRID} ${STATUS_ROW_TONE[ok ? "success" : failed ? "warning" : "neutral"]}`}>
+					<StatusBadge ok={ok} tone={failed ? "warning" : "neutral"} />
 					<span className="min-w-0">
-						<span className="block font-medium text-neutral-900">{t("domains.tracking.host")}</span>
-						<span className="block text-xs text-neutral-500">{t("domains.tracking.hostHint")}</span>
+						<span className="block font-display font-medium text-fg">{t("domains.tracking.host")}</span>
+						<span className="block text-xs text-fg-muted">{t("domains.tracking.hostHint")}</span>
 					</span>
-					<div className="min-w-0 break-words text-neutral-500">
+					<div className="min-w-0 break-words text-fg-muted">
 						{saved.available ? (
 							<div className="space-y-2">
 								<form className="flex flex-wrap gap-2" onSubmit={(event) => { event.preventDefault(); void save(value); }}>
@@ -86,7 +87,7 @@ export default function TrackingHostSection({ domain }: { domain: Domain }) {
 										placeholder={`mail.${domain.hostname}`}
 										value={value}
 										onChange={(event) => setValue(event.target.value)}
-										className="max-w-xs bg-white"
+										className="max-w-xs font-mono"
 										autoComplete="off"
 										spellCheck={false}
 									/>
@@ -94,12 +95,12 @@ export default function TrackingHostSection({ domain }: { domain: Domain }) {
 										{t("domains.tracking.save")}
 									</Button>
 									{saved.hostname && (
-										<Button type="button" size="sm" variant="outline" className="bg-white" disabled={busy} onClick={() => void save(null)}>
+										<Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void save(null)}>
 											{t("domains.tracking.remove")}
 										</Button>
 									)}
 								</form>
-								<p className={failed ? "text-xs text-amber-700" : "text-xs text-neutral-500"}>{status}</p>
+								<p className={failed ? "text-xs text-warning-text" : "text-xs text-fg-muted"}>{status}</p>
 							</div>
 						) : (
 							t("domains.tracking.migrationRequired")
@@ -107,7 +108,7 @@ export default function TrackingHostSection({ domain }: { domain: Domain }) {
 					</div>
 				</li>
 			</ul>
-			{error && <p role="alert" className="mt-2 text-xs text-red-600">{error}</p>}
+			{error && <p role="alert" className="mt-2 text-xs text-danger-text">{error}</p>}
 		</section>
 	);
 }

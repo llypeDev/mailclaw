@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Tag } from "@orangesys/ui";
 import { CheckCircle2, CircleX, Database, RefreshCw } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,39 +90,39 @@ export function AdminUpdateCard() {
 	}
 
 	return (
-		<Card className="rounded-3xl border-0 bg-white p-6">
+		<Card className="border border-line bg-surface p-6">
 			<CardHeader className="flex-row items-center gap-4 space-y-0 py-0">
-				<div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+				<div className="flex h-10 w-10 shrink-0 items-center justify-center border border-line bg-canvas-subtle text-fg-muted">
 					<RefreshCw className="h-5 w-5" />
 				</div>
 				<div>
 					<CardTitle className="text-base">{t("update.title")}</CardTitle>
-					<p className="mt-1 text-sm text-neutral-500">
+					<p className="mt-1 text-sm text-fg-muted">
 						{t("update.description")}
 					</p>
 				</div>
 			</CardHeader>
 			<CardContent className="space-y-5 pt-5">
-				{isChecking && <Skeleton className="h-20 w-full rounded-2xl" />}
+				{isChecking && <Skeleton className="h-20 w-full" />}
 
 				{!isChecking && status?.configured === false && (
 					<div className="space-y-3">
-						<p className="text-sm text-neutral-600">
+						<p className="text-sm text-fg-muted">
 							{status.configuration?.length ? t("update.completeConfig") : t("update.selfHosted")}
 						</p>
 						{!!status.configuration?.length && (
-							<ul className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-100">
+							<ul className="divide-y divide-line overflow-hidden border border-line">
 								{status.configuration.map((item) => (
 									<li key={item.name} className="flex items-center gap-3 px-4 py-3 text-sm">
 										{item.configured ? (
-											<CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+											<CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
 										) : (
-											<CircleX className="h-4 w-4 shrink-0 text-red-600" />
+											<CircleX className="h-4 w-4 shrink-0 text-danger" aria-hidden="true" />
 										)}
-										<code className="text-xs font-medium text-neutral-800">{item.name}</code>
-										<span className={`ml-auto text-xs font-medium ${item.configured ? "text-green-700" : "text-red-600"}`}>
+										<code className="font-mono text-xs font-medium text-fg">{item.name}</code>
+										<Tag size="sm" tone={item.configured ? "success" : "danger"} className="ms-auto shrink-0">
 											{item.configured ? t("update.configured") : t("update.missing")}
-										</span>
+										</Tag>
 									</li>
 								))}
 							</ul>
@@ -130,14 +131,14 @@ export function AdminUpdateCard() {
 				)}
 
 				{!isChecking && status?.configured && (
-					<div className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-100">
+					<div className="divide-y divide-line overflow-hidden border border-line">
 						<div className="flex items-center gap-3 px-4 py-4">
 							{status.available ? (
-								<RefreshCw className={`h-4 w-4 shrink-0 text-blue-600 ${isPending ? "animate-spin" : ""}`} />
+								<RefreshCw className={`h-4 w-4 shrink-0 text-accent-text ${isPending ? "animate-spin" : ""}`} aria-hidden="true" />
 							) : (
-								<CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+								<CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
 							)}
-							<p className="min-w-0 text-sm text-neutral-700">
+							<p className="min-w-0 text-sm text-fg">
 								{status.available
 									? t("update.available", { target: status.targetVersion, current: status.currentVersion })
 									: t("update.upToDate", { current: status.currentVersion })}
@@ -147,7 +148,7 @@ export function AdminUpdateCard() {
 									type="button"
 									onClick={handleUpdate}
 									disabled={isPending}
-									className="ml-auto shrink-0 text-sm font-medium text-blue-700 hover:underline disabled:pointer-events-none disabled:opacity-50"
+									className="ms-auto shrink-0 font-display text-sm font-semibold text-accent-text underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none disabled:opacity-50"
 								>
 									{isPending ? t("update.starting") : t("update.updateButton")}
 								</button>
@@ -157,7 +158,7 @@ export function AdminUpdateCard() {
 				)}
 
 				{(isCheckingMigrations || migrationStatus) && (
-					<div className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-100">
+					<div className="divide-y divide-line overflow-hidden border border-line">
 						{isCheckingMigrations && (
 							<div className="flex items-center gap-3 px-4 py-4">
 								<Skeleton className="h-4 w-4 rounded-full" />
@@ -167,15 +168,15 @@ export function AdminUpdateCard() {
 
 						{!isCheckingMigrations && !!migrationStatus?.pending.length && !migrationStatus.unknown.length && (
 							<div className="flex items-center gap-3 px-4 py-4">
-								<Database className={`h-4 w-4 shrink-0 text-amber-600 ${isMigrating ? "animate-pulse" : ""}`} />
-								<p className="text-sm text-neutral-700">
+								<Database className={`h-4 w-4 shrink-0 text-warning ${isMigrating ? "animate-pulse" : ""}`} aria-hidden="true" />
+								<p className="text-sm text-fg">
 									{t("update.pendingMigrations", { count: migrationStatus.pending.length })}
 								</p>
 								<button
 									type="button"
 									onClick={handleMigrate}
 									disabled={isMigrating}
-									className="ml-auto shrink-0 text-sm font-medium text-blue-700 hover:underline disabled:pointer-events-none disabled:opacity-50"
+									className="ms-auto shrink-0 font-display text-sm font-semibold text-accent-text underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none disabled:opacity-50"
 								>
 									{isMigrating ? t("update.updatingDatabase") : t("update.updateDatabase")}
 								</button>
@@ -183,7 +184,7 @@ export function AdminUpdateCard() {
 						)}
 
 						{!isCheckingMigrations && !!migrationStatus?.unknown.length && (
-							<div className="flex items-center gap-3 px-4 py-4 text-sm text-red-600">
+							<div className="flex items-center gap-3 px-4 py-4 text-sm text-danger-text">
 								<CircleX className="h-4 w-4 shrink-0" />
 								{t("update.deployMatching")}
 							</div>
@@ -191,15 +192,15 @@ export function AdminUpdateCard() {
 
 						{!isCheckingMigrations && migrationStatus?.ready && (
 							<div className="flex items-center gap-3 px-4 py-4">
-								<CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
-								<p className="text-sm text-neutral-700">{t("update.databaseUpToDate")}</p>
+								<CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+								<p className="text-sm text-fg">{t("update.databaseUpToDate")}</p>
 							</div>
 						)}
 					</div>
 				)}
 
 				{result?.ok && (
-					<p className="text-sm text-green-700">
+					<p className="text-sm text-success-text">
 						{t("update.started", { repo: result.repository, ref: result.ref })}{" "}
 						{result.runUrl && (
 							<a className="font-medium underline" href={result.runUrl} target="_blank" rel="noreferrer">
@@ -209,8 +210,8 @@ export function AdminUpdateCard() {
 						)}
 					</p>
 				)}
-				{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-				{migrationError && <p role="alert" className="text-sm text-red-600">{migrationError}</p>}
+				{error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
+				{migrationError && <p role="alert" className="text-sm text-danger-text">{migrationError}</p>}
 			</CardContent>
 		</Card>
 	);

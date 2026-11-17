@@ -3,9 +3,9 @@
 import { useRef, useState } from "react";
 import { confirmDestructive } from "@/components/ui/confirm-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Alert, EmptyState, Tag } from "@orangesys/ui";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
-  AlertTriangle,
   DatabaseBackup,
   Download,
   MoreVertical,
@@ -17,7 +17,6 @@ import {
   Upload,
 } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -41,7 +40,7 @@ import {
   fetchBackups,
   formatBackupDate,
   formatBackupSize,
-  getStatusClass,
+  getStatusTone,
   removeBackup,
   restoreBackup,
   saveBackupSettings,
@@ -117,10 +116,10 @@ export default function BackupsPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-medium text-neutral-900">
+          <h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-fg md:text-3xl">
             {t("backups.title")}
           </h1>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-2 text-sm text-fg-muted">
             {t("backups.description")}
           </p>
         </div>
@@ -148,12 +147,12 @@ export default function BackupsPage() {
               </Button>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
-              <DropdownMenu.Content align="end" sideOffset={6} className="z-50 min-w-48 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg">
-                <DropdownMenu.Item disabled={restore.isPending} onSelect={() => restoreInput.current?.click()} className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-neutral-900 outline-none hover:bg-neutral-100 focus:bg-neutral-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
+              <DropdownMenu.Content align="end" sideOffset={6} className="z-50 min-w-48 border border-line-strong bg-surface-raised p-1 text-sm shadow-lg">
+                <DropdownMenu.Item disabled={restore.isPending} onSelect={() => restoreInput.current?.click()} className="flex cursor-pointer items-center gap-2 px-3 py-2 text-fg outline-none hover:bg-surface-hover focus:bg-surface-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
                   <Upload className="h-4 w-4" />
                   {restore.isPending ? t("backups.restoring") : t("backups.restore")}
                 </DropdownMenu.Item>
-                <DropdownMenu.Item disabled={!settings || autoSaveSettings.isPending} onSelect={() => setSettingsOpen(true)} className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-neutral-900 outline-none hover:bg-neutral-100 focus:bg-neutral-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
+                <DropdownMenu.Item disabled={!settings || autoSaveSettings.isPending} onSelect={() => setSettingsOpen(true)} className="flex cursor-pointer items-center gap-2 px-3 py-2 text-fg outline-none hover:bg-surface-hover focus:bg-surface-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
                   <Settings className="h-4 w-4" />
                   {t("backups.settings")}
                 </DropdownMenu.Item>
@@ -170,73 +169,59 @@ export default function BackupsPage() {
             <DialogDescription>{t("backups.tablesDescription")}</DialogDescription>
           </DialogHeader>
           {settings && <div className="space-y-5">
-            <div className="divide-y divide-neutral-100">
+            <div className="divide-y divide-line">
               {BACKUP_TABLE_GROUPS.map((group) => {
                 const enabled = !settings.excludedTableGroups.includes(group.id);
                 const lastEnabled = enabled && settings.excludedTableGroups.length === BACKUP_TABLE_GROUPS.length - 1;
                 return <div key={group.id} className="flex items-start justify-between gap-4 py-4 first:pt-0 last:pb-0">
-                  <div className="min-w-0"><p className="text-sm font-medium text-neutral-900">{group.label}</p><p className="mt-1 break-words text-xs text-neutral-500">{t("backups.tables", { list: group.tables.join(", ") })}</p></div>
+                  <div className="min-w-0"><p className="text-sm font-medium text-fg">{group.label}</p><p className="mt-1 break-words text-xs text-fg-subtle">{t("backups.tables", { list: group.tables.join(", ") })}</p></div>
                   <Switch checked={enabled} disabled={lastEnabled} onCheckedChange={(checked) => setSettings({ ...settings, excludedTableGroups: checked ? settings.excludedTableGroups.filter((id) => id !== group.id) : [...settings.excludedTableGroups, group.id] })} aria-label={t("backups.backUpGroup", { group: group.label })} />
                 </div>;
               })}
             </div>
-            {saveSettings.error && <p role="alert" className="text-sm text-red-700">{saveSettings.error instanceof Error ? saveSettings.error.message : t("backups.saveSettingsFailed")}</p>}
+            {saveSettings.error && <p role="alert" className="text-sm text-danger-text">{saveSettings.error instanceof Error ? saveSettings.error.message : t("backups.saveSettingsFailed")}</p>}
             <Button onClick={() => saveSettings.mutate(settings)} disabled={saveSettings.isPending}><Save className="h-4 w-4" />{saveSettings.isPending ? t("common.saving") : t("backups.saveSettings")}</Button>
           </div>}
         </DialogContent>
       </Dialog>
 
       {error && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <Alert tone="danger">
           {error instanceof Error ? error.message : t("backups.operationFailed")}
-        </p>
+        </Alert>
       )}
 
       {configuration && !configuration.configured && (
-        <Card className="rounded-3xl border border-amber-200 bg-amber-50 p-6">
-          <CardHeader className="py-0">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
-              <div>
-                <CardTitle className="text-amber-950">
-                  {t("backups.setupTitle")}
-                </CardTitle>
-                <CardDescription className="mt-1 text-amber-800">
-                  {t("backups.setupDescription")}
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-5">
-            <div className="flex flex-wrap items-center gap-2">
-              {configuration.missing.map((item) => (
-                <Badge
-                  key={item}
-                  variant="outline"
-                  className="border-amber-300 bg-white/70 text-amber-900"
-                >
-                  {item}
-                </Badge>
-              ))}
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="ml-auto border-amber-300 bg-white/70"
-                disabled={backups.isFetching}
-                onClick={() => void backups.refetch()}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${backups.isFetching ? "animate-spin" : ""}`}
-                />
-                {t("backups.checkAgain")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <Alert
+          tone="warning"
+          title={t("backups.setupTitle")}
+          action={
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={backups.isFetching}
+              onClick={() => void backups.refetch()}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${backups.isFetching ? "animate-spin" : ""}`}
+              />
+              {t("backups.checkAgain")}
+            </Button>
+          }
+        >
+          <p>{t("backups.setupDescription")}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {configuration.missing.map((item) => (
+              <Tag key={item} size="sm" tone="warning" className="font-mono">
+                {item}
+              </Tag>
+            ))}
+          </div>
+        </Alert>
       )}
 
-      <Card className="rounded-3xl border-0 bg-white p-6">
+      <Card className="border border-line bg-surface p-6">
         <CardHeader className="py-0">
           <CardTitle>{t("backups.automatic")}</CardTitle>
           <CardDescription>
@@ -246,7 +231,7 @@ export default function BackupsPage() {
         <CardContent className="space-y-5 pt-5">
           {settings && (
             <>
-              <div className="flex items-center justify-between gap-4 border-t border-neutral-100 pt-5">
+              <div className="flex items-center justify-between gap-4 border-t border-line pt-5">
                 <Label htmlFor="automatic-backup-switch">{t("backups.enableAutomatic")}</Label>
                 <Switch
                   id="automatic-backup-switch"
@@ -339,7 +324,7 @@ export default function BackupsPage() {
                     )}
                   </div>
 
-                  <div className="grid gap-4 border-t border-neutral-100 pt-5">
+                  <div className="grid gap-4 border-t border-line pt-5">
                     <div className="flex items-center justify-between gap-4">
                       <Label htmlFor="retention-switch">{t("backups.deleteOld")}</Label>
                       <Switch
@@ -379,7 +364,7 @@ export default function BackupsPage() {
                             else setSettings({ ...settings, retentionDays: lastSavedSettings()?.retentionDays ?? 30 });
                           }}
                         />
-                        <span className="text-sm text-neutral-500 absolute z-10 right-6">{t("backups.days")}</span>
+                        <span className="pointer-events-none absolute end-6 z-10 text-sm text-fg-subtle">{t("backups.days")}</span>
                       </div>
                     </div>
                   </div>
@@ -390,12 +375,12 @@ export default function BackupsPage() {
         </CardContent>
       </Card>
 
-      <section className="overflow-hidden rounded-3xl bg-white">
-        <div className="flex items-center gap-3 border-b border-neutral-100 px-4 py-4">
-          <DatabaseBackup className="h-5 w-5 text-neutral-500" />
-          <h2 className="font-semibold text-neutral-900">{t("backups.history")}</h2>
+      <section className="overflow-hidden border border-line bg-surface">
+        <div className="flex items-center gap-3 border-b border-line px-4 py-4">
+          <DatabaseBackup className="h-5 w-5 text-fg-subtle" />
+          <h2 className="font-display font-semibold text-fg">{t("backups.history")}</h2>
         </div>
-        <div className="grid grid-cols-[1fr_110px_110px_170px_120px] gap-4 border-b border-neutral-100 bg-neutral-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        <div className="grid grid-cols-[1fr_110px_110px_170px_120px] gap-4 border-b border-line-strong bg-canvas-subtle px-4 py-2 font-display text-[length:var(--or-text-2xs)] font-medium uppercase tracking-[var(--or-tracking-meta)] text-fg-subtle">
           <span>{t("backups.col.file")}</span>
           <span>{t("backups.col.status")}</span>
           <span>{t("backups.col.size")}</span>
@@ -404,29 +389,35 @@ export default function BackupsPage() {
         </div>
         {backups.isLoading && <SkeletonRows count={5} />}
         {!backups.isLoading && (backups.data?.backups ?? []).length === 0 && (
-          <p className="px-4 py-6 text-sm text-neutral-500">{t("backups.none")}</p>
+          <EmptyState
+            variant="compact"
+            icon={<DatabaseBackup className="h-5 w-5" />}
+            title={t("backups.none")}
+          />
         )}
         {(backups.data?.backups ?? []).map((backup: BackupItem) => (
           <div
             key={backup.id}
-            className="grid grid-cols-[1fr_110px_110px_170px_120px] items-center gap-4 border-b border-neutral-100 px-4 py-3 last:border-b-0"
+            className="grid grid-cols-[1fr_110px_110px_170px_120px] items-center gap-4 border-b border-line px-4 py-3 last:border-b-0"
           >
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-neutral-900">
+              <p className="truncate text-sm font-medium text-fg">
                 {backup.filename ?? backup.id}
               </p>
-              <p className="truncate text-xs text-neutral-500">
+              <p className="truncate text-xs text-fg-subtle">
                 {backup.trigger === "manual" ? t("backups.manual") : t("backups.scheduled")}
                 {backup.error ? `: ${backup.error}` : ""}
               </p>
             </div>
-            <Badge variant="outline" className={getStatusClass(backup.status)}>
-              {t(`backups.status.${backup.status}` as TranslationKey)}
-            </Badge>
-            <span className="text-sm text-neutral-600">
+            <span className="min-w-0">
+              <Tag size="sm" tone={getStatusTone(backup.status)}>
+                {t(`backups.status.${backup.status}` as TranslationKey)}
+              </Tag>
+            </span>
+            <span className="text-sm tabular-nums text-fg-muted">
               {formatBackupSize(backup.size)}
             </span>
-            <span className="text-sm text-neutral-600">
+            <span className="text-sm text-fg-muted">
               {formatBackupDate(backup.createdAt)}
             </span>
             <div className="flex gap-1">
@@ -450,7 +441,7 @@ export default function BackupsPage() {
                 }
                 onClick={() => deleteBackup.mutate(backup.id)}
               >
-                <Trash2 className="h-4 w-4 text-red-600" />
+                <Trash2 className="h-4 w-4 text-danger-text" />
               </Button>
             </div>
           </div>

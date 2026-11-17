@@ -86,8 +86,8 @@ export default function AdminSettingsPage() {
 	return (
 		<div>
 			<div className="mb-8">
-				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("admin.title")}</h1>
-				<p className="mt-2 text-sm text-neutral-500">
+				<h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-fg md:text-3xl">{t("admin.title")}</h1>
+				<p className="mt-2 text-sm text-fg-muted">
 					{t("admin.description")}
 				</p>
 			</div>
@@ -96,16 +96,16 @@ export default function AdminSettingsPage() {
 					const Icon = section.icon;
 
 					return (
-						<Link key={section.href} href={section.href}>
-							<Card className="h-full rounded-3xl border-0 bg-white p-6 transition-colors hover:bg-blue-50/60">
+						<Link key={section.href} href={section.href} className="group block focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+							<Card className="h-full border border-line bg-surface p-6 transition-colors group-hover:border-line-strong group-hover:bg-surface-hover">
 								<CardHeader className="flex-row items-center gap-4 space-y-0 py-0">
-									<div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+									<div className="flex h-10 w-10 shrink-0 items-center justify-center border border-line bg-canvas-subtle text-fg-muted transition-colors group-hover:text-accent-text">
 										<Icon className="h-5 w-5" />
 									</div>
-									<h2 className="text-base font-semibold leading-none">{t(section.titleKey)}</h2>
+									<h2 className="font-display text-base font-semibold leading-none text-fg">{t(section.titleKey)}</h2>
 								</CardHeader>
 								<CardContent className="pt-4">
-									<p className="text-sm text-neutral-500">{t(section.descriptionKey)}</p>
+									<p className="text-sm text-fg-muted">{t(section.descriptionKey)}</p>
 								</CardContent>
 							</Card>
 						</Link>

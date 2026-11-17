@@ -5,7 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Plus } from "@/components/icons";
+import { Alert, EmptyState, Tag, type TagTone } from "@orangesys/ui";
+import { Mail, Plus } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,16 +25,17 @@ import { SectionRowSkeleton } from "@/components/page-skeletons";
 import { clearMailboxesCache } from "@/components/mailbox-provider-utils";
 import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
 import { authFetch } from "@/lib/auth/client";
+import { getAvatarColorStyle } from "@/lib/avatar-colors";
 import { fetchSessionInfo } from "@/hooks/use-current-user";
 import type { CurrentAccountResponse, Domain, MailboxOwner, MailboxesResponse } from "./types";
 import { formatAccountDateTime } from "../accounts/utils";
 import { getMailboxAddress, getMailboxesBase, getMailboxName } from "./utils";
 
 const COLUMNS = "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 md:grid-cols-[auto_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]";
-const STATUS_STYLES = {
-	active: "bg-green-600/10 text-green-800",
-	disabled: "bg-neutral-100 text-neutral-600",
-	pendingDeletion: "bg-red-100 text-red-700",
+const STATUS_TONES: Record<"active" | "disabled" | "pendingDeletion", TagTone> = {
+	active: "success",
+	disabled: "neutral",
+	pendingDeletion: "danger",
 };
 
 export default function MailboxesPage() {
@@ -138,7 +140,7 @@ export default function MailboxesPage() {
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center justify-between gap-4">
-				<h1 className="text-2xl md:text-3xl font-medium">{t("mailboxes.title")}</h1>
+				<h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-fg md:text-3xl">{t("mailboxes.title")}</h1>
 				<Dialog open={createOpen} onOpenChange={setCreateOpen}>
 					<DialogTrigger asChild>
 						<Button className={mobilePrimaryActionClass}>
@@ -159,8 +161,8 @@ export default function MailboxesPage() {
 										id="mailbox-type"
 										value={mailboxType}
 										onChange={(event) => setMailboxType(event.target.value as "personal" | "shared")}
-										containerClassName="flex w-full rounded-none border-0 p-0"
-										className="h-10 rounded-md border border-neutral-200 bg-white px-3 text-sm shadow-sm shadow-neutral-200/50 focus-visible:border-blue-600"
+										containerClassName="flex w-full px-0"
+										className="h-10 px-3 text-sm"
 									>
 										<option value="personal">{t("mailboxes.personalInbox")}</option>
 										<option value="shared">{t("mailboxes.sharedInbox")}</option>
@@ -178,8 +180,8 @@ export default function MailboxesPage() {
 										setOwnerUserId(event.target.value);
 										if (owner) setDisplayName(owner.name);
 									}}
-									containerClassName="flex w-full rounded-none border-0 p-0"
-										className="h-10 rounded-md border border-neutral-200 bg-white px-3 text-sm shadow-sm shadow-neutral-200/50 focus-visible:border-blue-600"
+									containerClassName="flex w-full px-0"
+										className="h-10 px-3 text-sm"
 								>
 									{mailboxOwners.map((owner) => (
 										<option key={owner.id} value={owner.id}>
@@ -189,9 +191,7 @@ export default function MailboxesPage() {
 								</Select>
 							</div>
 							) : (
-								<p className="rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-800">
-									{t("mailboxes.sharedHint")}
-								</p>
+								<Alert tone="info">{t("mailboxes.sharedHint")}</Alert>
 							)}
 							<div className="space-y-2">
 								<Label htmlFor="mailbox-name">{t("common.name")}</Label>
@@ -204,19 +204,19 @@ export default function MailboxesPage() {
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="mailbox-username">{t("mailboxes.emailAddress")}</Label>
-								<div className="flex h-10 overflow-hidden rounded-md border border-neutral-200 bg-white shadow-sm shadow-neutral-200/50 focus-within:border-blue-600">
+								<div className="flex h-10 overflow-hidden border border-line-control bg-surface transition-[border-color,box-shadow] duration-150 ease-out hover:border-fg-subtle focus-within:border-accent focus-within:shadow-[0_0_0_1px_var(--or-color-accent)]">
 									<Input
 										id="mailbox-username"
 										value={localPart}
 										onChange={(event) => setLocalPart(event.target.value)}
 										placeholder={t("mailboxes.localPlaceholder")}
-										className="min-w-0 flex-1 rounded-none border-0 shadow-none focus-visible:border-0"
+										className="min-w-0 flex-1 border-0 bg-transparent focus:shadow-none"
 									/>
-									<span className="flex items-center text-sm text-neutral-500">@</span>
+									<span className="flex items-center text-sm text-fg-subtle">@</span>
 									<Select
 										aria-label={t("accounts.domain")}
-										containerClassName="max-w-[55%] rounded-none border-0 p-0"
-						className="h-full rounded-none border-0 bg-transparent px-3 text-sm text-neutral-700 shadow-none"
+										containerClassName="max-w-[55%] border-0 bg-transparent p-0"
+						className="h-full px-3 text-sm text-fg-muted"
 										value={domainId}
 										onChange={(event) => setDomainId(event.target.value)}
 									>
@@ -230,7 +230,7 @@ export default function MailboxesPage() {
 								</div>
 							</div>
 							{create.isError && (
-								<p role="alert" className="text-sm text-red-600">{(create.error as Error).message}</p>
+								<p role="alert" className="text-sm text-danger-text">{(create.error as Error).message}</p>
 							)}
 							<Button
 								onClick={() => create.mutate()}
@@ -244,7 +244,7 @@ export default function MailboxesPage() {
 			</div>
 			<section className="space-y-3">
 				{/* <div className="flex items-center justify-between">
-					<span className="text-sm text-neutral-500">
+					<span className="text-sm text-fg-subtle">
 						{(mailboxes.data?.mailboxes ?? []).length} total
 					</span>
 				</div> */}
@@ -252,12 +252,16 @@ export default function MailboxesPage() {
 					<SectionRowSkeleton />
 				)}
 				{!mailboxes.isLoading && (mailboxes.data?.mailboxes ?? []).length === 0 && (
-					<p className="rounded-2xl bg-white px-5 py-4 text-sm text-neutral-500">
-						{t("mailboxes.none")}
-					</p>
+					<EmptyState
+						variant="compact"
+						headingLevel={2}
+						icon={<Mail className="h-5 w-5" />}
+						title={t("mailboxes.none")}
+						className="border border-line bg-surface px-5 py-4"
+					/>
 				)}
 				<List>
-					<div className={`${COLUMNS} bg-white px-5 py-3 text-xs font-medium uppercase text-neutral-500`}>
+					<div className={`${COLUMNS} bg-canvas-subtle px-5 py-3 font-display text-[length:var(--or-text-2xs)] font-medium uppercase tracking-[var(--or-tracking-meta)] text-fg-subtle`}>
 						<span className="w-10" />
 						<span>{t("common.name")}</span>
 						<span className="hidden md:block">{t("mailboxes.type")}</span>
@@ -274,9 +278,9 @@ export default function MailboxesPage() {
 							<ListRow key={mailbox.id} asChild className={`${COLUMNS} px-5 py-4`}>
 								<Link
 									href={`${base}/${mailbox.id}`}
-									className="group transition-colors hover:bg-blue-50/40"
+									className="group transition-colors hover:bg-surface-hover"
 								>
-									<span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
+									<span style={getAvatarColorStyle(getMailboxAddress(mailboxWithHostname))} className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-semibold">
 										{getMailboxName(mailboxWithHostname).trim().charAt(0).toUpperCase() || "?"}
 										{mailbox.hasAvatar && (
 											<ProgressiveAvatarImage
@@ -288,25 +292,25 @@ export default function MailboxesPage() {
 									</span>
 									<span className="min-w-0">
 										<span className="flex min-w-0 items-center gap-2">
-											<span className="block truncate text-sm font-semibold text-neutral-900">
+											<span className="block truncate text-sm font-semibold text-fg">
 												{getMailboxName(mailboxWithHostname)}
 											</span>
 										</span>
-										<span className="block truncate no-font-mono text-sm text-neutral-500">
+										<span className="block truncate no-font-mono text-sm text-fg-subtle">
 											{getMailboxAddress(mailboxWithHostname)}
 										</span>
 									</span>
 									<span className="hidden md:block">
-										<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${mailbox.type === "shared" ? "bg-blue-50 text-blue-700" : "bg-neutral-100 text-neutral-600"}`}>
+										<Tag size="sm" variant="solid" marker={false} tone={mailbox.type === "shared" ? "info" : "neutral"}>
 											{mailbox.type === "shared" ? t("mailboxes.sharedInbox") : t("mailboxes.personalInbox")}
-										</span>
+										</Tag>
 									</span>
 									<span className="hidden md:block">
-										<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[mailbox.status ?? "active"]}`}>
+										<Tag size="sm" tone={STATUS_TONES[mailbox.status ?? "active"]}>
 											{t(`accounts.status.${mailbox.status ?? "active"}`, { date: "" })}
-										</span>
+										</Tag>
 									</span>
-									<span className="hidden text-sm text-neutral-500 md:block">
+									<span className="hidden text-sm text-fg-subtle md:block">
 										{mailbox.type === "shared" ? "—" : mailbox.lastSignInAt ? formatAccountDateTime(mailbox.lastSignInAt) : t("accounts.neverSignedIn")}
 									</span>
 								</Link>

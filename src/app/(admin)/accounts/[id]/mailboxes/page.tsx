@@ -89,24 +89,24 @@ export default function AccountMailboxesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-medium text-neutral-900">{t("account.mailboxes.title")}</h1>
-        <p className="mt-2 text-sm text-neutral-500">
+        <h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-fg md:text-3xl">{t("account.mailboxes.title")}</h1>
+        <p className="mt-2 text-sm text-fg-muted">
           {t("account.mailboxes.manage", { name: account?.name ?? t("account.password.thisAccount") })}
         </p>
       </div>
-      <section className="space-y-4 rounded-3xl bg-white p-6">
-        <h2 className="text-base font-semibold text-neutral-900">{t("account.mailboxes.current")}</h2>
+      <section className="space-y-4 border border-line bg-surface p-6">
+        <h2 className="font-display text-base font-semibold text-fg">{t("account.mailboxes.current")}</h2>
         <div className="space-y-2">
           {mailboxes.map((mailbox) => (
             <div
               key={mailbox.id}
-              className="flex items-center justify-between rounded-2xl bg-neutral-50 px-4 py-3"
+              className="flex items-center justify-between border border-line bg-canvas-subtle px-4 py-3"
             >
               <span className="min-w-0">
                 <span className="block truncate font-medium">
                   {mailbox.displayName || mailbox.localPart}
                 </span>
-                <span className="block truncate text-sm text-neutral-500">
+                <span className="block truncate text-sm text-fg-subtle">
                   {mailbox.localPart}@{mailbox.hostname}
                 </span>
               </span>
@@ -123,18 +123,18 @@ export default function AccountMailboxesPage() {
                 onClick={() => void removeMailbox(mailbox.id)}
                 aria-label={t("account.mailboxes.removeInbox")}
               >
-                <Trash2 className="h-4 w-4 text-red-600" />
+                <Trash2 className="h-4 w-4 text-danger-text" />
               </Button>
               </span>
             </div>
           ))}
           {account && mailboxes.length === 0 && (
-            <p className="text-sm text-neutral-500">{t("account.mailboxes.none")}</p>
+            <p className="text-sm text-fg-subtle">{t("account.mailboxes.none")}</p>
           )}
         </div>
-        <div className="border-t border-neutral-200 pt-6">
-          <h2 className="text-base font-semibold text-neutral-900">{t("account.mailboxes.addTitle")}</h2>
-          <p className="mt-1 text-sm text-neutral-500">
+        <div className="border-t border-line pt-6">
+          <h2 className="font-display text-base font-semibold text-fg">{t("account.mailboxes.addTitle")}</h2>
+          <p className="mt-1 text-sm text-fg-subtle">
             {t("account.mailboxes.addDescription")}
           </p>
           <form onSubmit={addMailbox} className="mt-4 space-y-4">
@@ -157,7 +157,7 @@ export default function AccountMailboxesPage() {
                   id="inbox-domain"
                   value={domainId}
                   onChange={(event) => setDomainId(event.target.value)}
-                  containerClassName="h-10 w-full min-w-0 bg-white"
+                  containerClassName="h-10 w-full min-w-0"
                   className="min-w-0 text-sm"
                   disabled={!account || domains.length === 0 || saving}
                   required
@@ -172,8 +172,8 @@ export default function AccountMailboxesPage() {
               </div>
             </div>
             {domainId && (
-              <p className="break-all text-sm text-neutral-500">
-                {t("account.mailboxes.address")} <span className="font-medium text-neutral-900">{localPart || t("account.mailboxes.inboxPlaceholder")}@{domains.find((domain) => domain.id === domainId)?.hostname}</span>
+              <p className="break-all text-sm text-fg-subtle">
+                {t("account.mailboxes.address")} <span className="font-medium text-fg">{localPart || t("account.mailboxes.inboxPlaceholder")}@{domains.find((domain) => domain.id === domainId)?.hostname}</span>
               </p>
             )}
             <Button type="submit" disabled={!account || !domainId || !localPart.trim() || saving}>
@@ -183,7 +183,7 @@ export default function AccountMailboxesPage() {
           </form>
         </div>
       </section>
-      {message && <p role="status" className="text-sm text-neutral-500">{message}</p>}
+      {message && <p role="status" className="text-sm text-fg-muted">{message}</p>}
     </div>
   );
 }
