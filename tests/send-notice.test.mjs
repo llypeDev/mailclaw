@@ -108,7 +108,7 @@ test("a template without seconds keeps the whole suffix after the subject", () =
 
 test("every locale preserves the linked subject and countdown placeholders", () => {
 	const keys = ["compose.sendingIn", "compose.sendingSubject", "compose.sentSubject", "compose.undoSend", "compose.sendNow"];
-	const en = JSON.parse(readFileSync(join(root, "src/lib/i18n/en.json"), "utf8"));
+	const en = JSON.parse(readFileSync(join(root, "public/locales/en.json"), "utf8"));
 	const placeholders = (value) => [...value.matchAll(/\{\w+\}/g)].map(([token]) => token).sort();
 	for (const file of readdirSync(join(root, "public/locales"))) {
 		if (!file.endsWith(".json")) continue;

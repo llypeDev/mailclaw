@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { driveItems } from "@/db/schema";
 import { newId } from "@/lib/ids";
 import { authorizeDrive } from "@/lib/drive/auth";
@@ -13,7 +14,9 @@ export async function POST(request: Request, { params }: DriveItemParams) {
 	if (auth.error) return auth.error;
 	const item = await getDriveItem(auth.db, id);
 	if (!item || item.ownerId !== auth.user.id || item.trashedAt) return NextResponse.json({ error: "Not found" }, { status: 404 });
-	const body = await request.json().catch(() => ({})) as { enabled?: unknown };
+	const read = await readJsonObjectBody<{ enabled?: unknown }>(request);
+	if ("response" in read) return read.response;
+	const body = read.body;
 	const linkToken = body.enabled ? item.linkToken ?? `${newId()}${newId()}`.replace(/[^A-Za-z0-9]/g, "").slice(0, 32) : null;
 	await auth.db.update(driveItems).set({ linkToken }).where(eq(driveItems.id, id));
 	return NextResponse.json({ linkToken });

@@ -1,5 +1,6 @@
 import { and, desc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { driveItems, driveShares } from "@/db/schema";
 import { newId } from "@/lib/ids";
 import { authorizeDrive } from "@/lib/drive/auth";
@@ -83,7 +84,9 @@ export async function POST(request: Request) {
 	const auth = await authorizeDrive(request, true);
 	if (auth.error) return auth.error;
 	const { db, user } = auth;
-	const body = await request.json().catch(() => ({})) as { name?: unknown; parentId?: unknown };
+	const read = await readJsonObjectBody<{ name?: unknown; parentId?: unknown }>(request);
+	if ("response" in read) return read.response;
+	const body = read.body;
 	const name = normalizeDriveName(body.name);
 	if (!name) return NextResponse.json({ error: "Enter a folder name" }, { status: 400 });
 	let ownerId = user.id;

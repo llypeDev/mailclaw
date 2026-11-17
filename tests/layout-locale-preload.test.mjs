@@ -19,7 +19,7 @@ const stubs = new Map([
 	["next/font/google", "export const Geist = () => ({ variable: 'geist' }); export const Geist_Mono = () => ({ variable: 'geist-mono' });"],
 	["@/components/providers", "export function Providers({ children }) { return children; }"],
 	["@/components/language-provider", "export function LanguageProvider({ children }) { return children; }"],
-	["@/lib/i18n/server", "export async function getRequestLocale() { return globalThis.layoutTestLocale; } export async function loadServerMessages() { return { ok: 'ok' }; }"],
+	["@/lib/i18n/server", "export async function getRequestLocale() { return globalThis.layoutTestLocale; } export async function loadServerMessages(locale) { return locale === globalThis.layoutUnreadableLocale ? undefined : { ok: 'ok' }; }"],
 	["./home-server-utils", "export async function getHomeBranding() { return { appName: 'Mailclaw', iconHref: null }; }"],
 	["./globals.css", ""],
 ]);
@@ -105,10 +105,24 @@ test("the root layout preloads a translated catalog exactly once, in the head", 
 	assert.match(html, /<main>page<\/main>/);
 });
 
-test("the root layout preloads nothing for English", async (t) => {
+test("the root layout preloads the English catalog the same way, since it is not in the page's JavaScript", async (t) => {
 	globalThis.layoutTestLocale = "en";
 	t.after(() => { delete globalThis.layoutTestLocale; });
 	const html = await renderHtml(renderLayout());
-	assert.equal(catalogPreloads(html).length, 0, html);
+	const links = catalogPreloads(html);
+	assert.equal(links.length, 1, html);
+	assert.match(links[0], /href="\/locales\/en\.json"/);
 	assert.match(html, /<main>page<\/main>/);
+});
+
+test("a catalog the server cannot read preloads English, which the page then renders", async (t) => {
+	globalThis.layoutTestLocale = "de";
+	globalThis.layoutUnreadableLocale = "de";
+	t.after(() => {
+		delete globalThis.layoutTestLocale;
+		delete globalThis.layoutUnreadableLocale;
+	});
+	const links = catalogPreloads(await renderHtml(renderLayout()));
+	assert.equal(links.length, 1);
+	assert.match(links[0], /href="\/locales\/en\.json"/);
 });

@@ -5,6 +5,7 @@ import test, { after } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 import { JSDOM } from "jsdom";
+import { englishCatalog, registerEnglishCatalog } from "./helpers/english-catalog.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = mkdtempSync(join(root, "tests", ".tmp-aws-credentials-panel-"));
@@ -85,7 +86,8 @@ await build({
 });
 
 const { renderPanel, requestJson, ApiError } = await import(pathToFileURL(outfile).href);
-const en = JSON.parse(readFileSync(join(root, "src/lib/i18n/en.json"), "utf8"));
+const en = englishCatalog;
+await registerEnglishCatalog();
 const AWS_IAM_POLICY_SOURCE = readFileSync(join(root, "src/lib/aws/validate.ts"), "utf8");
 
 /** Answers the panel's calls from a queue of canned responses, recording what it was asked. */

@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { getDb } from "@/db";
 import { mailboxAccess, users } from "@/db/schema";
 import { requireAccountsAdmin } from "@/app/api/accounts/utils";
@@ -41,7 +42,9 @@ export async function GET(request: Request, { params }: MailboxAccessRouteParams
 export async function POST(request: Request, { params }: MailboxAccessRouteParams) {
 	const access = await requireAccountsAdmin(request);
 	if (access.error) return access.error;
-	const parsed = mailboxAccessSchema.safeParse(await request.json());
+	const read = await readJsonObjectBody(request);
+	if ("response" in read) return read.response;
+	const parsed = mailboxAccessSchema.safeParse(read.body);
 	if (!parsed.success) return NextResponse.json({ error: "Choose a valid account" }, { status: 400 });
 	const { id } = await params;
 	const db = getDb(access.env);

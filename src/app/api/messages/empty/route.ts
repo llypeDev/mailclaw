@@ -1,5 +1,6 @@
 import { and, count, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { getDb } from "@/db";
 import { messages } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth/cookies";
@@ -22,7 +23,9 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const payload = (await request.json().catch(() => ({}))) as EmptyFolderPayload;
+	const read = await readJsonObjectBody<EmptyFolderPayload>(request);
+	if ("response" in read) return read.response;
+	const payload = read.body;
 	if (!payload.mailboxId || !isPermanentDeleteFolder(payload.folder)) {
 		return NextResponse.json({ error: "A mailbox and a Trash or Spam folder are required" }, { status: 400 });
 	}

@@ -14,9 +14,11 @@ const outfile = join(outDir, "i18n.mjs");
 // Catalogs other than English are static assets; tests serve them from public/ for both the browser
 // `fetch` and the server's ASSETS binding. `testCatalogs` adds in-memory catalogs for an isolated locale.
 globalThis.testCatalogs = {};
+globalThis.unreadableCatalogs = new Set();
 globalThis.readTestAsset = async (input) => {
 	const path = new URL(String(input), "https://mailclaw.local").pathname;
 	const code = path.match(/^\/locales\/([\w-]+)\.json$/)?.[1];
+	if (code && globalThis.unreadableCatalogs.has(code)) return new Response("Unavailable", { status: 503 });
 	if (code && globalThis.testCatalogs[code]) return Response.json(globalThis.testCatalogs[code]);
 	const file = join(root, "public", path);
 	return existsSync(file) ? new Response(readFileSync(file)) : new Response("Not found", { status: 404 });
@@ -35,6 +37,7 @@ async function bundleI18n(outfile, extraLocale = false) {
 				import { loadMessages } from "./src/lib/i18n/utils";
 				export * from "./src/lib/i18n/utils";
 				export * from "./src/lib/i18n/locales";
+				export { GLOBAL_ERROR_MESSAGES } from "./src/app/error-screen-utils";
 				function Probe() { return createElement("span", null, useLanguage().t("navigation.inbox")); }
 				export async function renderLanguage(locale) {
 					const initialMessages = await loadMessages(locale);
@@ -82,7 +85,7 @@ async function bundleI18n(outfile, extraLocale = false) {
 await bundleI18n(outfile);
 
 const i18n = await import(pathToFileURL(outfile).href);
-const en = JSON.parse(readFileSync(join(root, "src/lib/i18n/en.json"), "utf8"));
+const en = JSON.parse(readFileSync(join(root, "public/locales/en.json"), "utf8"));
 
 const CATEGORIES = ["zero", "one", "two", "few", "many", "other"];
 const categoryOf = (key) => CATEGORIES.find((category) => key.endsWith(`.${category}`));
@@ -119,9 +122,26 @@ test("missing, invalid and unsupported locale values fall back to English", () =
 	assert.equal(i18n.resolveLocale("pt-BR"), "pt-BR");
 });
 
-test("translation uses the requested catalog and falls back per key", async () => {
+test("translation uses the requested catalog, then the fallback catalog per key, then the key", async () => {
 	assert.equal(i18n.translate(await i18n.loadMessages("pt-BR"), "navigation.inbox"), "Entrada");
-	assert.equal(i18n.translate({}, "navigation.inbox"), "Inbox");
+	// Server code passes English as the fallback; in the browser every catalog has every key (checked above).
+	assert.equal(i18n.translate({}, "navigation.inbox", undefined, en), "Inbox");
+	assert.equal(i18n.translate({}, "navigation.inbox"), "navigation.inbox");
+	assert.equal(i18n.createTranslator("de", {}, en)("thread.attachmentCount", { count: 1 }), en["thread.attachmentCount.one"].replace("{count}", "1"));
+});
+
+test("English is a static catalog like the others, not part of the shared i18n modules", async () => {
+	assert.ok(existsSync(join(root, "public/locales/en.json")), "the browser fetches /locales/en.json");
+	assert.equal(existsSync(join(root, "src/lib/i18n/en.json")), false, "a second copy would drift");
+	assert.deepEqual(await i18n.loadMessages("en"), en);
+	// Client modules import these; only server.ts may import the catalog itself (types.d.ts only its type).
+	for (const file of ["src/lib/i18n/utils.ts", "src/lib/i18n/catalog-store.ts", "src/lib/i18n/locales.ts", "src/components/language-provider.tsx", "src/app/global-error.tsx"]) {
+		assert.doesNotMatch(readFileSync(join(root, file), "utf8"), /^import (?!type )[^;]*\.json/m, file);
+	}
+});
+
+test("the global error page's English strings match the catalog", () => {
+	for (const [key, value] of Object.entries(i18n.GLOBAL_ERROR_MESSAGES)) assert.equal(value, en[key], key);
 });
 
 test("existing locale-specific plural translations remain available", async () => {
@@ -160,6 +180,14 @@ test("root layout passes the same cookie locale to HTML and provider on first re
 	}
 });
 
+test("a catalog the server cannot read renders the page in English, keeping the chosen language", async (t) => {
+	globalThis.unreadableCatalogs.add("it");
+	t.after(() => globalThis.unreadableCatalogs.delete("it"));
+	const html = await i18n.renderLayout("it");
+	assert.match(html, /<html lang="it"/);
+	assert.match(html, />Inbox<\/span>/);
+});
+
 test("a locale registered once reaches resolution, translation, cookie, selector and SSR", async () => {
 	assert.ok(existsSync(join(root, "src/lib/i18n/locales.ts")), "locales must have one shared registry");
 	// Use an ICU-supported locale absent from the registry. Unknown codes such as
@@ -191,7 +219,7 @@ test("a locale registered once reaches resolution, translation, cookie, selector
 
 test("translations interpolate {vars}, keep unknown placeholders and default to ltr", async () => {
 	assert.equal(i18n.translate({ "navigation.inbox": "Hi {name}, {other}" }, "navigation.inbox", { name: "Ana", count: 2 }), "Hi Ana, {other}");
-	assert.equal(i18n.translate({}, "navigation.inbox", { name: "x" }), "Inbox");
+	assert.equal(i18n.translate({}, "navigation.inbox", { name: "x" }, en), "Inbox");
 	assert.equal(i18n.createTranslator("pt-BR", await i18n.loadMessages("pt-BR"))("navigation.inbox", { count: 2 }), "Entrada");
 	assert.equal(i18n.getDirection("en"), "ltr");
 });

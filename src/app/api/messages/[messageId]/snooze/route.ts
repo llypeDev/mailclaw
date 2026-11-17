@@ -4,6 +4,7 @@ import { getDb } from "@/db";
 import { messages } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth/cookies";
 import { getEnv } from "@/lib/cloudflare";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
 import type { SnoozeMessagePayload } from "./types";
 import { getSnoozedUntil } from "./utils";
@@ -17,7 +18,9 @@ export async function POST(
 	const user = await getCurrentUser(env, request);
 	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-	const payload = (await request.json()) as SnoozeMessagePayload;
+	const read = await readJsonObjectBody<SnoozeMessagePayload>(request);
+	if ("response" in read) return read.response;
+	const payload = read.body;
 	const snoozedUntil = getSnoozedUntil(payload.snoozedUntil);
 	if (!snoozedUntil) {
 		return NextResponse.json({ error: "Choose a future snooze time" }, { status: 400 });

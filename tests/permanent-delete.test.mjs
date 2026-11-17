@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import test, { after } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
+import { registerEnglishCatalog } from "./helpers/english-catalog.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const directory = mkdtempSync(join(root, "node_modules", "mailclaw-permanent-delete-test-"));
@@ -29,6 +30,8 @@ await build({
 	logLevel: "silent",
 });
 const m = await import(pathToFileURL(join(directory, "entry.mjs")).href);
+// The helpers default to `defaultTranslator`, which reads whichever catalog has loaded.
+await registerEnglishCatalog();
 
 test("delete is an accepted bulk action that changes neither status nor read state", () => {
 	assert.equal(m.isAllowedBulkMessageAction("delete"), true);

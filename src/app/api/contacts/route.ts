@@ -5,6 +5,7 @@ import { contacts } from "@/db/schema";
 import { requireSessionUser } from "@/lib/api/auth";
 import { deleteAvatarImages } from "@/lib/avatar-images";
 import { getEnv } from "@/lib/cloudflare";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { normalizeEmailAddress } from "@/lib/email/address";
 import { importGravatarAvatar } from "@/lib/contacts/gravatar";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
@@ -74,7 +75,9 @@ export async function POST(request: Request) {
 	const auth = await requireSessionUser(env, request);
 	if (auth.error) return auth.error;
 	const user = auth.user;
-	const body = (await request.json()) as ContactRequestInput;
+	const read = await readJsonObjectBody<ContactRequestInput>(request);
+	if ("response" in read) return read.response;
+	const body = read.body;
 	const email = normalizeEmailAddress(body.address ?? "");
 	const displayName = body.displayName?.trim() || null;
 	if (!body.mailboxId || !parseAddress(email) || (displayName && displayName.length > 100)) {
@@ -117,7 +120,9 @@ export async function PATCH(request: Request) {
 	const auth = await requireSessionUser(env, request);
 	if (auth.error) return auth.error;
 	const user = auth.user;
-	const body = (await request.json()) as ContactRequestInput;
+	const read = await readJsonObjectBody<ContactRequestInput>(request);
+	if ("response" in read) return read.response;
+	const body = read.body;
 	const email = normalizeEmailAddress(body.address ?? "");
 	const displayName = body.displayName?.trim() ?? "";
 	if (!body.mailboxId || !email || !displayName || displayName.length > 100) {

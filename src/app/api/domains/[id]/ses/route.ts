@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { getEnv } from "@/lib/cloudflare";
 import { requireSessionUser } from "@/lib/api/auth";
 import { canManageDomains } from "@/lib/auth/admin";
@@ -40,7 +41,9 @@ export async function POST(request: Request, { params }: Params) {
 	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	const domain = await getDomainForUser(env, user.id, id);
 	if (!domain) return NextResponse.json({ error: "Not found" }, { status: 404 });
-	const body = (await request.json().catch(() => ({}))) as { action?: string };
+	const read = await readJsonObjectBody<{ action?: string }>(request);
+	if ("response" in read) return read.response;
+	const body = read.body;
 	try {
 		if (body.action === "test") {
 			const sent = await sendSystemEmail(env, { to: user.email, subject: "Mailclaw test email", text: `This message confirms ${domain.hostname} can send mail through Amazon SES.`, hostname: domain.hostname });

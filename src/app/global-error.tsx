@@ -5,12 +5,12 @@ import Link from "next/link";
 import { applyTheme, readThemePreference, themeBootstrapScript } from "@/components/theme-utils";
 import { DEFAULT_LOCALE, createTranslator } from "@/lib/i18n/utils";
 import type { RouteErrorProps } from "./error-screen-types";
-import { readErrorDigest } from "./error-screen-utils";
+import { GLOBAL_ERROR_MESSAGES, readErrorDigest } from "./error-screen-utils";
 import "./globals.css";
 
 // Replaces the root layout, so none of its providers (language, theme, branding) exist here:
-// strings come from the bundled English catalog and the theme is applied by hand.
-const t = createTranslator(DEFAULT_LOCALE);
+// strings are English, bundled with this page, and the theme is applied by hand.
+const t = createTranslator(DEFAULT_LOCALE, GLOBAL_ERROR_MESSAGES);
 
 export default function GlobalError({ error, retry }: RouteErrorProps) {
 	const digest = readErrorDigest(error);

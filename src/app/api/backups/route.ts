@@ -10,6 +10,7 @@ import {
 	updateBackupSettings,
 } from "@/lib/backups/service";
 import { getEnv } from "@/lib/cloudflare";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { parseBackupSettingsInput } from "./utils";
 
 export async function GET(request: Request) {
@@ -38,7 +39,9 @@ export async function PUT(request: Request) {
 	if (error) return error;
 	try {
 		assertPrimaryAdmin(user);
-		const input = parseBackupSettingsInput(await request.json());
+		const read = await readJsonObjectBody(request);
+		if ("response" in read) return read.response;
+		const input = parseBackupSettingsInput(read.body);
 		if (!input) return NextResponse.json({ error: "Invalid backup settings" }, { status: 400 });
 		await updateBackupSettings(env, input);
 		return NextResponse.json({ ok: true });

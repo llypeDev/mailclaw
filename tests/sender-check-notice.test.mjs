@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import test, { after } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
+import { registerEnglishCatalog } from "./helpers/english-catalog.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = mkdtempSync(join(tmpdir(), "mailclaw-sender-notice-"));
@@ -46,6 +47,7 @@ await build({
 });
 
 const { render } = await import(pathToFileURL(join(outDir, "entry.mjs")).href);
+await registerEnglishCatalog();
 const message = { id: "test", direction: "inbound", fromAddr: '"security@bank.test" <alerts@other.test>', replyTo: "help@third.test" };
 
 test("sender notice is one compact disclosure without duplicated warning reasons", () => {

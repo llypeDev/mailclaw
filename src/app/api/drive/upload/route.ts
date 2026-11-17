@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { and, eq, isNotNull, isNull, lt } from "drizzle-orm";
 import { driveItems, driveUploadParts } from "@/db/schema";
 import { newId } from "@/lib/ids";
@@ -15,7 +16,9 @@ export async function POST(request: Request) {
 	const auth = await authorizeDrive(request, true);
 	if (auth.error) return auth.error;
 	const { env, db, user } = auth;
-	const body = await request.json().catch(() => ({})) as { name?: unknown; size?: unknown; contentType?: unknown; parentId?: unknown; fingerprint?: unknown };
+	const read = await readJsonObjectBody<{ name?: unknown; size?: unknown; contentType?: unknown; parentId?: unknown; fingerprint?: unknown }>(request);
+	if ("response" in read) return read.response;
+	const body = read.body;
 	const size = typeof body.size === "number" && Number.isInteger(body.size) && body.size >= 0 ? body.size : null;
 	const name = normalizeDriveName(body.name) ?? "Untitled";
 	if (size === null) return NextResponse.json({ error: "Invalid file size" }, { status: 400 });

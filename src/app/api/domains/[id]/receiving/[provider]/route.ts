@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { z } from "zod";
 import { getEnv } from "@/lib/cloudflare";
 import { requireSessionUser } from "@/lib/api/auth";
@@ -52,7 +53,9 @@ export async function POST(request: Request, { params }: Params) {
 	if (!domain) return NextResponse.json({ error: "Not found" }, { status: 404 });
 	const provider = providerSchema.safeParse(rawProvider);
 	if (!provider.success) return NextResponse.json({ error: "Unknown provider" }, { status: 400 });
-	const body = (await request.json().catch(() => ({}))) as { replaceMx?: boolean };
+	const read = await readJsonObjectBody<{ replaceMx?: boolean }>(request);
+	if ("response" in read) return read.response;
+	const body = read.body;
 	try {
 		await setupReceiving(env, domain, provider.data, originOf(env, request), { replaceMx: body.replaceMx === true });
 		return NextResponse.json({ ok: true }, { headers: noStore });

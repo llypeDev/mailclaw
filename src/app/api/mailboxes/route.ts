@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { and, eq } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
@@ -22,7 +23,9 @@ export async function POST(request: Request) {
 	const auth = await requireSessionUser(env, request);
 	if (auth.error) return auth.error;
 	const user = auth.user;
-	const parsed = mailboxSchema.safeParse(await request.json());
+	const read = await readJsonObjectBody(request);
+	if ("response" in read) return read.response;
+	const parsed = mailboxSchema.safeParse(read.body);
 	if (!parsed.success) {
 		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 	}

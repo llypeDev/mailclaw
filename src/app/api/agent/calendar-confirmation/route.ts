@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { calendarEvents } from "@/db/schema";
 import { getEnv } from "@/lib/cloudflare";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { getCurrentUser } from "@/lib/auth/cookies";
 import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
 import { calendarAccessError } from "@/lib/calendar/api-auth";
@@ -35,7 +36,9 @@ export async function POST(request: Request) {
 	const denied = calendarAccessError(user);
 	if (denied) return denied;
 	if (!hasValidSessionMutationOrigin(request)) return Response.json({ error: "Invalid origin" }, { status: 403 });
-	const { token } = (await request.json().catch(() => ({}))) as { token?: string };
+	const read = await readJsonObjectBody<{ token?: string }>(request);
+	if ("response" in read) return read.response;
+	const { token } = read.body;
 	const confirmation = await readCalendarConfirmation(env, token ?? "", user.id);
 	if (!confirmation) return Response.json({ error: "This request has expired or is not valid" }, { status: 404 });
 	try {

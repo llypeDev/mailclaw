@@ -22,11 +22,11 @@ The root layout reads the cookie with `await cookies()`, validates it against th
 
 ## Adding translations
 
-Catalogs are flat JSON objects. English (`src/lib/i18n/en.json`) is bundled and defines `TranslationKey` and `Messages`; registered catalogs must contain all English keys with string values (plural variants may add categories). Add new English keys and update registered translations together. `translate()` retains a per-key English fallback.
+Catalogs are flat JSON objects in `public/locales/<code>.json`. English (`public/locales/en.json`) defines `TranslationKey` and `Messages`; registered catalogs must contain all English keys with string values (plural variants may add categories). Add new English keys and update registered translations together. Server code (`getServerTranslator`) falls back to English per key; the browser has no per-key fallback, since the parity test guarantees every key, and shows the key itself if one is ever missing.
 
 To add another language:
 
-1. Copy `src/lib/i18n/en.json` to `public/locales/<code>.json`, for example `public/locales/es.json`, and translate its values without changing the keys.
+1. Copy `public/locales/en.json` to `public/locales/<code>.json`, for example `public/locales/es.json`, and translate its values without changing the keys.
 2. Register it in `src/lib/i18n/locales.ts` with its BCP 47 locale code and native display name:
 
    ```ts
@@ -34,9 +34,9 @@ To add another language:
    es: { label: "Español" },
    ```
 
-That is the only registration point. The `Locale` type, supported-locale validation, cookie handling, server-rendered HTML and selector options all derive from it. No provider, layout, selector or utility changes are needed. English remains the default. For a right-to-left language add `dir: "rtl"` to the entry; the layout and provider then set `<html dir>`. English ships in the main bundle; every other catalog is a static asset loaded on demand (the browser fetches `/locales/<code>.json`, server rendering reads it through the `ASSETS` binding), so catalogs do not count toward the Worker's 3 MiB Free-plan size limit. Locale-specific date formatting is not part of this system.
+That is the only registration point. The `Locale` type, supported-locale validation, cookie handling, server-rendered HTML and selector options all derive from it. No provider, layout, selector or utility changes are needed. English remains the default. For a right-to-left language add `dir: "rtl"` to the entry; the layout and provider then set `<html dir>`. Every catalog, English included, is a static asset loaded on demand: the browser fetches `/locales/<code>.json` (the root layout preloads the one the page needs), so no catalog is part of the page's JavaScript. Server rendering bundles English (`src/lib/i18n/server.ts`, the only module that may import it) and reads the others through the `ASSETS` binding, so they do not count toward the Worker's 3 MiB Free-plan size limit. When the server cannot read a catalog, the page renders in English on both sides. Client code must not import a catalog; `global-error.tsx`, which has no provider, carries its own few English strings. Locale-specific date formatting is not part of this system.
 
-Client components use `useLanguage().t(key, vars?)`; server code uses `createTranslator(locale)` from `src/lib/i18n/utils.ts`, which returns the same function. Strings interpolate `{name}` placeholders from `vars`. For plurals, add `key.one`, `key.other` (and any other CLDR categories the language needs, such as `few` for Polish, Ukrainian and Arabic) to the catalog, then call `t("key", { count })`; the variant is picked with `Intl.PluralRules`, falling back to the bare key. The dialog close button uses the translated `navigation.close` automatically.
+Client components use `useLanguage().t(key, vars?)`; server code uses `getServerTranslator()` from `src/lib/i18n/server.ts`, or `createTranslator(locale, messages)` from `src/lib/i18n/utils.ts`, which return the same function. Code with no translator at hand can use `defaultTranslator`, which translates with whichever catalog the page has loaded. Strings interpolate `{name}` placeholders from `vars`. For plurals, add `key.one`, `key.other` (and any other CLDR categories the language needs, such as `few` for Polish, Ukrainian and Arabic) to the catalog, then call `t("key", { count })`; the variant is picked with `Intl.PluralRules`, falling back to the bare key. The dialog close button uses the translated `navigation.close` automatically.
 
  Keep routes, storage keys, permission checks, API values and user content independent of translated display text. Extend coverage gradually rather than replacing strings throughout the app in one change.
 

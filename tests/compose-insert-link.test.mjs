@@ -5,6 +5,7 @@ import test, { after } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 import { JSDOM } from "jsdom";
+import { registerEnglishCatalog } from "./helpers/english-catalog.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = mkdtempSync(join(root, "tests", ".tmp-compose-insert-link-"));
@@ -32,6 +33,7 @@ await build({
 const { createElement, act } = await import("react");
 const { createRoot } = await import("react-dom/client");
 const { RichTextEditor } = await import(pathToFileURL(join(outDir, "editor.mjs")).href);
+await registerEnglishCatalog();
 
 async function setup(t, selected = false) {
 	const container = document.createElement("div");

@@ -4,6 +4,7 @@ import { getDb } from "@/db";
 import { routingRules } from "@/db/schema";
 import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { domainRoutingRuleSchema } from "@/lib/validators";
 import {
 	assertAdminRuleMailbox,
@@ -43,7 +44,9 @@ export async function PATCH(request: Request, { params }: DomainRoutingRuleRoute
 	const loaded = await loadRule(request, id);
 	if (loaded.error) return loaded.error;
 
-	const body = (await request.json()) as Record<string, unknown>;
+	const read = await readJsonObjectBody(request);
+	if ("response" in read) return read.response;
+	const body = read.body;
 	// The rule's own domain always wins, so a request cannot move a rule to another domain.
 	const parsed = domainRoutingRuleSchema.safeParse({ ...body, domainId: loaded.rule.domainId });
 	if (!parsed.success) {

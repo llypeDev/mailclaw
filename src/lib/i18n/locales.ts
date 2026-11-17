@@ -6,8 +6,9 @@ type LocaleEntry = {
 };
 
 // Register a language here with its native name, and add its catalog as `public/locales/<code>.json`.
-// English ships in the bundle; other catalogs are static assets fetched when first needed, so they
-// do not count toward the Worker size limit.
+// The browser fetches every catalog, English included, as a static asset when first needed, so none is
+// part of the page's JavaScript; the Worker bundles English only (`server.ts`) and reads the others from
+// the assets, so they do not count toward its size limit.
 // Types, validation, cookies, SSR and the selector all derive from this registry.
 export const locales = {
 	en: { label: "English" },

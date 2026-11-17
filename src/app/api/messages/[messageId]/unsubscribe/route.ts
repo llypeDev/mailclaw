@@ -1,5 +1,6 @@
 import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { getDb } from "@/db";
 import { domains, mailboxes, messages } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth/cookies";
@@ -70,7 +71,9 @@ export async function POST(request: Request, { params }: UnsubscribeRouteParams)
 		return NextResponse.json({ error: "Too many unsubscribe attempts" }, { status: 429 });
 	}
 
-	const payload = (await request.json().catch(() => ({}))) as UnsubscribePayload;
+	const read = await readJsonObjectBody<UnsubscribePayload>(request);
+	if ("response" in read) return read.response;
+	const payload = read.body;
 	const andTrash = payload.action === "unsubscribe_and_trash";
 	const previewOnly = payload.previewOnly === true;
 

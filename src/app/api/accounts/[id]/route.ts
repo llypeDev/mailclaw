@@ -12,6 +12,7 @@ import { hasPasswordHash } from "@/lib/auth/password";
 import { consumeStepUpGrant } from "@/lib/auth/webauthn/grants";
 import { createAuditLog } from "@/lib/mailboxes/audit";
 import { authError } from "@/lib/http/auth-error";
+import { readJsonObjectBody } from "@/lib/http/request";
 
 export async function GET(request: Request, { params }: AccountRouteParams) {
 	const access = await requireAccountsAdmin(request);
@@ -67,7 +68,9 @@ export async function PATCH(request: Request, { params }: AccountRouteParams) {
 	if (!canManageUserAccount(actor, account)) {
 		return NextResponse.json({ error: "Only the primary admin can manage admin accounts" }, { status: 403 });
 	}
-	const parsed = updateManagedAccountSchema.safeParse(await request.json());
+	const read = await readJsonObjectBody(request);
+	if ("response" in read) return read.response;
+	const parsed = updateManagedAccountSchema.safeParse(read.body);
 	if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 	if (!actorIsPrimary && parsed.data.role !== account.role) {
 		return NextResponse.json({ error: "Only the primary admin can change roles" }, { status: 403 });

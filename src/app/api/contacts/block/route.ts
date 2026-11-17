@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { blockContact } from "@/lib/contacts/service";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
 import type { BlockContactRequest } from "./types";
@@ -11,7 +12,9 @@ export async function POST(request: Request) {
 	const auth = await requireSessionUser(env, request);
 	if (auth.error) return auth.error;
 	const user = auth.user;
-	const body = (await request.json()) as BlockContactRequest;
+	const read = await readJsonObjectBody<BlockContactRequest>(request);
+	if ("response" in read) return read.response;
+	const body = read.body;
 	if (!body.mailboxId || !body.address?.trim()) {
 		return NextResponse.json({ error: "Mailbox and contact are required" }, { status: 400 });
 	}

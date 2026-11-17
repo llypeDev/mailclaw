@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { webhooks } from "@/db/schema";
 import { parseWebhookEvents } from "@/lib/email/webhooks";
 import { webhookUpdateSchema } from "@/lib/validators";
@@ -33,7 +34,9 @@ export async function PATCH(request: Request, { params }: WebhookRouteParams) {
 	if (loaded.error) return loaded.error;
 	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 
-	const parsed = webhookUpdateSchema.safeParse(await request.json());
+	const read = await readJsonObjectBody(request);
+	if ("response" in read) return read.response;
+	const parsed = webhookUpdateSchema.safeParse(read.body);
 	if (!parsed.success) {
 		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 	}

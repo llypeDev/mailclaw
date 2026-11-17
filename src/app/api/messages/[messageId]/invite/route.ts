@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { getDb } from "@/db";
 import { calendarEvents, messages } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth/cookies";
@@ -63,7 +64,9 @@ export async function POST(request: Request, { params }: InviteRouteParams) {
 	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	const { messageId } = await params;
-	const body = await request.json().catch(() => ({})) as { response?: InviteResponse; sendReply?: boolean };
+	const read = await readJsonObjectBody<{ response?: InviteResponse; sendReply?: boolean }>(request);
+	if ("response" in read) return read.response;
+	const body = read.body;
 	const response = body.response;
 	if (response !== "accepted" && response !== "tentative" && response !== "declined") return NextResponse.json({ error: "Choose accept, maybe or decline" }, { status: 400 });
 	const db = getDb(env);

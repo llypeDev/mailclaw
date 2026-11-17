@@ -6,8 +6,8 @@ import test, { after } from "node:test";
 import { build } from "esbuild";
 import { JSDOM } from "jsdom";
 
-// The browser side of the locale catalog: it is not in the page, so LanguageProvider fetches
-// /locales/<code>.json once (React `use`), renders translated, and reuses it for later renders.
+// The browser side of the locale catalog: no catalog is in the page, English included, so LanguageProvider
+// fetches /locales/<code>.json once (React `use`), renders translated, and reuses it for later renders.
 const project = join(dirname(fileURLToPath(import.meta.url)), "..");
 const directory = mkdtempSync(join(project, "node_modules", "language-provider-test-"));
 after(() => rmSync(directory, { recursive: true, force: true }));
@@ -79,19 +79,28 @@ test("a non-English page loads its catalog from the static file once and renders
 	});
 });
 
-test("English and an explicit catalog need no request", async () => {
-	catalogRequests.length = 0;
+async function renderProvider(props) {
 	const container = document.createElement("div");
 	document.body.append(container);
 	const root = createRoot(container);
-	await act(async () => root.render(createElement(LanguageProvider, { initialLocale: "en" }, createElement(Probe))));
-	assert.equal(container.textContent, "Inbox");
-	await act(async () => root.render(createElement(LanguageProvider, { initialLocale: "fr", initialMessages: {} }, createElement(Probe))));
-	assert.equal(container.textContent, "Inbox", "an empty catalog (unreadable on the server) stays English");
-	assert.deepEqual(catalogRequests, []);
+	await act(async () => root.render(createElement(LanguageProvider, props, createElement(Probe))));
+	const text = container.textContent;
 	await act(async () => root.unmount());
+	return text;
+}
+
+test("English loads from its static file like any other catalog; an explicit catalog needs no request", async () => {
+	catalogRequests.length = 0;
+	assert.equal(await renderProvider({ initialLocale: "en" }), "Inbox");
+	assert.deepEqual(catalogRequests, ["/locales/en.json"]);
+	assert.equal(peekCatalog("en")["navigation.inbox"], "Inbox");
+	// The root layout passes `catalogLocale` when the server could not read the chosen language's catalog.
+	assert.equal(await renderProvider({ initialLocale: "fr", catalogLocale: "en" }), "Inbox", "rendered in English, as on the server");
+	assert.equal(await renderProvider({ initialLocale: "fr", initialMessages: { "navigation.inbox": "Boîte" } }), "Boîte");
+	assert.deepEqual(catalogRequests, ["/locales/en.json"], "English is fetched once per tab, and an explicit catalog not at all");
 });
 
+// English loaded in the previous test, so it is the fallback here without another request.
 test("an unreachable catalog renders English once instead of failing, and choosing the language retries", async () => {
 	catalogRequests.length = 0;
 	offline = true;

@@ -1,5 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { getDb } from "@/db";
 import { messageAttachments, messages } from "@/db/schema";
 import { authorizeDrive } from "@/lib/drive/auth";
@@ -22,7 +23,9 @@ export async function POST(request: Request) {
 	if (auth.error) return auth.error;
 	const { env, user } = auth;
 	const db = getDb(env);
-	const body = await request.json().catch(() => ({})) as { action?: unknown; ids?: unknown };
+	const read = await readJsonObjectBody<{ action?: unknown; ids?: unknown }>(request);
+	if ("response" in read) return read.response;
+	const body = read.body;
 	const ids = Array.isArray(body.ids) ? [...new Set(body.ids.filter((id): id is string => typeof id === "string"))] : [];
 	if (body.action !== "trash" && body.action !== "restore" && body.action !== "delete") return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 	if (!ids.length || ids.length > MAX_BULK) return NextResponse.json({ error: "Select between 1 and 200 attachments" }, { status: 400 });

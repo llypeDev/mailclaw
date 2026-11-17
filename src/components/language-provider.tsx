@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, use, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
-import { DEFAULT_LOCALE, createTranslator, getDirection, loadMessages, resolveLocale, serializeLocaleCookie } from "@/lib/i18n/utils";
+import { DEFAULT_LOCALE, createTranslator, defaultTranslator, getDirection, loadMessages, resolveLocale, serializeLocaleCookie } from "@/lib/i18n/utils";
 import { loadCatalog, peekCatalog } from "@/lib/i18n/catalog-store";
 import type { Locale, Messages } from "@/lib/i18n/types";
 import type { LanguageState } from "./language-provider-types";
@@ -9,44 +9,45 @@ import type { LanguageState } from "./language-provider-types";
 const LanguageContext = createContext<LanguageState>({
 	locale: DEFAULT_LOCALE,
 	setLocale: () => undefined,
-	t: createTranslator(DEFAULT_LOCALE),
+	t: defaultTranslator,
 });
 
-type Active = { locale: Locale; messages?: Partial<Messages> };
+/** `catalog` is whose messages render the page: `locale`'s own, or English when that one could not be read. */
+type Active = { locale: Locale; catalog: Locale; messages?: Partial<Messages> };
 
-// When the catalog cannot be fetched (offline) the page renders English rather than failing; choosing the
-// language again in the selector retries.
+// When a catalog cannot be fetched (offline) the page renders English rather than failing, if English can
+// be fetched; choosing the language again in the selector retries.
 const UNAVAILABLE_CATALOG: Partial<Messages> = {};
 
 /** Browser load of a catalog from `public/locales`, cached for the tab; `UNAVAILABLE_CATALOG` when it fails. */
 function loadClientCatalog(locale: Locale, retryFailed = false): Promise<Partial<Messages>> {
-	return locale === DEFAULT_LOCALE
-		? loadMessages(locale)
-		: loadCatalog(locale, () => loadMessages(locale), { fallback: UNAVAILABLE_CATALOG, retryFailed });
+	return loadCatalog(locale, () => loadMessages(locale), { fallback: UNAVAILABLE_CATALOG, retryFailed });
 }
 
 /**
- * The catalog to render with. English is bundled. Another language's catalog is not part of the page:
- * while the server renders the HTML it is already in the catalog store (the root layout loaded it), and
- * in the browser it comes from `/locales/<code>.json`, which the root layout preloads. Hydration waits
- * for that file (`use`), keeping the translated server HTML on screen, so there is no flash of English.
+ * The catalog to render with. No catalog is part of the page, English included: while the server renders
+ * the HTML it is already in the catalog store (the root layout loaded it), and in the browser it comes from
+ * `/locales/<code>.json`, which the root layout preloads. Hydration waits for that file (`use`), keeping the
+ * server HTML on screen, so there is no flash of untranslated text.
  */
-function useCatalog(locale: Locale, explicit: Partial<Messages> | undefined): Partial<Messages> | undefined {
-	if (explicit || locale === DEFAULT_LOCALE) return explicit;
-	// On the server a missing catalog means it could not be read; the layout then renders English.
-	if (typeof window === "undefined") return peekCatalog(locale);
+function useCatalog(locale: Locale, explicit: Partial<Messages> | undefined): Partial<Messages> {
+	if (explicit) return explicit;
+	// The layout loaded `locale`'s catalog on the server before rendering this.
+	if (typeof window === "undefined") return peekCatalog(locale) ?? peekCatalog(DEFAULT_LOCALE) ?? UNAVAILABLE_CATALOG;
 	// A loaded catalog's promise is marked fulfilled, so `use` returns it without suspending.
-	return use(loadClientCatalog(locale));
+	const messages = use(loadClientCatalog(locale));
+	return messages === UNAVAILABLE_CATALOG && locale !== DEFAULT_LOCALE ? use(loadClientCatalog(DEFAULT_LOCALE)) : messages;
 }
 
 /**
- * `initialMessages` overrides the catalog for `initialLocale` (tests, or `{}` to render English when the
- * server could not read the catalog). Without it the catalog comes from the catalog store (`useCatalog`).
+ * `catalogLocale` renders `initialLocale` with another language's catalog: the root layout passes English
+ * when the server could not read `initialLocale`'s, so both sides render the same text. `initialMessages`
+ * overrides the catalog (tests). Otherwise the catalog comes from the catalog store (`useCatalog`).
  */
-export function LanguageProvider({ initialLocale, initialMessages, children }: { initialLocale: Locale; initialMessages?: Partial<Messages>; children: ReactNode }) {
-	const [active, setActive] = useState<Active>({ locale: initialLocale, messages: initialMessages });
+export function LanguageProvider({ initialLocale, catalogLocale, initialMessages, children }: { initialLocale: Locale; catalogLocale?: Locale; initialMessages?: Partial<Messages>; children: ReactNode }) {
+	const [active, setActive] = useState<Active>({ locale: initialLocale, catalog: catalogLocale ?? initialLocale, messages: initialMessages });
 	const latestRequest = useRef(0);
-	const messages = useCatalog(active.locale, active.messages);
+	const messages = useCatalog(active.catalog, active.messages);
 
 	const setLocale = useCallback((next: Locale) => {
 		const nextLocale = resolveLocale(next);
@@ -62,7 +63,7 @@ export function LanguageProvider({ initialLocale, initialMessages, children }: {
 			}
 			document.documentElement.lang = nextLocale;
 			document.documentElement.dir = getDirection(nextLocale);
-			setActive({ locale: nextLocale, messages: nextMessages });
+			setActive({ locale: nextLocale, catalog: nextLocale, messages: nextMessages });
 		}).catch(() => undefined);
 	}, []);
 

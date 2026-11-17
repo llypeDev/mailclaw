@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { getDb } from "@/db";
 import { routingRules } from "@/db/schema";
 import { requireSessionUser } from "@/lib/api/auth";
@@ -49,7 +50,9 @@ export async function POST(request: Request) {
 	if (auth.error) return auth.error;
 	const user = auth.user;
 	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
-	const parsed = domainRoutingRuleSchema.safeParse(await request.json());
+	const read = await readJsonObjectBody(request);
+	if ("response" in read) return read.response;
+	const parsed = domainRoutingRuleSchema.safeParse(read.body);
 	if (!parsed.success) {
 		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 	}

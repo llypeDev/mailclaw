@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { eq } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
@@ -25,7 +26,9 @@ export async function POST(request: Request, { params }: Params) {
 	const domain = await getDomainForUser(env, auth.userId, id);
 	if (!domain) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-	const body = (await request.json().catch(() => ({}))) as { record?: string; replaceMx?: boolean };
+	const read = await readJsonObjectBody<{ record?: string; replaceMx?: boolean }>(request);
+	if ("response" in read) return read.response;
+	const body = read.body;
 	const record = body.record as DnsAuthRecord | undefined;
 	if (!record || !DNS_RECORDS.includes(record)) {
 		return NextResponse.json({ error: "Unknown DNS record" }, { status: 400 });

@@ -1,4 +1,5 @@
-import type en from "./en.json";
+// English, like every catalog, is a static asset; it also defines the keys.
+import type en from "../../../public/locales/en.json";
 
 export type { Locale } from "./locales";
 export type TranslationKey = keyof typeof en;

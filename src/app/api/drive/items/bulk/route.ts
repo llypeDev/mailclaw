@@ -1,5 +1,6 @@
 import { inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { driveItems } from "@/db/schema";
 import { authorizeDrive } from "@/lib/drive/auth";
 import { deleteDriveItems, getDriveChain, getDriveItem, getDriveRole } from "@/lib/drive/access";
@@ -17,7 +18,9 @@ export async function POST(request: Request) {
 	const auth = await authorizeDrive(request, true);
 	if (auth.error) return auth.error;
 	const { env, db, user } = auth;
-	const body = await request.json().catch(() => ({})) as { action?: unknown; ids?: unknown; parentId?: unknown };
+	const read = await readJsonObjectBody<{ action?: unknown; ids?: unknown; parentId?: unknown }>(request);
+	if ("response" in read) return read.response;
+	const body = read.body;
 	const ids = Array.isArray(body.ids) ? [...new Set(body.ids.filter((id): id is string => typeof id === "string"))] : [];
 	if (!ids.length || ids.length > MAX_BULK_ITEMS) return NextResponse.json({ error: "Select between 1 and 200 items" }, { status: 400 });
 

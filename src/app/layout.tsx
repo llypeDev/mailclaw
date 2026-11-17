@@ -54,11 +54,13 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 	// The catalog is loaded here (once per isolate) so the server-rendered HTML is translated, but it is not
 	// passed down: LanguageProvider reads it from the catalog store while rendering HTML, and the browser
 	// fetches the static `/locales/<code>.json` preloaded here instead of receiving it inside every page.
-	const translated = locale !== DEFAULT_LOCALE;
-	const catalogReadable = translated && !!(await loadServerMessages(locale));
+	// That holds for English too, so no catalog is part of the page's JavaScript. A catalog the server
+	// cannot read renders English on both sides rather than translating only in the browser.
+	const catalogLocale = (await loadServerMessages(locale)) ? locale : DEFAULT_LOCALE;
+	if (catalogLocale !== locale) await loadServerMessages(catalogLocale);
 	// A hint, not a `<link>` element: React's RSC renderer turns a `<link rel="preload">` in a Server
 	// Component into this same hint and SSR still renders the element, so the tag came out twice.
-	if (catalogReadable) preload(catalogPath(locale), { as: "fetch", crossOrigin: "anonymous" });
+	preload(catalogPath(catalogLocale), { as: "fetch", crossOrigin: "anonymous" });
 	const { iconHref, ...branding } = await getHomeBranding();
 	return (
 		<html lang={locale} dir={getDirection(locale)} data-remote-image-proxy="enabled" suppressHydrationWarning>
@@ -68,8 +70,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 				<link rel="icon" href={iconHref ?? DEFAULT_ICON_HREF}></link>
 			</head>
 			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-				{/* An unreadable catalog renders English on both sides (`{}` falls back per key) rather than translating only in the browser. */}
-				<LanguageProvider initialLocale={locale} initialMessages={translated && !catalogReadable ? {} : undefined}><Providers initialBranding={branding}>{children}</Providers></LanguageProvider>
+				<LanguageProvider initialLocale={locale} catalogLocale={catalogLocale === locale ? undefined : catalogLocale}><Providers initialBranding={branding}>{children}</Providers></LanguageProvider>
 			</body>
 		</html>
 	);

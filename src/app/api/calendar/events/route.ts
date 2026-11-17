@@ -10,6 +10,7 @@ import { normalizeCalendarColor } from "@/lib/calendar/colors";
 import { normalizeReminderMinutes } from "@/lib/calendar/reminder-utils";
 import { DEFAULT_REPEAT_DAYS, normalizeCalendarRepeat, normalizeCalendarRepeatDays } from "@/lib/calendar/recurrence";
 import type { CalendarEventInput } from "./types";
+import { readJsonObjectBody } from "@/lib/http/request";
 import { getRequestTimeZone, normalizeTimeZone } from "@/lib/time/utils";
 import { authorizeCalendarRequest, calendarKeyCanSendInvitations } from "@/lib/calendar/api-auth";
 
@@ -28,7 +29,9 @@ export async function POST(request: Request) {
 	const env = getEnv();
 	const { user, key, error } = await authorizeCalendarRequest(env, request, "calendar:write");
 	if (error) return error;
-	const input = await request.json() as CalendarEventInput;
+	const read = await readJsonObjectBody<CalendarEventInput>(request);
+	if ("response" in read) return read.response;
+	const input = read.body;
 	const startsAt = new Date(input.startsAt);
 	const endsAt = new Date(input.endsAt);
 	if (!input.title?.trim() || Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || endsAt <= startsAt) return NextResponse.json({ error: "Enter a title and valid event times" }, { status: 400 });
