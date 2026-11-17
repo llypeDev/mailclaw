@@ -91,7 +91,10 @@ function ComposeNoticeToast({ notice }: { notice: ComposeNotice }) {
 			aria-atomic="false"
 			className={cn(
 				// Orange's toast: raised surface, strong 1px border, the tone as a 3px bar on the start edge.
-				"fixed end-6 top-6 z-[60] flex max-w-[calc(100vw-3rem)] items-center gap-4 border border-line-strong border-s-[length:var(--or-border-accent)] bg-surface-raised px-4 py-3 text-sm font-medium text-fg shadow-lg",
+				// Bottom start, like the other toasts, away from the composer on the bottom end; on phones it spans
+				// the width just above the Compose button (COMPOSE_FAB_CLASS: 3rem tall at the bottom inset).
+				"fixed bottom-6 start-6 z-[60] flex max-w-[calc(100vw-3rem)] max-md:end-4 max-md:start-4 max-md:bottom-[calc(max(1rem,env(safe-area-inset-bottom))+3.75rem)] max-md:max-w-none",
+				"items-center gap-4 border border-line-strong border-s-[length:var(--or-border-accent)] bg-surface-raised px-4 py-3 text-sm font-medium text-fg shadow-lg",
 				notice.tone === "error" ? "border-s-danger" : notice.tone === "loading" ? "border-s-line-control" : "border-s-success",
 			)}
 		>
