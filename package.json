@@ -120,7 +120,7 @@
     "sass": "^1.105.0",
     "smtp-server": "^3.21.6",
     "tailwind-merge": "^3.6.0",
-    "vinext": "1.0.0-beta.13",
+    "vinext": "1.4.2",
     "workers-ai-provider": "^4.0.0",
     "ws": "^8.21.0",
     "zod": "^4.6.7"
@@ -144,7 +144,7 @@
     "@typescript-eslint/eslint-plugin": "8.73.0",
     "@typescript-eslint/parser": "8.73.0",
     "@vitejs/plugin-react": "^6.0.0",
-    "@vitejs/plugin-rsc": "^0.5.34",
+    "@vitejs/plugin-rsc": "^0.5.38",
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.2",
     "eslint": "^9",
@@ -154,8 +154,8 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5.7.4",
-    "vite": "npm:@voidzero-dev/vite-plus-core@1.0.0",
-    "vite-plus": "1.0.0",
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
+    "vite-plus": "1.4.0",
     "wrangler": "^4.163.0"
   },
   "overrides": {
@@ -165,7 +165,7 @@
     "satori": {
       "fflate": "0.7.5"
     },
-    "vite": "npm:@voidzero-dev/vite-plus-core@1.0.0"
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0"
   },
   "type": "module",
   "optionalDependencies": {

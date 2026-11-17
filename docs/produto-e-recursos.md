@@ -27,10 +27,10 @@ Licença: **MIT**. Sem conta, sem telemetria, sem serviço externo obrigatório.
 | Item | Valor |
 |---|---|
 | Código | ~92.500 linhas de TypeScript em 1.381 arquivos (`src`, `server`, `scripts`, `worker.ts`) |
-| Testes | 141 arquivos, ~18.300 linhas, `node:test` |
+| Testes | 162 arquivos, ~23.400 linhas, `node:test` |
 | Rotas de API | 213 arquivos `route.ts` |
 | Banco | Drizzle sobre SQLite/D1, PostgreSQL e MySQL, a partir de um schema só: 59 tabelas |
-| Migrações | 90 no SQLite, 14 no PostgreSQL, 14 no MySQL |
+| Migrações | 91 no SQLite, 15 no PostgreSQL, 15 no MySQL |
 | Frontend | Next.js 16 via vinext (Vite) + React 19, Tailwind v4, Radix, TanStack Query |
 | Idiomas | 34, incluindo direita-para-esquerda |
 
@@ -86,9 +86,9 @@ No estado do repositório em 17/11/2026:
 |---|---|
 | `npx tsc --noEmit` | sem erros |
 | `npm run lint` | 0 erros e 0 avisos |
-| `node --test tests/*.test.mjs` | 904 passam, 2 pulados de propósito, 0 falhas |
+| `node --test tests/*.test.mjs` | 1.090 passam, 2 pulados de propósito, 0 falhas |
 | `npm run build` | build completo do Worker |
-| `npm audit --omit=dev` | sem vulnerabilidades |
+| `npm audit` | sem vulnerabilidades (produção e desenvolvimento) |
 
 ## 5. O que vem depois
 

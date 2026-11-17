@@ -8,6 +8,8 @@ Verificações automáticas na data da análise: `npx tsc --noEmit` sem erros; `
 
 Depois da segunda rodada de correções (17/11/2026): `npx tsc --noEmit` sem erros; `npm run lint` com 0 erros e 0 avisos; `node --test` com 904 de 906 testes passando (2 pulados de propósito, 0 falhas); `npm audit --omit=dev` sem vulnerabilidades, `npm audit` com 6 (todas de desenvolvimento, ver 4.6); `npm run build` completo. O resumo está em "Andamento".
 
+Depois da terceira rodada (17/11/2026): `npx tsc --noEmit` sem erros; `npm run lint` com 0 erros e 0 avisos; `node --test` com 1.090 de 1.092 testes passando (2 pulados de propósito, 0 falhas); `npm audit` sem vulnerabilidades, inclusive de desenvolvimento; `npm run build` completo com `vinext` 1.4.2, e o Worker sobe no `vp preview`.
+
 ## Prioridades após a primeira instalação em produção (16/11/2026)
 
 A primeira instalação real (Cloudflare, plano Workers Free, recebimento pela Cloudflare e envio pelo Resend) mostrou problemas que a leitura do código não tinha mostrado. Esta seção define a ordem de trabalho; os números entre parênteses remetem aos itens das fases abaixo.
@@ -110,8 +112,8 @@ Na segunda rodada, `tsc`, lint, a suíte e o build rodaram de novo (números no 
 | 4.3 | Scripts npm com `VAR=valor comando` não rodam no Windows. Usar `cross-env`. | `package.json` | Pequeno | Feito (sem `cross-env`: `scripts/with-env.mjs`) |
 | 4.4 | 17 variáveis de ambiente sem documentação, entre elas `TRUST_PROXY` (sem ela, atrás de proxy reverso todos dividem o mesmo limite de login), `APNS_*` e `SPAMHAUS_DQS_KEY`. | `docs/`, `.env.docker.example` | Pequeno | Feito |
 | 4.5 | O teste `sns-signature` depende do binário `openssl`. | `tests/sns-signature.test.mjs` | Pequeno | Feito |
-| 4.6 | Dependências vulneráveis: atualizar `smtp-server` e `wrangler`; planejar `mailauth` 8. | `package.json` | Médio | Parcial (produção sem vulnerabilidades; 6 de desenvolvimento ficam no `vite-plus` 1.0.0, ver 4.11) |
-| 4.11 | Encontrado na segunda rodada: as 6 vulnerabilidades restantes (1 alta) estão no `vite-plus` 1.0.0 e somem a partir da 1.3.0. Mas com `vinext` 1.0.0-beta.13, o `vite-plus` 1.3.0, 1.4.0 e 1.6.0 geram um Worker quebrado: o `index.js` vira um reexport de 83 bytes e o chunk do ponto de entrada importa `./__vinext_cacheability_manifest.js` por caminho errado, então o Worker não sobe (o deploy falharia). Atualizar o `vinext` (há 1.4.x estável) e então o `vite-plus`, testando com `npm run preview`. As vulnerabilidades são do vitest em modo navegador/UI e do launch-editor, que o projeto não executa. | `package.json` | Médio | Pendente |
+| 4.6 | Dependências vulneráveis: atualizar `smtp-server` e `wrangler`; planejar `mailauth` 8. | `package.json` | Médio | Feito (`npm audit` sem vulnerabilidades, inclusive de desenvolvimento, depois do 4.11) |
+| 4.11 | Encontrado na segunda rodada: as 6 vulnerabilidades restantes (1 alta) estão no `vite-plus` 1.0.0 e somem a partir da 1.3.0. Mas com `vinext` 1.0.0-beta.13, o `vite-plus` 1.3.0, 1.4.0 e 1.6.0 geram um Worker quebrado: o `index.js` vira um reexport de 83 bytes e o chunk do ponto de entrada importa `./__vinext_cacheability_manifest.js` por caminho errado, então o Worker não sobe (o deploy falharia). Atualizar o `vinext` (há 1.4.x estável) e então o `vite-plus`, testando com `npm run preview`. As vulnerabilidades são do vitest em modo navegador/UI e do launch-editor, que o projeto não executa. | `package.json` | Médio | Feito (`vinext` 1.4.2, `vite-plus` 1.4.0, `@vitejs/plugin-rsc` 0.5.39; Worker sobe no `vp preview`, login, lista, cursor e iframe conferidos no Chrome; o erro `Identifier 'o' has already been declared` do beta.13 sumiu) |
 | 4.7 | Migrações no MySQL não são atômicas e não há bloqueio contra execução simultânea. | `src/lib/migrations/service.ts` | Médio | Feito |
 | 4.8 | Encontrado na segunda rodada: `package.json` (`cloudflare.bindings`) descreve `CF_EMAIL_WORKER_NAME`, mas nenhum código a lê; `getEmailWorkerName()` devolve `"mailclaw"` fixo. Remover a variável ou passar a lê-la. | `package.json`, `src/lib/cloudflare-api.ts` | Pequeno | Feito (`CF_EMAIL_WORKER_NAME`, padrão `mailclaw`) |
 | 4.9 | Encontrado na segunda rodada: `requireUser` ficou sem nenhum chamador depois do item 3.3. Remover, ou manter para código de terceiros. | `src/lib/auth/cookies.ts` | Pequeno | Feito (removido) |
@@ -291,18 +293,18 @@ Executada em paralelo por agentes, cada um dono de um conjunto de arquivos, com 
 - **API:** `GET /api/messages` passou a devolver `hasMore`, `total` pode ser `null` e `?count=only` devolve só o total. Anexos respondem 304, 206 e 416. As rotas `bulk` e de evento do calendário respondem 400 ou 413 a corpos inválidos. `/api/v1/messages` não mudou (ver 6.36).
 - **Envio pela Cloudflare no plano gratuito:** o setup conclui como "só recebimento" e avisa, em vez de travar.
 - **Docker:** o SMTP responde por destinatário já no RCPT, e o e-mail recebido que estava na fila em memória é reprocessado ao reiniciar. As variáveis `RESEND_API_KEY`, `AWS_*`, `APNS_*`, `INBOUND_REQUIRE_SIGNED_HEADERS` e as de spam passam a chegar ao app.
-- **Dependências:** `wrangler` 4.163, `smtp-server` 3.21, `mailauth` 8.1 (DMARC segue a RFC 9989; só afeta o SMTP próprio), `@cloudflare/vite-plugin` 1.69. `vite-plus` fica na 1.0.0 (item 4.11).
+- **Dependências:** `wrangler` 4.163, `smtp-server` 3.21, `mailauth` 8.1 (DMARC segue a RFC 9989; só afeta o SMTP próprio), `@cloudflare/vite-plugin` 1.69. `vite-plus` fica na 1.0.0 (item 4.11, resolvido na terceira rodada).
 
 **Decisões tomadas no caminho, diferentes do texto original dos itens**
 
 - 6.19: não foi criado `(mailbox_id, created_at DESC)`. Sem estatísticas, o SQLite passava a usá-lo para abrir uma conversa, que ia de 0,1 ms para 27 ms. Entraram `messages_status_page_idx` e `messages_starred_page_idx`; saíram `messages_mailbox_idx` e `messages_inbox_page_idx`, prefixos de outros índices. `messages_raw_r2_key_idx` passou a `(raw_r2_key, mailbox_id)`.
 - 6.17: `messages_counts_cover_idx` foi mantido. A medição mostrou que a contagem de não lidas ficaria 5,5 vezes mais cara sem ele, e consultas do JMAP também o usam.
-- 6.18: o total sai do caminho de cada página (`hasMore` com uma linha a mais, total pedido uma vez por visão), mas a paginação continua por `OFFSET`.
+- 6.18: o total sai do caminho de cada página (`hasMore` com uma linha a mais, total pedido uma vez por visão), mas a paginação continua por `OFFSET`. A paginação por chave entrou na terceira rodada.
 - 6.4: o cache da instância do Drizzle vale só para o D1. Bancos externos guardam a transação aberta na própria instância, e compartilhá-la entre requisições misturaria transações.
 - 6.5: scrypt com N=2^14, o maior que o workerd aceita (2^15 falha por limite de memória). Custa 40–65 ms de CPU, ainda acima dos 10 ms do plano gratuito.
 - 6.1: a checagem do handler virou uma varredura linear. Em alguns casos raros um e-mail que antes era devolvido ao remetente passa a ser descartado na fila em silêncio: anexo acima de 25 MB em codificação não base64 e estruturas MIME que a varredura conta a menos. O SMTP do Node continua com o parse completo, porque devolve 552 ao remetente.
-- 1.2: só entrou `script-src-attr 'none'` na CSP. Isolar o HTML do e-mail num iframe com `sandbox` exige teste em navegador (imagens `cid:`, altura, atalhos) e ficou para depois.
-- 6.27: a imagem remota passa a ter cache de um dia no navegador, mas não é transmitida em streaming, porque o limite de 5 MiB e a checagem do tipo de arquivo precisam do corpo antes da resposta 200.
+- 1.2: só entrou `script-src-attr 'none'` na CSP. Isolar o HTML do e-mail num iframe com `sandbox` exige teste em navegador (imagens `cid:`, altura, atalhos) e ficou para depois. Feito na terceira rodada.
+- 6.27: a imagem remota passa a ter cache de um dia no navegador, mas não é transmitida em streaming, porque o limite de 5 MiB e a checagem do tipo de arquivo precisam do corpo antes da resposta 200. Feito na terceira rodada.
 
 **Correções fora do plano encontradas no caminho**
 
@@ -316,6 +318,24 @@ Executada em paralelo por agentes, cada um dono de um conjunto de arquivos, com 
 **O que depende de quem opera a conta**
 
 P2.1 (filtrar `EXCEEDED_CPU` em Observability), ligar a replicação de leitura do D1 (6.11), domínio próprio (6.12), regras de ciclo de vida do R2 (6.13), proteger o branch `main` no GitHub exigindo o Checks (P3.1), criar as duas dead-letter queues e fazer o push (P1.1). Os passos estão em `docs/deployment.md`.
+
+### Terceira rodada (17/11/2026)
+
+Doze agentes em paralelo, mais a revisão do coordenador, que corrigiu à mão o que os testes novos acharam. Resultado: `tsc` sem erros, lint 0/0, 1.090 de 1.092 testes passando (eram 904), `npm audit` zerado, build completo com o `vinext` 1.4.2 e o Worker conferido no `vp preview` e no Chrome (login, lista, página por cursor, iframe com imagem `cid:`).
+
+**Mudanças que quem opera a instalação precisa saber**
+
+- **Migração nova:** SQLite `0090_add_totp_last_step`, PostgreSQL e MySQL `0014_totp_last_step`. Aplicar em Admin. Antes dela o login funciona como antes, só sem a proteção contra reuso do código TOTP. A coluna não está no schema do Drizzle de propósito (ver `CLAUDE.md`).
+- **Leitura de e-mail:** o HTML de cada mensagem e de cada nota agora é um iframe `srcdoc` sem permissão de script. Links `mailto:`/`tel:` não abrem mais uma aba em branco.
+- **API:** `GET /api/messages` aceita `cursor` e devolve `nextCursor`; a ordem entre mensagens do mesmo segundo ficou estável (`created_at`, `id`). `GET /api/v1/messages?fields=summary` devolve sem os corpos; outro valor de `fields` responde 400. O proxy de imagens remotas responde em streaming, sem `Content-Length`; uma imagem que passa de 5 MiB ou de 10 s depois da checagem chega cortada (no Docker, cada corte gera um "failed to pipe response" no log).
+- **Setup:** `/api/setup/prepare` responde 409 a um banco com tabelas que o Mailclaw não criou e sem registro de migrações.
+- **Configuração:** `CF_EMAIL_WORKER_NAME` passou a valer (padrão `mailclaw`). Quem renomear o Worker precisa saber que as regras de Email Routing criadas antes continuam apontando para o nome antigo.
+- **CI:** novo workflow `e2e.yml` ("Browser tests"), ainda não executado no GitHub. Como o Update Mailclaw copia `.github/workflows` para as instalações, ele roda lá também, a menos que `SKIP_E2E` ou `SKIP_CHECKS` seja `true`.
+- **Ferramentas:** `vinext` 1.4.2, `vite-plus` 1.4.0, `@vitejs/plugin-rsc` 0.5.39, todos com mais de duas semanas de publicação. O `index.js` do Worker continua com 83 bytes, mas agora reexporta um chunk com os caminhos certos.
+
+**Encontrado e corrigido pelos testes novos (6.40):** setup em banco alheio, reserva recusada em horário oferecido como livre, backup restaurado preso em "em andamento", exportação mbox que dividia uma mensagem em duas, e transferência de conta que movia uploads incompletos.
+
+**Ficou de fora, com motivo:** o índice que tiraria a ordenação do `Email/query` sem filtro (6.35) piora a abertura de conversas sem estatísticas; o nonce na CSP do app (1.2) precisa de middleware por requisição e ficou documentado em `docs/security.md`.
 
 ### Nota sobre o item 2.1
 
