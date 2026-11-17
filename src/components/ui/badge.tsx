@@ -1,32 +1,27 @@
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "@/lib/utils";
+"use client";
 
-const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors",
-  {
-    variants: {
-      variant: {
-        success: "border-transparent bg-green-600/10 text-green-800",
-        default:
-          "border-transparent bg-neutral-900 text-neutral-50",
-        secondary:
-          "border-transparent bg-neutral-100 text-neutral-900",
-        outline: "bg-neutral-100 border-transparent",
-      },
-    },
-    defaultVariants: { variant: "default" },
-  },
-);
+import { Tag } from "@orangesys/ui";
+import type * as React from "react";
+import type { BadgeProps } from "./badge-types";
+import { badgeLook, splitLeadingIcon } from "./badge-utils";
 
-export function Badge({
-  className,
-  variant,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof badgeVariants>) {
-  return (
-    <div
-      className={cn(badgeVariants({ variant }), "text-[9px] uppercase", className)}
-      {...props}
-    />
-  );
+export type { BadgeProps, BadgeVariant } from "./badge-types";
+
+/** A short status or category label: Orange's Tag, small and without the square marker. */
+export function Badge({ className, variant, children, ...props }: BadgeProps) {
+	const { variant: tagVariant, tone } = badgeLook(variant);
+	const { icon, label } = splitLeadingIcon(children);
+	return (
+		<Tag
+			size="sm"
+			variant={tagVariant}
+			tone={tone}
+			marker={false}
+			icon={icon}
+			className={className}
+			{...(props as React.HTMLAttributes<HTMLSpanElement>)}
+		>
+			{label}
+		</Tag>
+	);
 }

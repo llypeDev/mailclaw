@@ -1,37 +1,16 @@
-import type { TooltipPosition, TooltipProps } from "./tooltip-types";
+import type { TooltipProps } from "./tooltip-types";
 
-const TOOLTIP_GAP = 8;
-const VIEWPORT_PADDING = 8;
+/** Mailclaw's placements in Orange's terms: `auto` prefers below and flips above, `right` flips left. */
+export function getTooltipPlacement(placement: TooltipProps["placement"] = "auto"): "bottom" | "right" {
+	return placement === "right" ? "right" : "bottom";
+}
 
-export function getTooltipPosition(
-	trigger: HTMLElement,
-	tooltip: HTMLElement,
-	placement: TooltipProps["placement"] = "auto",
-): TooltipPosition {
-	const triggerRect = trigger.getBoundingClientRect();
-	const tooltipRect = tooltip.getBoundingClientRect();
-	if (placement === "right") {
-		return {
-			left: Math.min(triggerRect.right + TOOLTIP_GAP, window.innerWidth - tooltipRect.width - VIEWPORT_PADDING),
-			top: Math.min(
-				Math.max(triggerRect.top + triggerRect.height / 2 - tooltipRect.height / 2, VIEWPORT_PADDING),
-				window.innerHeight - tooltipRect.height - VIEWPORT_PADDING,
-			),
-		};
+/** Whether focus arrived from the keyboard (`:focus-visible`), the only focus that should open a tooltip. */
+export function isKeyboardFocus(element: Element): boolean {
+	try {
+		return element.matches(":focus-visible");
+	} catch {
+		// Engines without :focus-visible: treat every focus as keyboard focus, as the old tooltip did.
+		return true;
 	}
-	const centeredLeft = triggerRect.left + triggerRect.width / 2 - tooltipRect.width / 2;
-	const left = Math.min(
-		Math.max(centeredLeft, VIEWPORT_PADDING),
-		window.innerWidth - tooltipRect.width - VIEWPORT_PADDING,
-	);
-	const fitsBelow =
-		window.innerHeight - triggerRect.bottom >= tooltipRect.height + TOOLTIP_GAP;
-	const top = fitsBelow
-		? triggerRect.bottom + TOOLTIP_GAP
-		: triggerRect.top - tooltipRect.height - TOOLTIP_GAP;
-
-	return {
-		left,
-		top: Math.max(VIEWPORT_PADDING, top),
-	};
 }

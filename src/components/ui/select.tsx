@@ -50,6 +50,11 @@ function parseOptions(children: React.ReactNode): ParsedOption[] {
   return options;
 }
 
+// Kept on Radix Select: call sites style the trigger (className), its frame (containerClassName, often
+// "contents") and hold a ref to the trigger button, while Orange's Select is a native <select> whose
+// className lands on an outer field wrapper. Restyled as Orange's control and picker: 1px control frame
+// with the accent border on focus, raised list with the overlay shadow and the accent bar on the active
+// option, checked option marked in the accent text colour.
 export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
   (
     {
@@ -85,7 +90,12 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
     }
 
     return (
-      <span className={cn("relative inline-flex rounded-lg border border-neutral-200 px-2", containerClassName)}>
+      <span
+        className={cn(
+          "relative inline-flex border border-line-control bg-surface px-2 text-fg transition-[border-color,box-shadow,background-color] duration-150 ease-out hover:border-fg-subtle focus-within:border-accent has-[button:disabled]:border-line has-[button:disabled]:bg-canvas-subtle",
+          containerClassName,
+        )}
+      >
         <SelectPrimitive.Root
           value={toInternal(current)}
           onValueChange={handleValueChange}
@@ -99,7 +109,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
             aria-labelledby={ariaLabelledBy}
             aria-describedby={ariaDescribedBy}
             className={cn(
-              "flex w-full min-w-0 items-center justify-between gap-2 rounded-md bg-transparent text-left outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-neutral-500",
+              "group flex w-full min-w-0 items-center justify-between gap-2 bg-transparent text-left outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:text-fg-disabled data-[placeholder]:text-fg-subtle",
               className,
             )}
           >
@@ -107,7 +117,11 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
               <SelectPrimitive.Value placeholder={placeholder} />
             </span>
             <SelectPrimitive.Icon asChild>
-              <ChevronDown aria-hidden="true" size={16} className="shrink-0 text-neutral-500" />
+              <ChevronDown
+                aria-hidden="true"
+                size={16}
+                className="shrink-0 text-fg-muted transition-transform duration-200 group-hover:text-fg group-data-[state=open]:rotate-180 motion-reduce:transition-none"
+              />
             </SelectPrimitive.Icon>
           </SelectPrimitive.Trigger>
           <SelectPrimitive.Portal>
@@ -116,19 +130,19 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
               align="end"
               sideOffset={4}
               collisionPadding={8}
-              className="z-[300] max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden rounded-lg border border-neutral-200 bg-white text-sm text-neutral-900 shadow-lg"
+              className="z-[300] max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden border border-line-strong bg-surface-raised text-sm text-fg shadow-[var(--or-shadow-overlay)]"
             >
-              <SelectPrimitive.Viewport className="max-h-[inherit] overflow-y-auto p-1">
+              <SelectPrimitive.Viewport className="max-h-[inherit] overflow-y-auto py-1">
                 {options.map((option) => (
                   <SelectPrimitive.Item
                     key={option.value}
                     value={toInternal(option.value)}
                     disabled={option.disabled}
                     lang={option.lang}
-                    className="relative flex cursor-pointer select-none items-center rounded-md py-1.5 pr-8 pl-3 outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-neutral-100"
+                    className="relative flex cursor-pointer select-none items-center py-2 pr-8 pl-3 outline-none before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:scale-y-0 before:bg-accent before:transition-transform before:duration-200 data-[disabled]:pointer-events-none data-[disabled]:text-fg-disabled data-[highlighted]:bg-surface-hover data-[highlighted]:before:scale-y-100 data-[state=checked]:font-medium motion-reduce:before:transition-none"
                   >
                     <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
-                    <SelectPrimitive.ItemIndicator className="absolute right-2 inline-flex">
+                    <SelectPrimitive.ItemIndicator className="absolute right-2 inline-flex text-accent-text">
                       <Check size={16} />
                     </SelectPrimitive.ItemIndicator>
                   </SelectPrimitive.Item>

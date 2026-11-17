@@ -26,12 +26,14 @@ export function ResizeHandle({ label, onResizeStart, onResize, onResizeEnd }: Re
 		onResizeEnd?.();
 	}
 
+	// Kept (Orange's Splitter owns both panes; this is a lone edge handle). A 1px rule appears on hover and
+	// turns accent while dragging, Orange's feedback for a grab target.
 	return (
 		<div
 			role="separator"
 			aria-label={label}
 			aria-orientation="vertical"
-			className="absolute inset-y-0 right-0 z-20 w-2 translate-x-1/2 cursor-col-resize touch-none"
+			className="absolute inset-y-0 right-0 z-20 w-2 translate-x-1/2 cursor-col-resize touch-none after:absolute after:inset-y-0 after:left-1/2 after:w-px after:-translate-x-1/2 after:bg-transparent after:transition-colors after:duration-150 hover:after:bg-line-strong active:after:bg-accent motion-reduce:after:transition-none"
 			onPointerDown={handlePointerDown}
 			onPointerMove={handlePointerMove}
 			onPointerUp={handlePointerEnd}

@@ -1,14 +1,14 @@
+"use client";
+
+import { Skeleton as OrangeSkeleton } from "@orangesys/ui";
+import type * as React from "react";
 import { cn } from "@/lib/utils";
 import type { SkeletonProps, SkeletonRowsProps } from "./skeleton-types";
 
+// Orange's Skeleton (decorative, aria-hidden, shimmer that stops under reduced motion). The `rect` shape
+// adds no margins, and call sites size every block with className, which wins over Orange's defaults.
 export function Skeleton({ className, ...props }: SkeletonProps) {
-	return (
-		<div
-			aria-hidden="true"
-			className={cn("animate-pulse rounded-md bg-neutral-200/80", className)}
-			{...props}
-		/>
-	);
+	return <OrangeSkeleton variant="rect" className={className} {...(props as React.HTMLAttributes<HTMLSpanElement>)} />;
 }
 
 export function SkeletonRows({
@@ -16,7 +16,7 @@ export function SkeletonRows({
 	compact = false,
 }: SkeletonRowsProps) {
 	return (
-		<div className="divide-y divide-neutral-100">
+		<div className="divide-y divide-line-subtle">
 			{Array.from({ length: count }, (_, index) => (
 				<div
 					key={index}
