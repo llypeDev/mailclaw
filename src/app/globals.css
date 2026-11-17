@@ -347,19 +347,23 @@
 	--color-purple-950: color-mix(in oklab, var(--or-color-viz-2) 40%, var(--or-color-text));
 }
 
-body {
-	background: var(--or-color-bg);
-	color: var(--or-color-text);
-	font-family: var(--or-font-body);
-}
+/* In the components layer: after Orange's base styles, before utilities, so `font-mono` on a <pre> or a
+   heading still wins. */
+@layer components {
+	body {
+		background: var(--or-color-bg);
+		color: var(--or-color-text);
+		font-family: var(--or-font-body);
+	}
 
-h1, h2, h3, h4, h5, h6 {
-	font-family: var(--or-font-display);
-}
+	h1, h2, h3, h4, h5, h6 {
+		font-family: var(--or-font-display);
+	}
 
-pre,
-.text {
-	font-family: var(--or-font-body);
+	pre,
+	.text {
+		font-family: var(--or-font-body);
+	}
 }
 
 ::selection {
@@ -566,15 +570,11 @@ button {
 .bg-\[\#eef3fb\], .bg-\[\#eaf1fb\], .bg-\[\#e6ecf6\] { background-color: var(--or-color-surface-hover); }
 .hover\:bg-\[\#f2f6fc\]:hover { background-color: var(--or-color-surface-hover); }
 .hover\:bg-\[\#e6ecf6\]:hover { background-color: var(--or-color-surface-active); }
-/* HTML emails assume a white background: keep them on light "paper" inside the dark themes. */
-.dark .email-body {
-	color-scheme: light;
-	padding: 1rem;
-}
-
-/* On phones the settings/admin body is already white and padded, so white cards drop their own side padding to line up with the page header. */
+/* On phones the settings/admin body is already a padded surface, so cards drop their side padding and side
+   borders to line up with the page header. */
 @media (max-width: 767px) {
-	.page-flush :is(.bg-white.p-6, .bg-white.p-5) {
+	.page-flush :is(.bg-white.p-6, .bg-white.p-5, .bg-surface.p-6, .bg-surface.p-5) {
 		padding-inline: 0;
+		border-inline-width: 0;
 	}
 }
