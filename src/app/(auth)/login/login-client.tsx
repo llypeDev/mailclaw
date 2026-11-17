@@ -43,6 +43,8 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
   // reload with no message, so the buttons wait for hydration (false on the server, true once hydrated).
   const hydrated = useSyncExternalStore(subscribeToNothing, () => true, () => false);
   const runningRef = useRef(false);
+  // The pending conditional-mediation request, if any.
+  const autofillRef = useRef<Promise<void> | null>(null);
 
   const finish = useCallback((redirect?: string) => {
     router.replace(redirect ?? "/inbox");
@@ -54,7 +56,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
   useEffect(() => {
     let cancelled = false;
     if (!browserSupportsWebAuthn()) return;
-    void (async () => {
+    autofillRef.current = (async () => {
       try {
         if (!(await browserSupportsWebAuthnAutofill())) return;
         const options = await requestPasskeyLoginOptions();
@@ -77,17 +79,29 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
     })();
     return () => {
       cancelled = true;
+      autofillRef.current = null;
       WebAuthnAbortService.cancelCeremony();
     };
   }, [finish]);
+
+  // A modal passkey request started while the conditional one is still pending can hang until the
+  // browser finishes aborting it, so cancel that one and wait for it to settle first.
+  async function stopAutofill() {
+    const pending = autofillRef.current;
+    if (!pending) return;
+    autofillRef.current = null;
+    WebAuthnAbortService.cancelCeremony();
+    await pending;
+  }
 
   async function onPasskey() {
     if (!browserSupportsWebAuthn()) {
       setError(t("passkey.browserUnsupported"));
       return;
     }
-    setLoading(true);
     setError(null);
+    await stopAutofill();
+    setLoading(true);
     try {
       const { ok, data } = await submitPasskeyLogin();
       if (!ok) {
@@ -104,8 +118,9 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
 
   async function onPasskeyMfa() {
     if (!challengeToken) return;
-    setLoading(true);
     setError(null);
+    await stopAutofill();
+    setLoading(true);
     try {
       const { ok, data } = await submitPasskeyMfa(challengeToken);
       if (!ok) {
