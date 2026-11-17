@@ -1,12 +1,12 @@
 "use client";
 
+import { Eyebrow } from "@orangesys/ui";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, Forward, Inbox, Info, Pencil, Plus, Trash2 } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -17,6 +17,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RoutingRuleSelect } from "./routing-rule-select";
+import { SettingsPanel, SettingsSection } from "../settings-section";
+import { SETTING_STACK_CLASS } from "../settings-section-utils";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip } from "@/components/ui/tooltip";
 import { CardGridSkeleton } from "@/components/page-skeletons";
@@ -114,38 +116,32 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 	if (!canManage) return null;
 
 	return (
-		<div className="space-y-6">
-			<div className="flex flex-wrap items-end justify-between gap-4">
-				<div>
-					<div className="flex items-center gap-2">
-						<h2 className="text-2xl font-semibold">{t("routing.title")}</h2>
-						<Tooltip label={t("routing.about")}>
-							<button type="button" aria-label={t("routing.aboutLabel")} className="text-neutral-400 hover:text-neutral-700">
-								<Info className="h-4 w-4" />
-							</button>
-						</Tooltip>
-					</div>
-					<p className="mt-1 text-sm text-neutral-500">{t("routing.rulesFor", { host: hostname || t("routing.selectInbox") })}</p>
-				</div>
-				<div className="flex items-end gap-2">
-					<Button onClick={openCreate} disabled={!domainId}>
-						<Plus className="h-4 w-4" /> {t("routing.addRoute")}
-					</Button>
-				</div>
-			</div>
+		<SettingsSection
+			title={t("routing.title")}
+			titleAside={
+				<Tooltip label={t("routing.about")}>
+					<button type="button" aria-label={t("routing.aboutLabel")} className="text-fg-subtle transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+						<Info className="h-4 w-4" />
+					</button>
+				</Tooltip>
+			}
+			description={t("routing.rulesFor", { host: hostname || t("routing.selectInbox") })}
+			actions={
+				<Button onClick={openCreate} disabled={!domainId}>
+					<Plus className="h-4 w-4" /> {t("routing.addRoute")}
+				</Button>
+			}
+		>
 
 			{(!domain && isMailboxLoading) || rules.isLoading ? (
 				<CardGridSkeleton />
 			) : !domain && !mailboxId ? (
-				<Card>
-					<CardContent className="pt-6 text-sm text-neutral-500">
-						{t("routing.selectInboxFirst")}
-					</CardContent>
-				</Card>
+				<SettingsPanel className="text-sm text-fg-muted">
+					{t("routing.selectInboxFirst")}
+				</SettingsPanel>
 			) : (
-				<div className="space-y-1 overflow-hidden rounded-3xl">
+				<div className={SETTING_STACK_CLASS}>
 					<RuleSection
-						className="rounded-b-lg rounded-t-3xl"
 						title={t("routing.blockRules")}
 						description={t("routing.blockRulesDescription")}
 						rules={blockRules}
@@ -156,7 +152,6 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 						onToggle={(rule) => toggle.mutate(rule)}
 					/>
 					<RuleSection
-						className="rounded-b-3xl rounded-t-lg"
 						title={t("routing.catchAll")}
 						description={t("routing.catchAllDescription")}
 						rules={fallbackRules}
@@ -256,7 +251,7 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 								<div className="flex items-center gap-2">
 									<Label htmlFor="rule-value">{t("routing.matchValue")}</Label>
 									<Tooltip label={t("routing.matchAllHint")}>
-										<button type="button" aria-label={t("routing.matchAllHint")} className="text-neutral-500"><Info className="h-4 w-4" /></button>
+										<button type="button" aria-label={t("routing.matchAllHint")} className="text-fg-subtle transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"><Info className="h-4 w-4" /></button>
 									</Tooltip>
 								</div>
 								<Input
@@ -271,7 +266,7 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 								<div className="flex items-center gap-2">
 									<Label htmlFor="rule-priority">{t("routing.priority")}</Label>
 									<Tooltip label={t("routing.priorityHint")}>
-										<button type="button" aria-label={t("routing.priorityHint")} className="text-neutral-500"><Info className="h-4 w-4" /></button>
+										<button type="button" aria-label={t("routing.priorityHint")} className="text-fg-subtle transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"><Info className="h-4 w-4" /></button>
 									</Tooltip>
 								</div>
 								<Input
@@ -321,12 +316,12 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 						)}
 
 						{form.action === "forward" && (
-							<div className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2">
+							<div className="flex items-center justify-between border border-line px-3 py-2">
 								<div>
 									<div className="flex items-center gap-2">
-										<p className="text-sm font-medium">{t("routing.keepCopy")}</p>
+										<p className="text-sm font-medium text-fg">{t("routing.keepCopy")}</p>
 										<Tooltip label={t("routing.keepCopyHint")}>
-											<button type="button" aria-label={t("routing.keepCopyHint")} className="text-neutral-500"><Info className="h-4 w-4" /></button>
+											<button type="button" aria-label={t("routing.keepCopyHint")} className="text-fg-subtle transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"><Info className="h-4 w-4" /></button>
 										</Tooltip>
 									</div>
 								</div>
@@ -350,9 +345,9 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 							</div>
 						)}
 
-						{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+						{error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
 
-						<div className="flex justify-end gap-2 border-t border-neutral-200 pt-4">
+						<div className="flex justify-end gap-2 border-t border-line pt-4">
 							<Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
 								{t("common.cancel")}
 							</Button>
@@ -363,12 +358,11 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 					</form>
 				</DialogContent>
 			</Dialog>
-		</div>
+		</SettingsSection>
 	);
 }
 
 function RuleSection({
-	className,
 	title,
 	description,
 	rules,
@@ -378,7 +372,6 @@ function RuleSection({
 	onDelete,
 	onToggle,
 }: {
-	className: string;
 	title: string;
 	description: string;
 	rules: DomainRule[];
@@ -390,18 +383,16 @@ function RuleSection({
 }) {
 	const { t } = useLanguage();
 	return (
-		<Card className={`${className} border-0 bg-white px-6`}>
-			<CardHeader>
-				<div className="flex items-center gap-2">
-					<CardTitle className="text-xs uppercase">{title}</CardTitle>
-					<Tooltip label={description}>
-						<button type="button" aria-label={description} className="text-neutral-500"><Info className="h-4 w-4" /></button>
-					</Tooltip>
-				</div>
-			</CardHeader>
-			<CardContent className="space-y-2 pb-5">
+		<div className="border border-line bg-surface">
+			<div className="flex items-center gap-2 border-b border-line px-4 py-3 sm:px-5">
+				<Eyebrow as="h3">{title}</Eyebrow>
+				<Tooltip label={description}>
+					<button type="button" aria-label={description} className="text-fg-subtle transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"><Info className="h-4 w-4" /></button>
+				</Tooltip>
+			</div>
+			<div className="divide-y divide-line">
 				{rules.length === 0 ? (
-					<p className="text-sm text-neutral-500">{t("routing.noRules")}</p>
+					<p className="px-4 py-4 text-sm text-fg-muted sm:px-5">{t("routing.noRules")}</p>
 				) : (
 					rules.map((rule) => {
 						const Icon = ACTION_ICONS[rule.action];
@@ -409,22 +400,22 @@ function RuleSection({
 						return (
 							<div
 								key={rule.id}
-								className="flex flex-wrap items-center gap-3 rounded-xl border border-neutral-200 px-3 py-2"
+								className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5"
 							>
-								<Icon className="h-4 w-4 shrink-0 text-neutral-500" />
+								<Icon className="h-4 w-4 shrink-0 text-fg-subtle" />
 								<div className="min-w-0 flex-1">
 									<div className="flex items-center gap-2">
-										<p className="truncate text-sm font-medium">
+										<p className="truncate text-sm font-medium text-fg">
 											{ruleName}
 										</p>
 										{!rule.enabled && <Badge variant="secondary">{t("routing.disabled")}</Badge>}
 									</div>
 									{rule.name && (
-										<p className="truncate text-xs text-neutral-500">
+										<p className="truncate text-xs text-fg-muted">
 											{describeRule(rule, mailboxes, hostname, t)}
 										</p>
 									)}
-									<p className="text-xs text-neutral-500">
+									<p className="font-mono text-xs text-fg-subtle">
 										{t("routing.stats", { priority: rule.priority, count: rule.matchCount, last: formatLastMatched(rule.lastMatchedAt, t) })}
 									</p>
 								</div>
@@ -433,13 +424,13 @@ function RuleSection({
 									<Pencil className="h-4 w-4" />
 								</Button>
 								<Button variant="ghost" size="sm" onClick={() => onDelete(rule.id)} aria-label={`${t("rules.delete")}: ${ruleName}`}>
-									<Trash2 className="h-4 w-4 text-red-600" />
+									<Trash2 className="h-4 w-4 text-danger-text" />
 								</Button>
 							</div>
 						);
 					})
 				)}
-			</CardContent>
-		</Card>
+			</div>
+		</div>
 	);
 }

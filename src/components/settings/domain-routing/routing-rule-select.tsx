@@ -7,9 +7,9 @@ export const RoutingRuleSelect = React.forwardRef<HTMLButtonElement, SelectProps
 	({ className, containerClassName, ...props }, ref) => (
 		<Select
 			ref={ref}
-			containerClassName={cn("block min-w-0 rounded-none border-0 px-0", containerClassName)}
+			containerClassName={cn("block min-w-0 border-0 px-0", containerClassName)}
 			className={cn(
-				"h-10 rounded-md border border-neutral-200 py-2 pl-3 pr-3 text-sm shadow-sm shadow-neutral-200/50 focus-visible:border-blue-600",
+				"h-10 border border-line-control bg-surface py-2 ps-3 pe-3 text-sm transition-colors hover:border-fg-subtle focus-visible:border-accent",
 				className,
 			)}
 			{...props}

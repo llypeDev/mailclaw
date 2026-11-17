@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@orangesys/ui";
 import { useEffect, useState } from "react";
 import { confirmDestructive } from "@/components/ui/confirm-dialog";
 import { Bell, Smartphone } from "@/components/icons";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { formatUserDate } from "@/lib/time/utils";
 import type { MobileDevice } from "./device-settings-types";
 import { loadDevices, signOutDevice } from "./device-settings-utils";
+import { SETTING_ROWS_CLASS } from "./settings-section-utils";
 
 /**
  * Settings > Security card listing phones and tablets signed in with the
@@ -37,22 +39,22 @@ export function DeviceSettings() {
 		}
 	}
 
-	if (!devices) return <p className="text-sm text-neutral-500">{error ?? t("devices.loading")}</p>;
-	if (devices.length === 0) return <p className="text-sm text-neutral-500">{t("devices.empty")}</p>;
+	if (!devices) return <p role={error ? "alert" : undefined} className={error ? "text-sm text-danger-text" : "text-sm text-fg-muted"}>{error ?? t("devices.loading")}</p>;
+	if (devices.length === 0) return <div className="border border-line bg-surface"><EmptyState variant="compact" icon={<Smartphone className="h-5 w-5" />} title={t("devices.empty")} headingLevel={3} /></div>;
 
 	return (
 		<div className="space-y-3">
-			{error ? <p className="text-sm text-red-600">{error}</p> : null}
-			<ul className="divide-y divide-neutral-100 rounded-2xl bg-neutral-50">
+			{error ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
+			<ul className={SETTING_ROWS_CLASS}>
 				{devices.map((device) => (
-					<li key={device.id} className="flex items-center gap-3 p-4">
-						<Smartphone className="h-5 w-5 shrink-0 text-neutral-500" />
+					<li key={device.id} className="flex items-center gap-3 px-4 py-4 sm:px-5">
+						<Smartphone className="h-5 w-5 shrink-0 text-fg-subtle" />
 						<div className="min-w-0 flex-1">
-							<p className="flex items-center gap-2 truncate text-sm font-medium text-neutral-900">
+							<p className="flex items-center gap-2 truncate text-sm font-medium text-fg">
 								{device.name}
-								{device.pushEnabled ? <Bell className="h-3.5 w-3.5 text-neutral-400" aria-label={t("devices.push")} /> : null}
+								{device.pushEnabled ? <Bell className="h-3.5 w-3.5 text-fg-subtle" aria-label={t("devices.push")} /> : null}
 							</p>
-							<p className="truncate text-sm text-neutral-500">
+							<p className="truncate text-sm text-fg-muted">
 								{t("devices.signedIn", { date: formatUserDate(device.createdAt, { dateStyle: "short" }) })} ·{" "}
 								{device.lastUsedAt ? t("apiKeys.lastUsed", { date: formatUserDate(device.lastUsedAt, { dateStyle: "short" }) }) : t("apiKeys.neverUsed")}
 							</p>

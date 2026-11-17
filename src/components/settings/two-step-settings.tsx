@@ -13,6 +13,8 @@ import { authErrorText } from "@/lib/auth/error-messages";
 import { ClientRequestError } from "@/lib/http/client-error";
 import { generateRecoveryCodes, setSecondFactorRequirement } from "./passkey-settings-utils";
 import { refreshSecurityStatus, useSecurityStatus } from "./security-status-store";
+import { SettingsSection } from "./settings-section";
+import { SETTING_HINT_CLASS, SETTING_ROWS_CLASS } from "./settings-section-utils";
 import { StepUpDialog } from "./step-up-dialog";
 
 type PendingAction = "toggle-on" | "toggle-off" | "enroll" | "disable" | "codes";
@@ -22,7 +24,7 @@ function RecoveryCodesList({ codes }: { codes: string[] }) {
 	const [copied, setCopied] = useState(false);
 	return (
 		<div className="space-y-3">
-			<ul className="grid grid-cols-2 gap-2 rounded-xl bg-neutral-50 p-4 font-mono text-sm text-neutral-800">
+			<ul className="grid grid-cols-2 gap-2 border border-line bg-canvas-subtle p-4 font-mono text-sm text-fg">
 				{codes.map((code) => <li key={code}>{code}</li>)}
 			</ul>
 			<Button
@@ -58,13 +60,9 @@ export function TwoStepSettings() {
 
 	if (!status) {
 		return (
-			<div className="space-y-5">
-				<div>
-					<h2 className="text-lg font-semibold text-neutral-900">{t("twoStep.title")}</h2>
-					<p className="mt-1 text-sm text-neutral-500">{t("twoStep.description")}</p>
-				</div>
-				<p role={loadFailed ? "alert" : undefined} className="text-sm text-neutral-500">{loadFailed ? t("mfa.loadFailed") : t("mfa.loading")}</p>
-			</div>
+			<SettingsSection title={t("twoStep.title")} description={t("twoStep.description")}>
+				<p role={loadFailed ? "alert" : undefined} className={loadFailed ? "text-sm text-danger-text" : "text-sm text-fg-muted"}>{loadFailed ? t("mfa.loadFailed") : t("mfa.loading")}</p>
+			</SettingsSection>
 		);
 	}
 
@@ -113,36 +111,33 @@ export function TwoStepSettings() {
 	}
 
 	return (
-		<div className="space-y-5">
-			<div>
-				<div className="flex items-center justify-between gap-4">
-					<h2 className="text-lg font-semibold text-neutral-900">{t("twoStep.title")}</h2>
-					{status.passwordSet && (
-						<Switch
-							checked={status.requireSecondFactor}
-							disabled={busy || (!hasAnyFactor && !status.requireSecondFactor)}
-							onCheckedChange={(enabled) => setPending(enabled ? "toggle-on" : "toggle-off")}
-							aria-label={t("twoStep.requireTitle")}
-						/>
-					)}
-				</div>
-				<p className="mt-1 text-sm text-neutral-500">{status.passwordSet ? t("twoStep.description") : t("twoStep.passwordlessDescription")}</p>
-			</div>
+		<SettingsSection
+			title={t("twoStep.title")}
+			description={status.passwordSet ? t("twoStep.description") : t("twoStep.passwordlessDescription")}
+			actions={status.passwordSet ? (
+				<Switch
+					checked={status.requireSecondFactor}
+					disabled={busy || (!hasAnyFactor && !status.requireSecondFactor)}
+					onCheckedChange={(enabled) => setPending(enabled ? "toggle-on" : "toggle-off")}
+					aria-label={t("twoStep.requireTitle")}
+				/>
+			) : null}
+		>
 
 			{status.passwordSet && !hasAnyFactor && (
-				<p className="text-xs leading-5 text-neutral-500">{t("twoStep.addMethodHint")}</p>
+				<p className={SETTING_HINT_CLASS}>{t("twoStep.addMethodHint")}</p>
 			)}
 
 			{/* An enabled authenticator stays visible on a passwordless account so it can be turned off. */}
 			{(status.passwordSet || status.totpEnabled) && (
-				<div className="divide-y divide-neutral-100 rounded-2xl border border-neutral-100">
+				<div className={SETTING_ROWS_CLASS}>
 					{status.passwordSet && (
-						<div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+						<div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
 							<div className="flex items-start gap-3">
-								<KeyRound className={`mt-0.5 h-5 w-5 shrink-0 ${status.passkeys.length > 0 ? "text-green-600" : "text-neutral-400"}`} />
+								<KeyRound className={`mt-0.5 h-5 w-5 shrink-0 ${status.passkeys.length > 0 ? "text-success-text" : "text-fg-subtle"}`} />
 								<div>
-									<h3 className="text-sm font-semibold text-neutral-900">{t("twoStep.passkeyTitle")}</h3>
-									<p className="mt-1 text-sm text-neutral-500">
+									<h3 className="text-sm font-semibold text-fg">{t("twoStep.passkeyTitle")}</h3>
+									<p className="mt-1 text-sm text-fg-muted">
 										{status.passkeys.length > 0 ? t("twoStep.passkeysAvailable", { count: status.passkeys.length }) : t("twoStep.noPasskeys")}
 									</p>
 								</div>
@@ -152,12 +147,12 @@ export function TwoStepSettings() {
 							</Button>
 						</div>
 					)}
-					<div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+					<div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
 						<div className="flex items-start gap-3">
-							<Smartphone className={`mt-0.5 h-5 w-5 shrink-0 ${status.totpEnabled ? "text-green-600" : "text-neutral-400"}`} />
+							<Smartphone className={`mt-0.5 h-5 w-5 shrink-0 ${status.totpEnabled ? "text-success-text" : "text-fg-subtle"}`} />
 							<div>
-								<h3 className="text-sm font-semibold text-neutral-900">{t("twoStep.authenticatorTitle")}</h3>
-								<p className="mt-1 text-sm text-neutral-500">
+								<h3 className="text-sm font-semibold text-fg">{t("twoStep.authenticatorTitle")}</h3>
+								<p className="mt-1 text-sm text-fg-muted">
 									{status.totpEnabled
 										? t("twoStep.authenticatorOn", { count: status.recoveryCodesLeft })
 										: t("twoStep.authenticatorOff")}
@@ -178,7 +173,7 @@ export function TwoStepSettings() {
 				</div>
 			)}
 
-			{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+			{error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
 
 			<StepUpDialog
 				open={!!pending}
@@ -198,16 +193,16 @@ export function TwoStepSettings() {
 							<DialogTitle>{t("mfa.scanTitle")}</DialogTitle>
 							<DialogDescription>{t("mfa.scanDescription")}</DialogDescription>
 						</DialogHeader>
-						<div role="img" aria-label={t("mfa.scanTitle")} className="mx-auto w-48 rounded-xl border border-neutral-200 bg-white p-2" dangerouslySetInnerHTML={{ __html: qrSvg ?? "" }} />
-						<details className="text-xs text-neutral-500">
+						<div role="img" aria-label={t("mfa.scanTitle")} className="mx-auto w-48 border border-line bg-surface p-2" dangerouslySetInnerHTML={{ __html: qrSvg ?? "" }} />
+						<details className="text-xs text-fg-muted">
 							<summary className="cursor-pointer">{t("mfa.cantScan")}</summary>
-							<code className="mt-2 block break-all rounded-md bg-neutral-50 p-2 font-mono text-neutral-800">{secret}</code>
+							<code className="mt-2 block break-all border border-line bg-canvas-subtle p-2 font-mono text-fg">{secret}</code>
 						</details>
 						<div className="space-y-2">
 							<Label htmlFor="mfa-code">{t("mfa.sixDigitCode")}</Label>
 							<Input id="mfa-code" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value)} placeholder="123 456" required autoFocus />
 						</div>
-						{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+						{error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
 						<Button type="submit" disabled={busy}>{busy ? t("mfa.checking") : t("mfa.verifyAndTurnOn")}</Button>
 					</form>
 				</DialogContent>
@@ -225,6 +220,6 @@ export function TwoStepSettings() {
 					</div>
 				</DialogContent>
 			</Dialog>
-		</div>
+		</SettingsSection>
 	);
 }

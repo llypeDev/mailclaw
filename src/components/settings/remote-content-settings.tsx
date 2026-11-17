@@ -7,6 +7,7 @@ import {
 	updateRemoteContentMode,
 	type RemoteContentMode,
 } from "@/components/messages/use-remote-content-utils";
+import { SETTING_ERROR_CLASS, SETTING_ROWS_CLASS, SETTING_ROW_CLASS } from "./settings-section-utils";
 
 const OPTIONS = [
 	{ mode: "ask", title: "settings.remoteContent.ask" },
@@ -47,21 +48,22 @@ export function RemoteContentSettings() {
 
 	return (
 		<div>
-			<div role="radiogroup" aria-label={t("settingsPage.inbox.remoteContent")} className="space-y-3">
+			<div role="radiogroup" aria-label={t("settingsPage.inbox.remoteContent")} className={SETTING_ROWS_CLASS}>
 				{OPTIONS.map((option) => (
-					<label key={option.mode} className="flex cursor-pointer items-center gap-3 rounded-xl bg-neutral-50 p-4">
+					<label key={option.mode} className={`${SETTING_ROW_CLASS} cursor-pointer gap-3 hover:bg-surface-hover has-[:checked]:bg-accent-subtle`}>
 						<input
 							type="radio"
 							name="remote-content-mode"
-														checked={mode === option.mode}
+							className="h-4 w-4 shrink-0 accent-[var(--or-color-accent)]"
+							checked={mode === option.mode}
 							disabled={loading || saving}
 							onChange={() => choose(option.mode)}
 						/>
-						<span className="flex-1 text-sm font-medium text-neutral-900">{t(option.title)}</span>
+						<span className="flex-1 text-sm font-medium text-fg">{t(option.title)}</span>
 					</label>
 				))}
 			</div>
-			{error && <p role="alert" className="mt-2 px-4 text-sm text-red-600">{error}</p>}
+			{error && <p role="alert" className={SETTING_ERROR_CLASS}>{error}</p>}
 		</div>
 	);
 }

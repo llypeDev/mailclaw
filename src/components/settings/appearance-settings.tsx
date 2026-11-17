@@ -11,6 +11,7 @@ import {
 	THEME_CHANGED_EVENT,
 	type ThemePreference,
 } from "@/components/theme-utils";
+import { SETTING_DESCRIPTION_CLASS, SETTING_ROWS_CLASS, SETTING_ROW_CLASS, SETTING_TITLE_CLASS } from "./settings-section-utils";
 
 const OPTIONS: { value: ThemePreference; labelKey: TranslationKey }[] = [
 	{ value: "system", labelKey: "settings.theme.system" },
@@ -32,29 +33,31 @@ export function AppearanceSettings() {
 	const preference = useSyncExternalStore(subscribeThemePreference, readThemePreference, serverThemePreference);
 
 	return (
-		<label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
-			<span className="flex-1">
-				<span className="block text-sm font-medium text-neutral-900">{t("settings.theme.label")}</span>
-				<span className="mt-1 block text-sm text-neutral-500">
-					{t("settings.theme.description")}
+		<div className={SETTING_ROWS_CLASS}>
+			<label className={SETTING_ROW_CLASS}>
+				<span className="min-w-0 flex-1">
+					<span className={SETTING_TITLE_CLASS}>{t("settings.theme.label")}</span>
+					<span className={SETTING_DESCRIPTION_CLASS}>
+						{t("settings.theme.description")}
+					</span>
 				</span>
-			</span>
-			<Select
-				value={preference}
-				aria-label={t("settings.theme.label")}
-				className="py-1.5 text-sm text-neutral-900"
-				onChange={(event) => {
-					const next = event.target.value;
-					if (!isThemePreference(next)) return;
-					saveThemePreference(next);
-				}}
-			>
-				{OPTIONS.map((option) => (
-					<option key={option.value} value={option.value}>
-						{t(option.labelKey)}
-					</option>
-				))}
-			</Select>
-		</label>
+				<Select
+					value={preference}
+					aria-label={t("settings.theme.label")}
+					className="py-1.5 text-sm text-fg"
+					onChange={(event) => {
+						const next = event.target.value;
+						if (!isThemePreference(next)) return;
+						saveThemePreference(next);
+					}}
+				>
+					{OPTIONS.map((option) => (
+						<option key={option.value} value={option.value}>
+							{t(option.labelKey)}
+						</option>
+					))}
+				</Select>
+			</label>
+		</div>
 	);
 }

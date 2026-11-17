@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { Alert, ProgressBar } from "@orangesys/ui";
 import { useEffect, useRef, useState } from "react";
 import { Upload } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
@@ -25,6 +26,7 @@ import {
 	getTakeoutSources,
 	saveTakeoutProgress,
 } from "./takeout-import-utils";
+import { SETTING_FILE_INPUT_CLASS, SETTING_HINT_CLASS } from "./settings-section-utils";
 
 const SECTION_LABEL_KEYS: Record<string, TranslationKey> = {
 	inbox: "navigation.inbox",
@@ -167,20 +169,20 @@ export function TakeoutImport() {
 					multiple
 					disabled={running}
 					onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
-					className="block w-full rounded-md border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm shadow-neutral-200/50 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-100 file:px-3 file:py-1.5 file:text-sm file:font-medium"
+					className={SETTING_FILE_INPUT_CLASS}
 				/>
-				<p className="text-xs leading-5 text-neutral-500">{t("importPage.takeoutHint")}</p>
+				<p className={SETTING_HINT_CLASS}>{t("importPage.takeoutHint")}</p>
 			</div>
 			<div className="grid gap-2 sm:grid-cols-3">
-				<label className="flex items-center gap-2 text-sm text-neutral-700">
+				<label className="flex items-center gap-2 text-sm text-fg">
 					<Checkbox checked={folders} disabled={running} onChange={(event) => setFolders(event.target.checked)} />
 					{t("importPage.takeoutFolders")}
 				</label>
-				<label className="flex items-center gap-2 text-sm text-neutral-700">
+				<label className="flex items-center gap-2 text-sm text-fg">
 					<Checkbox checked={skipSpam} disabled={running} onChange={(event) => setSkipSpam(event.target.checked)} />
 					{t("importPage.takeoutSkipSpam")}
 				</label>
-				<label className="flex items-center gap-2 text-sm text-neutral-700">
+				<label className="flex items-center gap-2 text-sm text-fg">
 					<Checkbox checked={skipTrash} disabled={running} onChange={(event) => setSkipTrash(event.target.checked)} />
 					{t("importPage.takeoutSkipTrash")}
 				</label>
@@ -195,12 +197,12 @@ export function TakeoutImport() {
 						onChange={(event) => setIgnoreLabels(event.target.value)}
 						placeholder="[Superhuman]/, Notes"
 					/>
-					<p className="text-xs leading-5 text-neutral-500">{t("importPage.takeoutIgnoreHint")}</p>
+					<p className={SETTING_HINT_CLASS}>{t("importPage.takeoutIgnoreHint")}</p>
 				</div>
 			)}
-			<p className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-500">
+			<Alert tone="info">
 				{t("importPage.takeoutKeepOpen")}
-			</p>
+			</Alert>
 			<div className="flex flex-wrap gap-2">
 				<Button type="submit" disabled={!selectedMailbox || files.length === 0 || running}>
 					<Upload className="h-4 w-4" />
@@ -216,60 +218,57 @@ export function TakeoutImport() {
 				)}
 			</div>
 			{run && (
-				<div className="space-y-1 text-xs text-neutral-500" aria-live="polite">
-					<div className="flex justify-between gap-4">
-						<span className="truncate">
-							{run.sourceCount > 0
-								? t("importPage.takeoutReading", { source: run.sourceLabel, index: run.sourceIndex, count: run.sourceCount })
-								: t("importPage.preparing")}
-						</span>
-						<span className="shrink-0">
-							{formatBytes(run.bytesRead)} / {formatBytes(run.bytesTotal)}
-						</span>
-					</div>
-					<div className="h-1.5 overflow-hidden rounded-full bg-neutral-100">
-						<div className="h-full bg-blue-600 transition-[width]" style={{ width: `${percent}%` }} />
-					</div>
+				<div className="space-y-1 text-xs text-fg-muted" aria-live="polite">
+					<ProgressBar
+						size="sm"
+						label={run.sourceCount > 0
+							? t("importPage.takeoutReading", { source: run.sourceLabel, index: run.sourceIndex, count: run.sourceCount })
+							: t("importPage.preparing")}
+						value={percent}
+						formatValue={() => `${formatBytes(run.bytesRead)} / ${formatBytes(run.bytesTotal)}`}
+					/>
 					{run.resumedAt > 0 && <p>{t("importPage.takeoutResumed", { count: run.resumedAt })}</p>}
 				</div>
 			)}
 			{summary && (run?.mode === "import" || result?.mode === "import") && (
-				<p className="text-sm text-neutral-700">
+				<p className="text-sm text-fg-muted">
 					{t("importPage.takeoutCounts", { read: summary.read, imported: summary.imported, skipped: summary.skipped })}
 				</p>
 			)}
 			{result && (
-				<div className="space-y-2 rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-800">
-					{result.summary.aborted && <p className="font-medium">{t("importPage.takeoutStopped")}</p>}
-					{result.mode === "preview" && (
-						<>
-							<p className="font-medium">{t("importPage.takeoutPreviewResult", { count: destinationCount })}</p>
-							<ul className="space-y-0.5 text-xs">
-								{destinations.map(([key, count]) => (
-									<li key={key} className="flex justify-between gap-4">
-										<span className="truncate">{destinationLabel(key)}</span>
-										<span className="tabular-nums">{count}</span>
-									</li>
-								))}
-							</ul>
-						</>
-					)}
-					{result.summary.tooLarge > 0 && <p className="text-xs">{t("importPage.takeoutTooLarge", { count: result.summary.tooLarge })}</p>}
-					{result.summary.ignored > 0 && <p className="text-xs">{t("importPage.takeoutIgnored", { count: result.summary.ignored })}</p>}
-					{result.summary.failed > 0 && (
-						<div className="text-xs text-red-700">
-							<p>{t("importPage.takeoutFailed", { count: result.summary.failed })}</p>
-							<ul className="mt-1 list-disc space-y-0.5 pl-5">
-								{result.summary.errors.slice(0, 5).map((item) => (
-									<li key={item}>{item}</li>
-								))}
-							</ul>
-						</div>
-					)}
-				</div>
+				<Alert tone="success">
+					<div className="space-y-2">
+						{result.summary.aborted && <p className="font-medium">{t("importPage.takeoutStopped")}</p>}
+						{result.mode === "preview" && (
+							<>
+								<p className="font-medium">{t("importPage.takeoutPreviewResult", { count: destinationCount })}</p>
+								<ul className="space-y-0.5 text-xs">
+									{destinations.map(([key, count]) => (
+										<li key={key} className="flex justify-between gap-4">
+											<span className="truncate">{destinationLabel(key)}</span>
+											<span className="tabular-nums">{count}</span>
+										</li>
+									))}
+								</ul>
+							</>
+						)}
+						{result.summary.tooLarge > 0 && <p className="text-xs">{t("importPage.takeoutTooLarge", { count: result.summary.tooLarge })}</p>}
+						{result.summary.ignored > 0 && <p className="text-xs">{t("importPage.takeoutIgnored", { count: result.summary.ignored })}</p>}
+						{result.summary.failed > 0 && (
+							<div className="text-xs text-danger-text">
+								<p>{t("importPage.takeoutFailed", { count: result.summary.failed })}</p>
+								<ul className="mt-1 list-disc space-y-0.5 ps-5">
+									{result.summary.errors.slice(0, 5).map((item) => (
+										<li key={item}>{item}</li>
+									))}
+								</ul>
+							</div>
+						)}
+					</div>
+				</Alert>
 			)}
-			{notice && <p className="rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">{notice}</p>}
-			{error && <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+			{notice && <Alert tone="warning" live>{notice}</Alert>}
+			{error && <Alert tone="danger" live>{error}</Alert>}
 		</form>
 	);
 }

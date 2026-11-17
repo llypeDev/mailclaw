@@ -7,6 +7,7 @@ import {
 	areBrowserNotificationsEnabled,
 	setBrowserNotificationsEnabled,
 } from "@/hooks/message-realtime-utils";
+import { SETTING_DESCRIPTION_CLASS, SETTING_ERROR_CLASS, SETTING_ROWS_CLASS, SETTING_ROW_CLASS, SETTING_TITLE_CLASS } from "./settings-section-utils";
 
 export function BrowserNotificationSettings() {
 	const { t } = useLanguage();
@@ -30,49 +31,51 @@ export function BrowserNotificationSettings() {
 
 	return (
 		<div>
-			<label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
-				<span className="flex-1">
-					<span className="block text-sm font-medium text-neutral-900">{t("settings.notifications.title")}</span>
-					<span className="mt-1 block text-sm text-neutral-500">
-						{t("settings.notifications.description")}
+			<div className={SETTING_ROWS_CLASS}>
+				<label className={SETTING_ROW_CLASS}>
+					<span className="flex-1">
+						<span className={SETTING_TITLE_CLASS}>{t("settings.notifications.title")}</span>
+						<span className={SETTING_DESCRIPTION_CLASS}>
+							{t("settings.notifications.description")}
+						</span>
 					</span>
-				</span>
-				<Switch
-					checked={permission === "granted" && enabled}
-					disabled={permission === "unsupported" || permission === "denied"}
-					onCheckedChange={(nextEnabled) => {
-						setError(null);
-						if (!nextEnabled) {
-							try {
-								setBrowserNotificationsEnabled(false);
-								setEnabled(false);
-							} catch {
-								setError(t("settings.notifications.saveFailed"));
+					<Switch
+						checked={permission === "granted" && enabled}
+						disabled={permission === "unsupported" || permission === "denied"}
+						onCheckedChange={(nextEnabled) => {
+							setError(null);
+							if (!nextEnabled) {
+								try {
+									setBrowserNotificationsEnabled(false);
+									setEnabled(false);
+								} catch {
+									setError(t("settings.notifications.saveFailed"));
+								}
+								return;
 							}
-							return;
-						}
-						void (async () => {
-							try {
-								const nextPermission = permission === "granted" ? permission : await Notification.requestPermission();
-								setPermission(nextPermission);
-								if (nextPermission !== "granted") return;
-								setBrowserNotificationsEnabled(true);
-								setEnabled(true);
-							} catch {
-								setError(t("settings.notifications.enableFailed"));
-							}
-						})();
-					}}
-					aria-label={t("settings.notifications.enable")}
-				/>
-			</label>
+							void (async () => {
+								try {
+									const nextPermission = permission === "granted" ? permission : await Notification.requestPermission();
+									setPermission(nextPermission);
+									if (nextPermission !== "granted") return;
+									setBrowserNotificationsEnabled(true);
+									setEnabled(true);
+								} catch {
+									setError(t("settings.notifications.enableFailed"));
+								}
+							})();
+						}}
+						aria-label={t("settings.notifications.enable")}
+					/>
+				</label>
+			</div>
 			{permission === "denied" && (
-				<p className="mt-2 px-4 text-sm text-neutral-500">{t("settings.notifications.blocked")}</p>
+				<p className="mt-2 text-sm text-fg-muted">{t("settings.notifications.blocked")}</p>
 			)}
 			{permission === "unsupported" && (
-				<p className="mt-2 px-4 text-sm text-neutral-500">{t("settings.notifications.unavailable")}</p>
+				<p className="mt-2 text-sm text-fg-muted">{t("settings.notifications.unavailable")}</p>
 			)}
-			{error && <p role="alert" className="mt-2 px-4 text-sm text-red-600">{error}</p>}
+			{error && <p role="alert" className={SETTING_ERROR_CLASS}>{error}</p>}
 		</div>
 	);
 }

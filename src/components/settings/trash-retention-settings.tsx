@@ -6,6 +6,7 @@ import { authFetch } from "@/lib/auth/client";
 import { TRASH_RETENTION_OPTIONS, describeTrashRetention } from "@/lib/email/trash-retention-utils";
 import type { TrashRetentionSettingsResponse } from "@/app/api/settings/trash-retention/types";
 import { Select } from "@/components/ui/select";
+import { SETTING_DESCRIPTION_CLASS, SETTING_ERROR_CLASS, SETTING_ROWS_CLASS, SETTING_ROW_CLASS, SETTING_TITLE_CLASS } from "./settings-section-utils";
 
 export function TrashRetentionSettings() {
 	const { t } = useLanguage();
@@ -54,27 +55,29 @@ export function TrashRetentionSettings() {
 
 	return (
 		<div>
-			<label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
-				<span className="flex-1">
-					<span className="block text-sm font-medium text-neutral-900">{t("settings.trash.title")}</span>
-					<span className="mt-1 block text-sm text-neutral-500">
-						{t("settings.trash.description")}
+			<div className={SETTING_ROWS_CLASS}>
+				<label className={SETTING_ROW_CLASS}>
+					<span className="min-w-0 flex-1">
+						<span className={SETTING_TITLE_CLASS}>{t("settings.trash.title")}</span>
+						<span className={SETTING_DESCRIPTION_CLASS}>
+							{t("settings.trash.description")}
+						</span>
 					</span>
-				</span>
-				<Select
-					value={days ?? ""}
-					disabled={loading}
-					onChange={(event) => void updateDays(event.target.value ? Number(event.target.value) : null)}
-					className="py-1.5 text-sm text-neutral-800"
-					aria-label={t("settings.trash.title")}
-				>
-					<option value="">{describeTrashRetention(null, t)}</option>
-					{options.map((value) => (
-						<option key={value} value={value}>{describeTrashRetention(value, t)}</option>
-					))}
-				</Select>
-			</label>
-			{error && <p role="alert" className="mt-2 px-4 text-sm text-red-600">{error}</p>}
+					<Select
+						value={days ?? ""}
+						disabled={loading}
+						onChange={(event) => void updateDays(event.target.value ? Number(event.target.value) : null)}
+						className="py-1.5 text-sm text-fg"
+						aria-label={t("settings.trash.title")}
+					>
+						<option value="">{describeTrashRetention(null, t)}</option>
+						{options.map((value) => (
+							<option key={value} value={value}>{describeTrashRetention(value, t)}</option>
+						))}
+					</Select>
+				</label>
+			</div>
+			{error && <p role="alert" className={SETTING_ERROR_CLASS}>{error}</p>}
 		</div>
 	);
 }

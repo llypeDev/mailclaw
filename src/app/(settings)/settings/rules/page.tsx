@@ -1,23 +1,15 @@
-import { PageHeading } from "@/components/page-heading";
+import { getServerTranslator } from "@/lib/i18n/server";
 import { InboxRules } from "@/components/settings/inbox-rules";
 import { DomainRouting } from "@/components/settings/domain-routing/domain-routing";
+import { SettingsPageHeader } from "@/components/settings/settings-section";
 
-export default function SettingsRulesPage() {
+export default async function SettingsRulesPage() {
+	const t = await getServerTranslator();
 	return (
-		<div className="space-y-8">
-			<PageHeading labelKey="settings.nav.rules" />
-			{/* <div>
-				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">Rules</h1>
-				<p className="mt-1 text-sm text-neutral-500">
-					Rules for the selected inbox.
-				</p>
-			</div> */}
-			<div>
-				<DomainRouting />
-			</div>
-			<div className="py-6">
-				<InboxRules />
-			</div>
+		<div className="space-y-8 py-4">
+			<SettingsPageHeader eyebrow={t("settings.nav.settings")} title={t("settings.nav.rules")} />
+			<DomainRouting />
+			<InboxRules />
 		</div>
 	);
 }

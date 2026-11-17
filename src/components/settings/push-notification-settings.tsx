@@ -7,6 +7,7 @@ import {
 	enablePushNotifications,
 	getPushState,
 } from "@/lib/push/client";
+import { SETTING_DESCRIPTION_CLASS, SETTING_ERROR_CLASS, SETTING_ROWS_CLASS, SETTING_ROW_CLASS, SETTING_TITLE_CLASS } from "./settings-section-utils";
 
 type State = {
 	loading: boolean;
@@ -61,31 +62,33 @@ export function PushNotificationSettings() {
 
 	return (
 		<div>
-			<label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
-				<span className="flex-1">
-					<span className="block text-sm font-medium text-neutral-900">Browser push notifications</span>
-					<span className="mt-1 block text-sm text-neutral-500">{description}</span>
-				</span>
-				<Switch
-					checked={state.subscribed}
-					disabled={disabled}
-					onCheckedChange={(enabled) => {
-						setState((current) => ({ ...current, loading: true, error: null }));
-						void (enabled ? enablePushNotifications() : disablePushNotifications())
-							.then(() => getPushState())
-							.then((next) => setState({ ...next, loading: false, error: null }))
-							.catch((error) => {
-								setState((current) => ({
-									...current,
-									loading: false,
-									error: error instanceof Error ? error.message : "Failed to update notifications",
-								}));
-							});
-					}}
-					aria-label="Enable browser push notifications"
-				/>
-			</label>
-			{state.error && <p role="alert" className="mt-2 px-4 text-sm text-red-600">{state.error}</p>}
+			<div className={SETTING_ROWS_CLASS}>
+				<label className={SETTING_ROW_CLASS}>
+					<span className="flex-1">
+						<span className={SETTING_TITLE_CLASS}>Browser push notifications</span>
+						<span className={SETTING_DESCRIPTION_CLASS}>{description}</span>
+					</span>
+					<Switch
+						checked={state.subscribed}
+						disabled={disabled}
+						onCheckedChange={(enabled) => {
+							setState((current) => ({ ...current, loading: true, error: null }));
+							void (enabled ? enablePushNotifications() : disablePushNotifications())
+								.then(() => getPushState())
+								.then((next) => setState({ ...next, loading: false, error: null }))
+								.catch((error) => {
+									setState((current) => ({
+										...current,
+										loading: false,
+										error: error instanceof Error ? error.message : "Failed to update notifications",
+									}));
+								});
+						}}
+						aria-label="Enable browser push notifications"
+					/>
+				</label>
+			</div>
+			{state.error && <p role="alert" className={SETTING_ERROR_CLASS}>{state.error}</p>}
 		</div>
 	);
 }

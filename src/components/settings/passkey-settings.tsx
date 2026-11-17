@@ -1,9 +1,11 @@
 "use client";
 
+import { Alert } from "@orangesys/ui";
 import { useEffect, useRef, useState } from "react";
 import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
-import { AlertTriangle, CheckCircle2, KeyRound, Pencil, Plus, ShieldCheck, ShieldOff, Trash2 } from "@/components/icons";
+import { CheckCircle2, KeyRound, Pencil, Plus, ShieldCheck, ShieldOff, Trash2 } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,6 +15,7 @@ import { addPasskey, checkPasskey, passkeyProvider, removePasskey, renamePasskey
 import { PasskeyFirstChoice, type PasskeyPolicyChoice } from "./passkey-first-choice";
 import { disableMfa } from "./utils";
 import { refreshSecurityStatus, useSecurityStatus } from "./security-status-store";
+import { SETTING_HINT_CLASS, SETTING_ROWS_CLASS, SETTING_STATUS_CLASS } from "./settings-section-utils";
 import { StepUpDialog } from "./step-up-dialog";
 import { authErrorText } from "@/lib/auth/error-messages";
 import { isPasskeyCancellation, isPasskeyUnsupported } from "@/lib/auth/webauthn/browser-errors";
@@ -150,7 +153,7 @@ export function PasskeySettings() {
 		}
 	}
 
-	if (!status) return <p role={loadFailed ? "alert" : undefined} className="text-sm text-neutral-500">{loadFailed ? t("passkey.loadFailed") : t("mfa.loading")}</p>;
+	if (!status) return <p role={loadFailed ? "alert" : undefined} className={loadFailed ? "text-sm text-danger-text" : "text-sm text-fg-muted"}>{loadFailed ? t("passkey.loadFailed") : t("mfa.loading")}</p>;
 
 	// Password accounts can fall back to password sign-in; passkey-only accounts cannot.
 	const canRemove = status.passkeys.length > 1 || status.passwordSet;
@@ -182,15 +185,15 @@ export function PasskeySettings() {
 
 	return (
 		<div className="space-y-5">
-			<div className="rounded-2xl bg-neutral-50 p-4">
+			<div className="border border-line bg-canvas-subtle p-4">
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<div className="flex min-w-0 items-start gap-3">
 						{status.passkeys.length > 0 ? (
-							<ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+							<ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-success-text" />
 						) : (
-							<ShieldOff className="mt-0.5 h-5 w-5 shrink-0 text-neutral-400" />
+							<ShieldOff className="mt-0.5 h-5 w-5 shrink-0 text-fg-subtle" />
 						)}
-						<p className="text-sm font-medium text-neutral-900">
+						<p className="text-sm font-medium text-fg">
 							{status.passkeys.length === 0 ? t("passkey.none") : t("passkey.count", { count: status.passkeys.length })}
 						</p>
 					</div>
@@ -207,7 +210,7 @@ export function PasskeySettings() {
 						</Button>
 					</div>
 				</div>
-				{checkError && <p role="alert" className="mt-3 text-sm text-red-600">{checkError}</p>}
+				{checkError && <p role="alert" className="mt-3 text-sm text-danger-text">{checkError}</p>}
 				{checkedPasskey && (
 					<p role="status" aria-live="polite" className="sr-only">
 						{t("passkey.justVerified")}: {displayName(checkedPasskey)}
@@ -215,35 +218,35 @@ export function PasskeySettings() {
 				)}
 			</div>
 
-			{notice && <p role="status" className="text-sm text-neutral-500">{notice}</p>}
+			{notice && <p role="status" className={SETTING_STATUS_CLASS}>{notice}</p>}
 
 			{status.passkeys.length > 0 && (
-				<ul className="divide-y divide-neutral-100 rounded-2xl border border-neutral-100">
+				<ul className={SETTING_ROWS_CLASS}>
 					{status.passkeys.map((passkey) => (
 						<li
 							key={passkey.id}
-							className={`flex items-center justify-between gap-4 px-4 py-3 transition-colors ${checkedId === passkey.id ? "bg-green-50/70" : ""}`}
+							className={`flex items-center justify-between gap-4 px-4 py-3 transition-colors ${checkedId === passkey.id ? "bg-success-subtle" : ""}`}
 						>
 							<div className="flex min-w-0 items-start gap-3">
-								<KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
+								<KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle" />
 								<div className="min-w-0">
 									<div className="flex flex-wrap items-center gap-2">
-										<p className="truncate text-sm font-medium text-neutral-900" title={displayName(passkey)}>{displayName(passkey)}</p>
+										<p className="truncate text-sm font-medium text-fg" title={displayName(passkey)}>{displayName(passkey)}</p>
 										{checkedId === passkey.id && (
-											<span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+											<Badge variant="success">
 												<CheckCircle2 className="h-3 w-3" />
 												{t("passkey.justVerified")}
-											</span>
+											</Badge>
 										)}
 									</div>
-									<p className="mt-1 text-xs text-neutral-500">
+									<p className="mt-1 text-xs text-fg-muted">
 										{passkey.lastUsedAt
 											? t("passkey.lastUsed", { date: new Date(passkey.lastUsedAt).toLocaleString() })
 											: t("passkey.neverUsed")}
 										{" · "}
 										{passkey.backedUp ? t("passkey.backedUp") : t("passkey.deviceOnly")}
 									</p>
-									<p className="mt-0.5 text-xs text-neutral-400">{t("passkey.createdAt", { date: new Date(passkey.createdAt).toLocaleDateString() })}</p>
+									<p className="mt-0.5 font-mono text-xs text-fg-subtle">{t("passkey.createdAt", { date: new Date(passkey.createdAt).toLocaleDateString() })}</p>
 								</div>
 							</div>
 							<div className="flex shrink-0 items-center gap-1">
@@ -306,7 +309,7 @@ export function PasskeySettings() {
 								placeholder={t("passkey.namePlaceholder")}
 								autoFocus
 							/>
-							<p className="text-xs leading-5 text-neutral-500">{t("passkey.nameHint")}</p>
+							<p className={SETTING_HINT_CLASS}>{t("passkey.nameHint")}</p>
 						</div>
 						<Button type="submit">{t("common.continue")}</Button>
 					</form>
@@ -320,13 +323,9 @@ export function PasskeySettings() {
 						<DialogDescription>{t("passkey.removeDescription", { name: confirmRemove?.name ?? "" })}</DialogDescription>
 					</DialogHeader>
 					{warnsLastSecondFactor && (
-						<p
-							role="alert"
-							className="mb-4 flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-sm leading-5 text-amber-800"
-						>
-							<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
-							<span className="min-w-0">{t("passkey.removeLastSecondFactorWarning")}</span>
-						</p>
+						<Alert tone="warning" live className="mb-4">
+							{t("passkey.removeLastSecondFactorWarning")}
+						</Alert>
 					)}
 					<div className="flex justify-end gap-2">
 						<Button type="button" variant="outline" onClick={() => setConfirmRemove(null)}>
@@ -366,7 +365,7 @@ export function PasskeySettings() {
 								autoFocus
 							/>
 						</div>
-						{renameError && <p role="alert" className="text-sm text-red-600">{renameError}</p>}
+						{renameError && <p role="alert" className="text-sm text-danger-text">{renameError}</p>}
 						<Button type="submit" disabled={renaming}>{renaming ? t("common.pleaseWait") : t("common.save")}</Button>
 					</form>
 				</DialogContent>

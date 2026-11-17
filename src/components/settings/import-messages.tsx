@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { Alert } from "@orangesys/ui";
 import { useState } from "react";
 import { Upload } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import type { ImportMessagesProps, ImportMessagesResult } from "./import-messages-types";
 import { importMessageFiles } from "./import-messages-utils";
+import { SETTING_FILE_INPUT_CLASS, SETTING_HINT_CLASS } from "./settings-section-utils";
 
 export function ImportMessages({ destination, sourceLabel }: ImportMessagesProps) {
 	const { t } = useLanguage();
@@ -58,9 +60,9 @@ export function ImportMessages({ destination, sourceLabel }: ImportMessagesProps
 							accept=".eml,.mbox,.mbx,message/rfc822,application/mbox"
 							multiple
 							onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
-							className="block w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm shadow-neutral-200/50 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-100 file:px-3 file:py-1.5 file:text-sm file:font-medium"
+							className={SETTING_FILE_INPUT_CLASS}
 						/>
-						<p className="text-xs leading-5 text-neutral-500">
+						<p className={SETTING_HINT_CLASS}>
 							{t("import.limits")}
 						</p>
 					</div>
@@ -70,15 +72,15 @@ export function ImportMessages({ destination, sourceLabel }: ImportMessagesProps
 					</Button>
 
 					{result?.job && (
-						<p className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
+						<Alert tone="success" live>
 							{t("importJobs.started")}
-						</p>
+						</Alert>
 					)}
 
 					{error && (
-						<p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+						<Alert tone="danger" live>
 							{error}
-						</p>
+						</Alert>
 					)}
 				</form>
 			</CardContent>

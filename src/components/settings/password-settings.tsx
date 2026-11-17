@@ -12,6 +12,7 @@ import { authErrorText } from "@/lib/auth/error-messages";
 import { ClientRequestError } from "@/lib/http/client-error";
 import { removePassword, setPassword } from "./passkey-settings-utils";
 import { refreshSecurityStatus, useSecurityStatus } from "./security-status-store";
+import { SETTING_HINT_CLASS, SETTING_STATUS_CLASS } from "./settings-section-utils";
 import { StepUpDialog } from "./step-up-dialog";
 import { PasskeyFirstChoice, type PasskeyPolicyChoice } from "./passkey-first-choice";
 
@@ -94,7 +95,7 @@ export function PasswordSettings() {
 		}
 	}
 
-	if (!status) return <p role={loadFailed ? "alert" : undefined} className="text-sm text-neutral-500">{loadFailed ? t("settings.password.failed") : t("mfa.loading")}</p>;
+	if (!status) return <p role={loadFailed ? "alert" : undefined} className={loadFailed ? "text-sm text-danger-text" : "text-sm text-fg-muted"}>{loadFailed ? t("settings.password.failed") : t("mfa.loading")}</p>;
 
 	return (
 		<div className="space-y-4">
@@ -125,12 +126,12 @@ export function PasswordSettings() {
 						</Button>
 					</div>
 					{status.passkeys.length === 0 ? (
-						<p className="text-xs leading-5 text-neutral-500">{t("passkey.addBeforeRemovingPassword")}</p>
+						<p className={SETTING_HINT_CLASS}>{t("passkey.addBeforeRemovingPassword")}</p>
 					) : (
 						// Without a second step the password is the weakest factor, so the
 						// passkey-only account is the better one.
 						!status.requireSecondFactor && (
-							<p className="text-xs leading-5 text-neutral-500">{t("passkey.removePasswordRecommended")}</p>
+							<p className={SETTING_HINT_CLASS}>{t("passkey.removePasswordRecommended")}</p>
 						)
 					)}
 				</form>
@@ -147,7 +148,7 @@ export function PasswordSettings() {
 						setPending("set");
 					}}
 				>
-					<p className="text-sm text-neutral-500">{t("passkey.noPassword")}</p>
+					<p className="text-sm text-fg-muted">{t("passkey.noPassword")}</p>
 					<div className="space-y-2">
 						<Label htmlFor="setPassword">{t("settings.password.new")}</Label>
 						<Input id="setPassword" type="password" autoComplete="new-password" minLength={8} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required />
@@ -163,8 +164,8 @@ export function PasswordSettings() {
 				</form>
 			)}
 
-			{message && <p role="status" className="text-sm text-neutral-500">{message}</p>}
-			{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+			{message && <p role="status" className={SETTING_STATUS_CLASS}>{message}</p>}
+			{error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
 
 			<Dialog open={confirmRemove} onOpenChange={setConfirmRemove}>
 				<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto sm:max-w-[440px]">
@@ -172,7 +173,7 @@ export function PasswordSettings() {
 						<DialogTitle>{t("passkey.removePasswordTitle")}</DialogTitle>
 						<DialogDescription>{t("passkey.removePasswordDescription")}</DialogDescription>
 					</DialogHeader>
-					<p className="mb-4 text-sm leading-6 text-neutral-500">{t("passkey.lostAllHint")}</p>
+					<p className="mb-4 text-sm leading-6 text-fg-muted">{t("passkey.lostAllHint")}</p>
 					<div className="flex justify-end gap-2">
 						<Button type="button" variant="outline" onClick={() => setConfirmRemove(false)}>
 							{t("common.cancel")}

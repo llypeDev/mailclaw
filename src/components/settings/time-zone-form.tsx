@@ -1,11 +1,14 @@
 "use client";
 
+import { Heading, Text } from "@orangesys/ui";
 import { useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { saveUserTimeZonePreference } from "@/lib/time/client";
+import { cn } from "@/lib/utils";
+import { SETTING_PANEL_CLASS, SETTING_STATUS_CLASS } from "./settings-section-utils";
 import { formatCurrentTimeInZone, listTimeZones, updateUserTimeZone } from "./time-zone-form-utils";
 import type { TimeZoneFormProps } from "./time-zone-form-types";
 
@@ -22,7 +25,7 @@ export function TimeZoneForm({ userId, initialTimeZone }: TimeZoneFormProps) {
 		catch { return null; }
 	})();
 
-	return <form className="space-y-4 rounded-lg bg-white p-6" onSubmit={(event) => {
+	return <form className={cn(SETTING_PANEL_CLASS, "space-y-4")} onSubmit={(event) => {
 		event.preventDefault();
 		setSaving(true);
 		setStatus(null);
@@ -34,18 +37,18 @@ export function TimeZoneForm({ userId, initialTimeZone }: TimeZoneFormProps) {
 		}).catch((error) => setStatus(error instanceof Error ? error.message : t("settings.timeZone.failed"))).finally(() => setSaving(false));
 	}}>
 		<div>
-			<h3 className="text-lg font-semibold text-neutral-900">{t("settings.timeZone.title")}</h3>
-			<p className="mt-1 text-sm text-neutral-500">{t("settings.timeZone.description", { zone: deviceTimeZone })}</p>
+			<Heading level={3} size="md">{t("settings.timeZone.title")}</Heading>
+			<Text size="sm" tone="muted" className="mt-1">{t("settings.timeZone.description", { zone: deviceTimeZone })}</Text>
 		</div>
 		<div className="space-y-2">
 			<Label htmlFor="account-time-zone">{t("settings.timeZone.title")}</Label>
 			<Input id="account-time-zone" list="account-time-zone-options" value={timeZone} onChange={(event) => { setTimeZone(event.target.value); setStatus(null); }} placeholder={t("settings.timeZone.placeholder", { zone: deviceTimeZone })} autoComplete="off" />
 			<datalist id="account-time-zone-options">{listTimeZones(deviceTimeZone).map((zone) => <option key={zone} value={zone} />)}</datalist>
-			{validZone && <p className="text-sm text-neutral-500">{t("settings.timeZone.current", { time: validZone })}</p>}
+			{validZone && <p className="font-mono text-sm text-fg-muted">{t("settings.timeZone.current", { time: validZone })}</p>}
 		</div>
 		<div className="flex items-center gap-3">
 			<Button type="submit" disabled={saving || timeZone.trim() === savedTimeZone || !validZone}>{saving ? t("common.saving") : t("settings.timeZone.save")}</Button>
-			{status && <p className="text-sm text-neutral-500" role="status">{status}</p>}
+			{status && <p className={SETTING_STATUS_CLASS} role="status">{status}</p>}
 		</div>
 	</form>;
 }

@@ -1,20 +1,22 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { Alert, ProgressBar } from "@orangesys/ui";
 import { useMemo, useState } from "react";
-import { Upload } from "@/components/icons";
+import { ChevronDown, Upload } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
 import type { TranslationKey } from "@/lib/i18n/types";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { ImportJobs } from "@/components/settings/import-jobs";
 import { importMessageFiles } from "@/components/settings/import-messages-utils";
 import { TakeoutImport } from "@/components/settings/takeout-import";
+import { SettingsPageHeader, SettingsPanel, SettingsSection } from "@/components/settings/settings-section";
+import { SETTING_FILE_INPUT_CLASS, SETTING_HINT_CLASS } from "@/components/settings/settings-section-utils";
 import type {
   ImapFormState,
   ImportSourceItem,
@@ -181,29 +183,13 @@ export default function SettingsImportPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="sr-only">{t("settings.nav.import")}</h1>
-      {/* <div>
-        <h1 className="text-2xl md:text-3xl font-medium text-neutral-900">Import</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          Move mail from selected source sections into the matching sections of
-          the current mailbox.
-        </p>
-      </div> */}
+    <div className="space-y-8 py-4">
+      <SettingsPageHeader eyebrow={t("settings.nav.mailbox")} title={t("settings.nav.import")} />
 
       <ImportJobs refreshKey={jobsRefresh} />
 
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-xl font-semibold text-neutral-900">
-            {t("importPage.title")}
-          </h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            {t("importPage.description")}
-          </p>
-        </div>
-        <div className="space-y-1 overflow-hidden rounded-3xl">
-          <CardContent className="space-y-6 rounded-b-lg rounded-t-3xl bg-white p-6">
+      <SettingsSection title={t("importPage.title")} description={t("importPage.description")}>
+          <SettingsPanel className="space-y-6">
             <div className="flex flex-col gap-2">
               <Label htmlFor="import-source">{t("importPage.source")}</Label>
               <Select
@@ -213,7 +199,6 @@ export default function SettingsImportPage() {
                   setActiveTab(event.target.value as ImportTab)
                 }
                 className="text-sm w-full py-2"
-                // className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm text-neutral-900 shadow-sm shadow-neutral-200/50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
                 <option value="file">{t("importPage.backupFile")}</option>
                 <option value="imap">{t("importPage.imap")}</option>
@@ -231,18 +216,19 @@ export default function SettingsImportPage() {
                 <button
                   type="button"
                   onClick={() => setSourceDropdownOpen((open) => !open)}
-                  className="flex w-full items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-left text-sm shadow-sm shadow-neutral-200/50"
+                  aria-expanded={sourceDropdownOpen}
+                  className="flex h-10 w-full items-center justify-between border border-line-control bg-surface px-3 py-2 text-start text-sm text-fg transition-colors hover:border-fg-subtle focus-visible:border-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
                 >
                   <label className="flex-1">{t("importPage.selected")}</label>
                   <span className="truncate">{sourceSummary}</span>
-                  <span className="text-neutral-500 px-2">▾</span>
+                  <ChevronDown className={`ms-2 h-4 w-4 shrink-0 text-fg-muted transition-transform ${sourceDropdownOpen ? "rotate-180" : ""}`} aria-hidden="true" />
                 </button>
                 {sourceDropdownOpen && (
-                  <div className="absolute z-20 mt-2 w-full rounded-xl border border-neutral-200 bg-white p-2 shadow-lg">
+                  <div className="absolute z-20 mt-1 w-full border border-line-strong bg-surface-raised py-1 shadow-lg">
                     {importSourceOptions.map((option) => (
                       <label
                         key={option.value}
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-fg hover:bg-surface-hover"
                       >
                         <Checkbox
                           checked={selectedSections.includes(option.value)}
@@ -256,10 +242,6 @@ export default function SettingsImportPage() {
                   </div>
                 )}
               </div>
-              {/* <p className="text-xs leading-5 text-neutral-500">
-            Select Folders to import every source IMAP folder into matching
-            Mailclaw folders.
-          </p> */}
             </div>
 
             {activeTab === "file" ? (
@@ -275,16 +257,16 @@ export default function SettingsImportPage() {
                       onChange={(event) =>
                         setFiles(Array.from(event.target.files ?? []))
                       }
-                      className="block w-full rounded-md border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm shadow-neutral-200/50 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-100 file:px-3 file:py-1.5 file:text-sm file:font-medium"
+                      className={SETTING_FILE_INPUT_CLASS}
                     />
-                    <p className="text-xs leading-5 text-neutral-500">
+                    <p className={SETTING_HINT_CLASS}>
                       {t("importPage.fileHint", { section: sourceLabel(fileImportSource) })}
                     </p>
                   </div>
                   {selectedSections.includes("others") && (
-                    <p className="rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    <Alert tone="warning">
                       {t("importPage.othersNote")}
-                    </p>
+                    </Alert>
                   )}
                   <Button
                     type="submit"
@@ -298,31 +280,23 @@ export default function SettingsImportPage() {
                     {fileLoading ? t("import.importing") : t("importPage.importFiles")}
                   </Button>
                   {fileProgress && (
-                    <div
-                      className="space-y-1 text-xs text-neutral-500"
-                      aria-live="polite"
-                    >
-                      <div className="flex justify-between">
-                        <span>{fileProgress.label}</span>
-                        <span>{fileProgress.completed}%</span>
-                      </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100">
-                        <div
-                          className="h-full bg-blue-600 transition-[width]"
-                          style={{ width: `${fileProgress.completed}%` }}
-                        />
-                      </div>
+                    <div aria-live="polite">
+                      <ProgressBar
+                        size="sm"
+                        label={fileProgress.label}
+                        value={fileProgress.completed}
+                      />
                     </div>
                   )}
                   {fileStarted && (
-                    <p className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    <Alert tone="success" live>
                       {t("importJobs.started")}
-                    </p>
+                    </Alert>
                   )}
                   {fileError && (
-                    <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <Alert tone="danger" live>
                       {fileError}
-                    </p>
+                    </Alert>
                   )}
                 </form>
               </>
@@ -407,7 +381,7 @@ export default function SettingsImportPage() {
                         }
                       />
                     </div>
-                    <label className="flex items-end gap-2 pb-2 text-sm text-neutral-700">
+                    <label className="flex items-end gap-2 pb-2 text-sm text-fg">
                       <Checkbox
                         checked={imapForm.importAll}
                         onChange={(event) =>
@@ -419,7 +393,7 @@ export default function SettingsImportPage() {
                       />
                       {t("importPage.importAll")}
                     </label>
-                    <label className="flex items-end gap-2 pb-2 text-sm text-neutral-700">
+                    <label className="flex items-end gap-2 pb-2 text-sm text-fg">
                       <Checkbox
                         checked={imapForm.secure}
                         onChange={(event) =>
@@ -432,9 +406,9 @@ export default function SettingsImportPage() {
                       {t("importPage.useTls")}
                     </label>
                   </div>
-                  <p className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-500">
+                  <Alert tone="info">
                     {t("importPage.imapNote")}
-                  </p>
+                  </Alert>
                   <Button
                     type="submit"
                     disabled={
@@ -450,44 +424,33 @@ export default function SettingsImportPage() {
                     {imapLoading ? t("import.importing") : t("importPage.importSources")}
                   </Button>
                   {imapProgress && (
-                    <div
-                      className="space-y-1 text-xs text-neutral-500"
-                      aria-live="polite"
-                    >
-                      <div className="flex justify-between">
-                        <span>{imapProgress.label}</span>
-                        <span>
-                          {imapProgress.completed}/{imapProgress.total}
-                        </span>
-                      </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100">
-                        <div
-                          className="h-full bg-blue-600 transition-[width]"
-                          style={{
-                            width: `${Math.round((imapProgress.completed / imapProgress.total) * 100)}%`,
-                          }}
-                        />
-                      </div>
+                    <div aria-live="polite">
+                      <ProgressBar
+                        size="sm"
+                        label={imapProgress.label}
+                        value={imapProgress.completed}
+                        max={imapProgress.total}
+                        formatValue={(value, info) => `${value}/${info.max}`}
+                      />
                     </div>
                   )}
                   {imapStarted && (
-                    <p className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    <Alert tone="success" live>
                       {t("importJobs.started")}
-                    </p>
+                    </Alert>
                   )}
                   {imapError && (
-                    <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <Alert tone="danger" live>
                       {imapError}
-                    </p>
+                    </Alert>
                   )}
                 </form>
               </>
             )}
             </>
             )}
-          </CardContent>
-        </div>
-      </section>
+          </SettingsPanel>
+      </SettingsSection>
     </div>
   );
 }

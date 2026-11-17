@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent, KeyboardEvent } from "react";
+import { EmptyState } from "@orangesys/ui";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Folder, Forward, Plus, ShieldAlert, Trash2 } from "@/components/icons";
@@ -18,6 +19,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RoutingRuleSelect } from "./domain-routing/routing-rule-select";
+import { SettingsSection } from "./settings-section";
+import { SETTING_HINT_CLASS, SETTING_ROWS_CLASS } from "./settings-section-utils";
 import type { InboxRule, InboxRuleInput } from "./inbox-rules-types";
 import {
   createInboxRule,
@@ -141,27 +144,23 @@ export function InboxRules() {
   }
 
   return (
-    <section className="space-y-4">
-      <div className="flex flex-row items-center">
-        <header className="flex-1">
-          <h2 className="text-2xl font-semibold text-neutral-900">
-            {t("rules.mailboxTitle")}
-          </h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            {t("rules.appliedAfterDelivery")}
-          </p>
-        </header>
-
+    <SettingsSection
+      title={t("rules.mailboxTitle")}
+      description={t("rules.appliedAfterDelivery")}
+      actions={
         <Button type="button" onClick={openCreateDialog} disabled={!mailboxId}>
           <Plus className="h-4 w-4" />
           {t("rules.new")}
         </Button>
-      </div>
-      <div className="rounded-3xl bg-white p-6">
+      }
+    >
+      <div>
         {(rules.data?.rules ?? []).length === 0 && (
-          <p className="text-sm text-neutral-500">{t("rules.none")}</p>
+          <div className="border border-line bg-surface">
+            <EmptyState variant="compact" icon={<Folder className="h-5 w-5" />} title={t("rules.none")} headingLevel={3} />
+          </div>
         )}
-        <div className="space-y-1">
+        {(rules.data?.rules ?? []).length > 0 && <div className={SETTING_ROWS_CLASS}>
           {(rules.data?.rules ?? []).map((rule) => (
             <div
               key={rule.id}
@@ -169,9 +168,9 @@ export function InboxRules() {
               tabIndex={0}
               onClick={() => openEditDialog(rule)}
               onKeyDown={(event) => onRuleKeyDown(event, rule)}
-              className="group flex cursor-pointer items-center gap-3 rounded-xl bg-neutral-50 px-3 py-3 outline-none transition-colors hover:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-blue-200"
+              className="group flex cursor-pointer items-center gap-3 px-4 py-3 outline-none transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-line bg-canvas-subtle text-fg-muted">
                 {rule.action === "forward" ? (
                   <Forward className="h-4 w-4" />
                 ) : rule.action === "spam" ? (
@@ -183,12 +182,12 @@ export function InboxRules() {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-neutral-900">
+                <p className="truncate text-sm font-medium text-fg">
                   {getRuleFieldLabel(rule.matchField, t)}{" "}
                   {getRuleOperatorLabel(rule.matchOperator, t)}{" "}
                   {rule.matchValue || rule.pattern}
                 </p>
-                <p className="truncate text-xs text-neutral-500">
+                <p className="truncate text-xs text-fg-muted">
                   {getRuleDestinationLabel(rule)}
                 </p>
               </div>
@@ -209,7 +208,7 @@ export function InboxRules() {
               </Button>
             </div>
           ))}
-        </div>
+        </div>}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -300,9 +299,9 @@ export function InboxRules() {
                     onChange={(event) => setForwardTo(event.target.value)}
                     placeholder="destination@example.com"
                   />
-                  <p className="text-xs leading-5 text-neutral-500">{t("rules.forwardHint")}</p>
+                  <p className={SETTING_HINT_CLASS}>{t("rules.forwardHint")}</p>
                 </div>
-                <label className="flex items-center gap-2 text-sm text-neutral-700">
+                <label className="flex items-center gap-2 text-sm text-fg-muted">
                   <Checkbox
                     checked={keepCopy}
                     onChange={(event) => setKeepCopy(event.target.checked)}
@@ -312,9 +311,9 @@ export function InboxRules() {
               </div>
             )}
             {save.isError && (
-              <p role="alert" className="text-sm text-red-600">{save.error.message}</p>
+              <p role="alert" className="text-sm text-danger-text">{save.error.message}</p>
             )}
-            <div className="flex justify-end gap-2 border-t border-neutral-200 pt-4">
+            <div className="flex justify-end gap-2 border-t border-line pt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -342,6 +341,6 @@ export function InboxRules() {
           </form>
         </DialogContent>
       </Dialog>
-    </section>
+    </SettingsSection>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { useShortcuts } from "@/components/shortcuts";
 import { Switch } from "@/components/ui/switch";
+import { SETTING_DESCRIPTION_CLASS, SETTING_ERROR_CLASS, SETTING_ROWS_CLASS, SETTING_ROW_CLASS, SETTING_TITLE_CLASS } from "./settings-section-utils";
 
 export function InboxShortcutsSettings() {
 	const { t } = useLanguage();
@@ -18,28 +19,30 @@ export function InboxShortcutsSettings() {
 
 	return (
 		<div>
-			<label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
-				<span className="flex-1">
-					<span className="block text-sm font-medium text-neutral-900">{t("settings.shortcuts.title")}</span>
-					<span className="mt-1 block text-sm text-neutral-500">
-						{t("settings.shortcuts.description")}
+			<div className={SETTING_ROWS_CLASS}>
+				<label className={SETTING_ROW_CLASS}>
+					<span className="flex-1">
+						<span className={SETTING_TITLE_CLASS}>{t("settings.shortcuts.title")}</span>
+						<span className={SETTING_DESCRIPTION_CLASS}>
+							{t("settings.shortcuts.description")}
+						</span>
 					</span>
-				</span>
-				<Switch
-					checked={shortcutsEnabled}
-					disabled={shortcutsPreferenceLoading || saving}
-					onCheckedChange={(enabled) => {
-						setSaving(true);
-						setSaveError(null);
-						void setShortcutsEnabled(enabled)
-							.catch((error) => setSaveError(error instanceof Error ? error.message : t("settings.shortcuts.failed")))
-							.finally(() => setSaving(false));
-					}}
-					aria-label={t("settings.shortcuts.enable")}
-				/>
-			</label>
+					<Switch
+						checked={shortcutsEnabled}
+						disabled={shortcutsPreferenceLoading || saving}
+						onCheckedChange={(enabled) => {
+							setSaving(true);
+							setSaveError(null);
+							void setShortcutsEnabled(enabled)
+								.catch((error) => setSaveError(error instanceof Error ? error.message : t("settings.shortcuts.failed")))
+								.finally(() => setSaving(false));
+						}}
+						aria-label={t("settings.shortcuts.enable")}
+					/>
+				</label>
+			</div>
 			{(saveError || shortcutsPreferenceError) && (
-				<p role="alert" className="mt-2 px-4 text-sm text-red-600">{saveError || shortcutsPreferenceError}</p>
+				<p role="alert" className={SETTING_ERROR_CLASS}>{saveError || shortcutsPreferenceError}</p>
 			)}
 		</div>
 	);

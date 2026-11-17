@@ -45,14 +45,14 @@ export function PasskeyFirstChoice({
 				hint: t("passkey.choiceRemovesPasswordAndCodes"),
 				notes: [t("passkey.choiceTwoSteps")],
 				icon: KeyRound,
-				iconClass: "text-neutral-500",
+				iconClass: "text-fg-subtle",
 			},
 			{
 				id: "keep",
 				title: t("passkey.choiceKeepCurrent"),
 				hint: t("passkey.choiceKeepCurrentHint"),
 				icon: ShieldCheck,
-				iconClass: "text-green-600",
+				iconClass: "text-success-text",
 			},
 		]
 		: [
@@ -61,21 +61,21 @@ export function PasskeyFirstChoice({
 				title: t(addingPassword ? "passkey.choiceKeepPasskeysOnly" : "passkey.choicePasskeyOnly"),
 				hint: t(addingPassword ? "passkey.choiceDiscardPassword" : "passkey.choiceRemovesPassword"),
 				icon: KeyRound,
-				iconClass: "text-neutral-500",
+				iconClass: "text-fg-subtle",
 			},
 			{
 				id: "password-and-passkey",
 				title: t("passkey.choicePasswordAndPasskey"),
 				hint: t(totpEnabled ? "twoStep.requireDescription" : "passkey.choicePasswordAndPasskeyHint"),
 				icon: ShieldCheck,
-				iconClass: "text-green-600",
+				iconClass: "text-success-text",
 			},
 			{
 				id: "keep",
 				title: t("passkey.choiceKeepPasswordOnly"),
 				hint: t("passkey.choiceKeepPasswordOnlyHint"),
 				icon: AlertTriangle,
-				iconClass: "text-amber-500",
+				iconClass: "text-warning-text",
 			},
 		];
 
@@ -92,7 +92,7 @@ export function PasskeyFirstChoice({
 					<DialogTitle>{t("passkey.firstChoiceTitle")}</DialogTitle>
 					<DialogDescription>{t(addingPassword ? "passkey.passwordChoiceDescription" : "passkey.firstChoiceDescription")}</DialogDescription>
 				</DialogHeader>
-				<p className="mb-4 flex items-start gap-2 text-xs leading-5 text-neutral-500">
+				<p className="mb-4 flex items-start gap-2 text-xs leading-5 text-fg-muted">
 					<Info className="mt-0.5 h-4 w-4 shrink-0" />
 					<span>{t("passkey.choiceRecoveryNote")}</span>
 				</p>
@@ -103,14 +103,14 @@ export function PasskeyFirstChoice({
 							type="button"
 							onClick={() => onChoose(option.id)}
 							disabled={busy}
-							className="flex w-full items-start gap-3 rounded-2xl border border-neutral-200 p-3 text-left transition-colors hover:border-neutral-300 hover:bg-neutral-50"
+							className="flex w-full items-start gap-3 border border-line p-3 text-start transition-colors hover:border-line-strong hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-60"
 						>
 							<option.icon className={`mt-0.5 h-4 w-4 shrink-0 ${option.iconClass}`} />
 							<span className="min-w-0">
-								<span className="block text-sm font-medium text-neutral-900">{option.title}</span>
-								<span className="mt-0.5 block text-sm leading-5 text-neutral-500">{option.hint}</span>
+								<span className="block text-sm font-medium text-fg">{option.title}</span>
+								<span className="mt-0.5 block text-sm leading-5 text-fg-muted">{option.hint}</span>
 								{option.notes?.map((note) => (
-									<span key={note} className="mt-1 flex items-start gap-1.5 text-xs leading-5 text-neutral-400">
+									<span key={note} className="mt-1 flex items-start gap-1.5 text-xs leading-5 text-fg-subtle">
 										<Info className="mt-0.5 h-3 w-3 shrink-0" />
 										{note}
 									</span>

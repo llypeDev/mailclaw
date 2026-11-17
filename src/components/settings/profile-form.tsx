@@ -1,5 +1,6 @@
 "use client";
 
+import { Heading, Text } from "@orangesys/ui";
 import { useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
@@ -8,8 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authFetch } from "@/lib/auth/client";
 import { dispatchProfileNameChanged } from "@/lib/profile/name-client";
+import { cn } from "@/lib/utils";
 import { InboxSwitcher } from "./inbox-switcher";
 import { ProfileAvatarForm } from "./profile-avatar-form";
+import { SETTING_PANEL_CLASS, SETTING_STATUS_CLASS } from "./settings-section-utils";
 import type { ProfileFormProps, ProfileFormResponse } from "./types";
 import { getMailboxAddress, updateCurrentMailboxName } from "./utils";
 
@@ -110,10 +113,10 @@ export function ProfileForm({
   }
 
   if (isLoading) {
-    return <p className="rounded-t-3xl rounded-b-lg bg-white p-6 text-sm text-neutral-500">{t("settings.signature.loadingInbox")}</p>;
+    return <p className={cn(SETTING_PANEL_CLASS, "text-sm text-fg-muted")}>{t("settings.signature.loadingInbox")}</p>;
   }
   if (!selectedMailbox) {
-    return <p className="rounded-t-3xl rounded-b-lg bg-white p-6 text-sm text-neutral-500">{t("settings.signature.selectInbox")}</p>;
+    return <p className={cn(SETTING_PANEL_CLASS, "text-sm text-fg-muted")}>{t("settings.signature.selectInbox")}</p>;
   }
 
   const address = getMailboxAddress(selectedMailbox);
@@ -123,7 +126,7 @@ export function ProfileForm({
     <>
       <form
         onSubmit={onProfileSubmit}
-        className="space-y-6 rounded-b-lg rounded-t-3xl bg-white p-6"
+        className={cn(SETTING_PANEL_CLASS, "space-y-6")}
       >
         <InboxSwitcher />
         <div className="flex items-center gap-4">
@@ -134,10 +137,10 @@ export function ProfileForm({
             colorSeed={address}
           />
           <div>
-            <p className="text-sm font-medium text-neutral-900">
+            <p className="text-sm font-medium text-fg">
               {t("settings.profile.pictureTitle")}
             </p>
-            <p className="mt-1 text-sm text-neutral-500">
+            <p className="mt-1 text-sm text-fg-muted">
               {t("settings.profile.pictureDescription")}
             </p>
           </div>
@@ -164,7 +167,6 @@ export function ProfileForm({
             type="email"
             readOnly
             aria-readonly="true"
-            className="bg-neutral-50"
           />
         </div>
 
@@ -176,22 +178,22 @@ export function ProfileForm({
             {savingProfile ? t("common.saving") : t("settings.profile.save")}
           </Button>
           {profileStatus && (
-            <p className="text-sm text-neutral-500">{profileStatus}</p>
+            <p className={SETTING_STATUS_CLASS}>{profileStatus}</p>
           )}
         </div>
       </form>
 
       {isPrimary && <form
         onSubmit={onRecoverySubmit}
-        className="space-y-4 rounded-lg bg-white p-6"
+        className={cn(SETTING_PANEL_CLASS, "space-y-4")}
       >
         <div>
-          <h3 className="text-lg font-semibold text-neutral-900">
+          <Heading level={3} size="md">
             {t("settings.profile.recoveryTitle")}
-          </h3>
-          <p className="mt-1 text-sm text-neutral-500">
+          </Heading>
+          <Text size="sm" tone="muted" className="mt-1">
             {t("settings.profile.recoveryDescription")}
-          </p>
+          </Text>
         </div>
         <div className="space-y-2">
           <Label htmlFor="resetEmail">{t("settings.profile.emailAddress")}</Label>
@@ -212,7 +214,7 @@ export function ProfileForm({
             {savingRecovery ? t("common.saving") : t("settings.profile.saveRecovery")}
           </Button>
           {recoveryStatus && (
-            <p className="text-sm text-neutral-500">{recoveryStatus}</p>
+            <p className={SETTING_STATUS_CLASS}>{recoveryStatus}</p>
           )}
         </div>
       </form>}

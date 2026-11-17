@@ -98,7 +98,7 @@ export function StepUpDialog({
 			<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto sm:max-w-[440px]">
 				<DialogHeader>
 					{step && step.total > 1 && (
-						<p aria-live="polite" className="text-xs font-medium uppercase tracking-wide text-neutral-400">
+						<p aria-live="polite" className="font-mono text-xs font-medium uppercase tracking-wide text-fg-subtle">
 							{t("passkey.stepOf", { current: step.current, total: step.total })}
 						</p>
 					)}
@@ -111,12 +111,12 @@ export function StepUpDialog({
 							<KeyRound className="h-4 w-4" />
 							{busy ? t("passkey.waiting") : t("passkey.verifyWithPasskey")}
 						</Button>
-						<p className="flex items-start gap-2 text-xs leading-5 text-neutral-500">
+						<p className="flex items-start gap-2 text-xs leading-5 text-fg-muted">
 							<ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
 							{t("passkey.verifyHint")}
 						</p>
 						{passwordPathAllowed && (
-							<p className="text-center text-xs uppercase tracking-wide text-neutral-400">{t("passkey.or")}</p>
+							<p className="flex items-center gap-3 font-display text-xs uppercase tracking-wide text-fg-subtle before:h-px before:flex-1 before:bg-line after:h-px after:flex-1 after:bg-line">{t("passkey.or")}</p>
 						)}
 					</div>
 				)}
@@ -163,14 +163,14 @@ export function StepUpDialog({
 					</form>
 				)}
 				{!canUsePasskey && !passwordPathAllowed && (
-					<p role="alert" className="text-sm text-red-600">{t("passkey.verifyUnavailable")}</p>
+					<p role="alert" className="text-sm text-danger-text">{t("passkey.verifyUnavailable")}</p>
 				)}
 				{canUsePasskey && passwordPathAllowed && !showPassword && (
-					<button type="button" className="w-full text-center text-sm text-neutral-500 hover:text-neutral-800" onClick={() => setShowPassword(true)}>
+					<button type="button" className="w-full text-center text-sm text-fg-muted underline-offset-4 hover:text-fg hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus" onClick={() => setShowPassword(true)}>
 						{t("passkey.usePasswordInstead")}
 					</button>
 				)}
-				{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+				{error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
 			</DialogContent>
 		</Dialog>
 	);

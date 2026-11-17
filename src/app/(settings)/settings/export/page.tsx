@@ -1,9 +1,11 @@
 "use client";
 
+import { Alert } from "@orangesys/ui";
 import { useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { Button } from "@/components/ui/button";
+import { SettingsPageHeader, SettingsPanel, SettingsSection } from "@/components/settings/settings-section";
 import type { ExportState } from "./types";
 import { exportMailbox } from "./utils";
 
@@ -25,33 +27,20 @@ export default function SettingsExportPage() {
 	}
 
 	return (
-		<div className="space-y-6">
-			<h1 className="sr-only">{t("settings.nav.export")}</h1>
-			{/* <div>
-				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">Export</h1>
-				<p className="mt-1 text-sm text-neutral-500">
-					Download mail from the currently selected mailbox.
-				</p>
-			</div> */}
-
-			<section className="space-y-4">
-				<div>
-					<h2 className="text-xl font-semibold text-neutral-900">{t("export.title")}</h2>
-					<p className="mt-1 text-sm text-neutral-500">
-						{t("export.description")}
-					</p>
-				</div>
-				<div className="space-y-3 rounded-3xl bg-white p-6">
-					<Button type="button" variant="outline" disabled={!selectedMailbox || exportState.loading} onClick={onExport}>
+		<div className="space-y-8 py-4">
+			<SettingsPageHeader eyebrow={t("settings.nav.mailbox")} title={t("settings.nav.export")} />
+			<SettingsSection title={t("export.title")} description={t("export.description")}>
+				<SettingsPanel className="space-y-3">
+					<Button type="button" disabled={!selectedMailbox || exportState.loading} onClick={onExport}>
 						{exportState.loading ? t("export.preparing") : t("export.download")}
 					</Button>
 					{exportState.error && (
-						<p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+						<Alert tone="danger" live>
 							{exportState.error}
-						</p>
+						</Alert>
 					)}
-				</div>
-			</section>
+				</SettingsPanel>
+			</SettingsSection>
 		</div>
 	);
 }

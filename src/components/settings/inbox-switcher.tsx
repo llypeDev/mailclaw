@@ -18,7 +18,7 @@ function InboxAvatar({ mailbox }: { mailbox: MailboxOption }) {
 			<ProgressiveAvatarImage
 				src={`/api/mailboxes/${mailbox.id}/avatar`}
 				alt={name}
-				className="h-10 w-10 shrink-0 rounded-full border border-neutral-200 object-cover"
+				className="h-10 w-10 shrink-0 rounded-full border border-line object-cover"
 				onError={() => setFailedId(mailbox.id)}
 			/>
 		);
@@ -26,7 +26,7 @@ function InboxAvatar({ mailbox }: { mailbox: MailboxOption }) {
 
 	return (
 		<div
-			className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white"
+			className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-active font-display text-sm font-semibold text-fg"
 			style={getAvatarColorStyle(getMailboxAddress(mailbox))}
 			aria-hidden="true"
 		>
@@ -40,16 +40,16 @@ function InboxLabel({ mailbox }: { mailbox: MailboxOption }) {
 	return (
 		<>
 			<InboxAvatar mailbox={mailbox} />
-			<div className="min-w-0 flex-1 text-left">
+			<div className="min-w-0 flex-1 text-start">
 				<div className="flex items-center gap-1.5">
-					<p className="truncate text-sm font-semibold text-neutral-900">{getMailboxName(mailbox)}</p>
+					<p className="truncate text-sm font-semibold text-fg">{getMailboxName(mailbox)}</p>
 					{mailbox.type === "shared" && (
-						<span title={t("account.sharedInbox")} aria-label={t("account.sharedInbox")} className="shrink-0 text-blue-600">
+						<span title={t("account.sharedInbox")} aria-label={t("account.sharedInbox")} className="shrink-0 text-accent-text">
 							<UsersRound className="h-3.5 w-3.5" />
 						</span>
 					)}
 				</div>
-				<p className="truncate text-xs text-neutral-500">{getMailboxAddress(mailbox)}</p>
+				<p className="truncate font-mono text-xs text-fg-muted">{getMailboxAddress(mailbox)}</p>
 			</div>
 		</>
 	);
@@ -73,15 +73,15 @@ export function InboxSwitcher() {
 				aria-expanded={open}
 				aria-haspopup="listbox"
 				aria-label={t("settings.account.switchInbox")}
-				className="flex w-full items-center gap-3 rounded-2xl border border-neutral-200 px-4 py-3 transition-colors hover:bg-neutral-50"
+				className="flex w-full items-center gap-3 border border-line-control bg-surface px-4 py-3 transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
 			>
 				<InboxLabel mailbox={selectedMailbox} />
-				<ChevronDown className={`h-4 w-4 shrink-0 text-neutral-500 transition-transform ${open ? "rotate-180" : ""}`} />
+				<ChevronDown className={`h-4 w-4 shrink-0 text-fg-muted transition-transform ${open ? "rotate-180" : ""}`} />
 			</button>
 			{open && (
 				<div
 					role="listbox"
-					className="absolute left-0 right-0 top-full z-50 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-1 shadow-xl shadow-neutral-900/10"
+					className="absolute inset-x-0 top-full z-50 mt-1 max-h-72 overflow-y-auto border border-line-strong bg-surface-raised py-1 shadow-lg"
 				>
 					{mailboxes.map((mailbox) => {
 						const selected = mailbox.id === selectedMailbox.id;
@@ -95,10 +95,10 @@ export function InboxSwitcher() {
 									setSelectedMailbox(mailbox);
 									setOpen(false);
 								}}
-								className="flex w-full items-center gap-3 rounded-xl px-3 py-2 hover:bg-neutral-100"
+								className={`flex w-full items-center gap-3 border-s-[3px] px-3 py-2 hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline-none ${selected ? "border-accent" : "border-transparent"}`}
 							>
 								<InboxLabel mailbox={mailbox} />
-								{selected && <Check className="h-4 w-4 shrink-0 text-blue-600" />}
+								{selected && <Check className="h-4 w-4 shrink-0 text-accent-text" />}
 							</button>
 						);
 					})}

@@ -1,11 +1,14 @@
 "use client";
 
+import { Alert, Heading, Text } from "@orangesys/ui";
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { LanguageSelector } from "@/components/language-selector";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MailboxSignatureForm } from "./mailbox-signature-form";
 import { ProfileForm } from "./profile-form";
+import { SettingsPageHeader, SettingsPanel, SettingsSection } from "./settings-section";
+import { SETTING_STACK_CLASS } from "./settings-section-utils";
 import { TimeZoneForm } from "./time-zone-form";
 import type { AccountSettingsResponse } from "./types";
 import { loadAccountSettings } from "./utils";
@@ -31,61 +34,56 @@ export function AccountSettings() {
 		};
 	}, [t]);
 
+	const header = <SettingsPageHeader eyebrow={t("settings.nav.settings")} title={t("settings.nav.account")} />;
+
 	if (error) {
-		return <p role="alert" className="py-8 text-sm text-red-600">{error}</p>;
+		return (
+			<div className="space-y-8 py-4">
+				{header}
+				<Alert tone="danger" live>{error}</Alert>
+			</div>
+		);
 	}
 
 	if (!user) {
 		return (
-			<div className="space-y-6 py-4">
-				<Skeleton className="h-9 w-40" />
-				<Skeleton className="h-72 w-full rounded-3xl" />
+			<div className="space-y-8 py-4">
+				{header}
+				<Skeleton className="h-72 w-full" />
 			</div>
 		);
 	}
 
 	return (
 		<div className="space-y-8 py-4">
-			<h1 className="sr-only">{t("settings.nav.account")}</h1>
-			{/* <div>
-				<h1 className="text-2xl md:text-3xl font-medium text-neutral-900">Account</h1>
-				<p className="mt-1 text-sm text-neutral-500">Manage your account details and sign-in password.</p>
-			</div> */}
+			{header}
 
-			<section className="space-y-4">
-				<div>
-					<h2 className="text-xl font-semibold text-neutral-900">{t("settings.account.detailsTitle")}</h2>
-					<p className="mt-1 text-sm text-neutral-500">{t("settings.account.detailsDescription")}</p>
-				</div>
-				<div className="space-y-1 overflow-hidden rounded-3xl">
+			<SettingsSection title={t("settings.account.detailsTitle")} description={t("settings.account.detailsDescription")}>
+				<div className={SETTING_STACK_CLASS}>
 					<ProfileForm
 						accountName={user.name}
 						initialResetEmail={user.resetEmail ?? ""}
 					/>
 
-					<div className="space-y-4 rounded-b-3xl rounded-t-lg bg-white p-6">
+					<SettingsPanel className="space-y-4">
 						<div>
-							<h3 className="text-lg font-semibold text-neutral-900">{t("settings.account.signatureTitle")}</h3>
-							<p className="mt-1 text-sm text-neutral-500">{t("settings.account.signatureDescription")}</p>
+							<Heading level={3} size="md">{t("settings.account.signatureTitle")}</Heading>
+							<Text size="sm" tone="muted" className="mt-1">{t("settings.account.signatureDescription")}</Text>
 						</div>
-					<MailboxSignatureForm />
-					</div>
+						<MailboxSignatureForm />
+					</SettingsPanel>
 				</div>
-			</section>
+			</SettingsSection>
 
-			<section className="space-y-4">
-				<div>
-					<h2 className="text-xl font-semibold text-neutral-900">{t("settings.account.generalTitle")}</h2>
-					<p className="mt-1 text-sm text-neutral-500">{t("settings.account.generalDescription")}</p>
-				</div>
-				<div className="space-y-1 overflow-hidden rounded-3xl">
-					<div className="rounded-t-3xl rounded-b-lg bg-white p-6">
-						<h3 className="mb-3 text-lg font-semibold text-neutral-900">{t("language.label")}</h3>
+			<SettingsSection title={t("settings.account.generalTitle")} description={t("settings.account.generalDescription")}>
+				<div className={SETTING_STACK_CLASS}>
+					<SettingsPanel>
+						<Heading level={3} size="md" className="mb-3">{t("language.label")}</Heading>
 						<div className="max-w-xs [&>div]:px-0 [&_label]:sr-only"><LanguageSelector /></div>
-					</div>
+					</SettingsPanel>
 					<TimeZoneForm userId={user.id} initialTimeZone={user.timeZone} />
 				</div>
-			</section>
+			</SettingsSection>
 		</div>
 	);
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { authFetch } from "@/lib/auth/client";
 import { useLanguage } from "@/components/language-provider";
 import { Switch } from "@/components/ui/switch";
+import { SETTING_DESCRIPTION_CLASS, SETTING_ERROR_CLASS, SETTING_ROWS_CLASS, SETTING_ROW_CLASS, SETTING_TITLE_CLASS } from "./settings-section-utils";
 
 export function SpamFilterSettings() {
 	const { t } = useLanguage();
@@ -47,14 +48,16 @@ export function SpamFilterSettings() {
 
 	return (
 		<div>
-			<label className="flex items-start gap-3 rounded-xl bg-neutral-50 p-4">
-				<span className="flex-1">
-					<span className="block text-sm font-medium text-neutral-900">{t("settings.spam.title")}</span>
-					<span className="mt-1 block text-sm text-neutral-500">{t("settings.spam.description")}</span>
-				</span>
-				<Switch checked={enabled} disabled={loading} onCheckedChange={(value) => void updateEnabled(value)} aria-label={t("settings.spam.enable")} />
-			</label>
-			{error && <p role="alert" className="mt-2 px-4 text-sm text-red-600">{error}</p>}
+			<div className={SETTING_ROWS_CLASS}>
+				<label className={SETTING_ROW_CLASS}>
+					<span className="flex-1">
+						<span className={SETTING_TITLE_CLASS}>{t("settings.spam.title")}</span>
+						<span className={SETTING_DESCRIPTION_CLASS}>{t("settings.spam.description")}</span>
+					</span>
+					<Switch checked={enabled} disabled={loading} onCheckedChange={(value) => void updateEnabled(value)} aria-label={t("settings.spam.enable")} />
+				</label>
+			</div>
+			{error && <p role="alert" className={SETTING_ERROR_CLASS}>{error}</p>}
 		</div>
 	);
 }
