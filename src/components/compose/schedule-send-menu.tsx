@@ -17,6 +17,10 @@ import type { ScheduleSendMenuProps } from "./schedule-send-types";
 import { useIsMobile } from "@/components/sidebar-mobile-utils";
 import { ScheduleSendSheet } from "./schedule-send-sheet";
 import { getUserTimeZone } from "@/lib/time/utils";
+import { buttonVariants } from "@/components/ui/button-utils";
+
+/** The chevron half of the Send split button: Orange's primary icon button, divided from Send by a lighter edge. */
+const TRIGGER_CLASS = `${buttonVariants({ size: "roundedSM" })} border-s-on-accent/30 max-md:h-10 max-md:w-10`;
 
 export function ScheduleSendMenu({ disabled, value, onChange, mailboxId, from, onApplyTemplate }: ScheduleSendMenuProps) {
 	const { t } = useLanguage();
@@ -41,7 +45,7 @@ export function ScheduleSendMenu({ disabled, value, onChange, mailboxId, from, o
 	if (isPhone) {
 		return (
 			<>
-				<button type="button" disabled={disabled} aria-label={t("schedule.optionsLabel")} onClick={() => setSheetOpen(true)} className="inline-flex h-8 items-center justify-center rounded-r-lg border-l border-blue-500 bg-blue-600 px-2 text-white max-md:h-10 max-md:px-2.5 transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50">
+				<button type="button" disabled={disabled} aria-label={t("schedule.optionsLabel")} onClick={() => setSheetOpen(true)} className={TRIGGER_CLASS}>
 					<ChevronDown className="h-4 w-4" />
 				</button>
 				<ScheduleSendSheet open={sheetOpen} onOpenChange={setSheetOpen} value={value} onChange={onChange} onApplyTemplate={onApplyTemplate} onNewTemplate={() => setNewTemplateOpen(true)} />
@@ -57,7 +61,7 @@ export function ScheduleSendMenu({ disabled, value, onChange, mailboxId, from, o
 				type="button"
 				disabled={disabled}
 				aria-label={t("schedule.optionsLabel")}
-				className="inline-flex h-8 items-center justify-center rounded-r-lg border-l border-blue-500 bg-blue-600 px-2 text-white max-md:h-10 max-md:px-2.5 transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+				className={TRIGGER_CLASS}
 			>
 				<ChevronDown className="h-4 w-4" />
 			</DropdownMenu.Trigger>
@@ -65,37 +69,37 @@ export function ScheduleSendMenu({ disabled, value, onChange, mailboxId, from, o
 				<DropdownMenu.Content
 					align="start"
 					sideOffset={6}
-					className="z-50 min-w-56 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg"
+					className="z-50 min-w-56 border border-line-strong bg-surface-raised p-1 text-sm text-fg shadow-lg"
 				>
 					<TemplateMenu onApply={onApplyTemplate} onNew={() => setNewTemplateOpen(true)} />
-					<DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
-					<DropdownMenu.Label className="px-3 pb-1 pt-2 text-xs font-medium text-neutral-500">{t("schedule.heading")}</DropdownMenu.Label>
+					<DropdownMenu.Separator className="my-1 h-px bg-line-subtle" />
+					<DropdownMenu.Label className="px-3 pb-1 pt-2 font-display text-xs font-medium uppercase tracking-wider text-fg-subtle">{t("schedule.heading")}</DropdownMenu.Label>
 					{value && (
 						<>
 							<DropdownMenu.Item
 								onSelect={() => onChange(null)}
-								className="flex cursor-pointer items-center rounded-md px-3 py-2 outline-none hover:bg-neutral-100 focus:bg-neutral-100"
+								className="flex cursor-pointer items-center px-3 py-2 outline-none hover:bg-surface-hover focus:bg-surface-hover"
 							>
-								<X className="mr-2 h-4 w-4" />
+								<X className="me-2 h-4 w-4" />
 								{t("schedule.clear")}
 							</DropdownMenu.Item>
-							<DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
+							<DropdownMenu.Separator className="my-1 h-px bg-line-subtle" />
 						</>
 					)}
 					{options.map((option) => (
 						<DropdownMenu.Item
 							key={option.labelKey}
 							onSelect={() => onChange(option.value)}
-							className="cursor-pointer rounded-md px-3 py-2 outline-none hover:bg-neutral-100 focus:bg-neutral-100"
+							className="cursor-pointer px-3 py-2 outline-none hover:bg-surface-hover focus:bg-surface-hover"
 						>
 							{t(option.labelKey)}
-							<span className="ml-2 text-xs text-neutral-500">
+							<span className="ms-2 font-mono text-xs text-fg-subtle">
 								{option.value && formatScheduledSend(option.value)}
 							</span>
 						</DropdownMenu.Item>
 					))}
-					<DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
-					<DropdownMenu.Label className="px-3 pb-1 pt-2 text-xs font-medium text-neutral-500">
+					<DropdownMenu.Separator className="my-1 h-px bg-line-subtle" />
+					<DropdownMenu.Label className="px-3 pb-1 pt-2 font-display text-xs font-medium uppercase tracking-wider text-fg-subtle">
 						{t("schedule.pick", { timeZone: getUserTimeZone() })}
 					</DropdownMenu.Label>
 					<input
@@ -106,9 +110,9 @@ export function ScheduleSendMenu({ disabled, value, onChange, mailboxId, from, o
 						onKeyDown={(event) => event.stopPropagation()}
 						aria-invalid={pastPicked}
 						aria-describedby={pastPicked ? "schedule-past-time" : undefined}
-						className="mx-2 mb-2 h-9 rounded-md border border-neutral-200 px-2 text-sm outline-none focus:border-blue-400"
+						className="mx-2 mb-2 h-9 border border-line-control bg-surface px-2 text-sm text-fg outline-none focus:border-focus focus-visible:outline-2 focus-visible:outline-focus aria-[invalid=true]:border-danger"
 					/>
-					{pastPicked && <p id="schedule-past-time" role="alert" className="mx-2 mb-2 text-xs text-red-600">{t("schedule.pastTime")}</p>}
+					{pastPicked && <p id="schedule-past-time" role="alert" className="mx-2 mb-2 text-xs text-danger-text">{t("schedule.pastTime")}</p>}
 				</DropdownMenu.Content>
 			</DropdownMenu.Portal>
 		</DropdownMenu.Root>

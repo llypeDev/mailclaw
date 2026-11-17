@@ -10,7 +10,9 @@ import type { ComposeNotice, ComposeNoticeAction } from "@/components/compose/co
 import { useSidebar } from "@/components/sidebar-state";
 import { useLanguage } from "@/components/language-provider";
 import { authFetch } from "@/lib/auth/client";
+import { buttonVariants } from "@/components/ui/button-utils";
 import { cn } from "@/lib/utils";
+import { COMPOSE_FAB_CLASS } from "./compose-fab-utils";
 import { getSendStatusPollDelay } from "./send-notice-utils";
 
 function ComposeNoticeToast({ notice }: { notice: ComposeNotice }) {
@@ -88,11 +90,12 @@ function ComposeNoticeToast({ notice }: { notice: ComposeNotice }) {
 			role="status"
 			aria-atomic="false"
 			className={cn(
-				"fixed right-6 top-6 z-[60] flex max-w-[calc(100vw-3rem)] items-center gap-4 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg",
-				notice.tone === "error" ? "bg-red-600" : notice.tone === "loading" ? "bg-neutral-800" : "bg-green-600",
+				// Orange's toast: raised surface, strong 1px border, the tone as a 3px bar on the start edge.
+				"fixed end-6 top-6 z-[60] flex max-w-[calc(100vw-3rem)] items-center gap-4 border border-line-strong border-s-[length:var(--or-border-accent)] bg-surface-raised px-4 py-3 text-sm font-medium text-fg shadow-lg",
+				notice.tone === "error" ? "border-s-danger" : notice.tone === "loading" ? "border-s-line-control" : "border-s-success",
 			)}
 		>
-			{notice.tone === "loading" && <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />}
+			{notice.tone === "loading" && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-fg-muted" aria-hidden="true" />}
 			<span className="min-w-0 break-words">
 				{parts ? (
 					<>
@@ -116,7 +119,7 @@ function ComposeNoticeToast({ notice }: { notice: ComposeNotice }) {
 					type="button"
 					onClick={() => void runAction(action)}
 					disabled={pendingAction !== null}
-					className="shrink-0 rounded-md bg-white/20 px-2.5 py-1 font-semibold hover:bg-white/30 disabled:cursor-wait disabled:opacity-60"
+					className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0 disabled:cursor-wait")}
 				>
 					{action.label}
 				</button>
@@ -139,7 +142,7 @@ export function FloatingComposer({ showButton = false }: { showButton?: boolean 
 					type="button"
 					onClick={() => openComposer()}
 					aria-label={t("navigation.compose")}
-					className="fixed right-[max(1rem,env(safe-area-inset-right))] bottom-[max(1rem,env(safe-area-inset-bottom))] z-30 flex h-12 items-center gap-3 rounded-2xl bg-blue-100 px-5 text-base font-medium text-blue-950 shadow-sm transition-colors hover:bg-blue-200 active:bg-blue-200 md:hidden"
+					className={COMPOSE_FAB_CLASS}
 				>
 					<MailPlus size={19} />
 					{t("navigation.compose")}

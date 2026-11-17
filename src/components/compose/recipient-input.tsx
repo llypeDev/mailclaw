@@ -124,10 +124,10 @@ export function RecipientInput({
 
 	return (
 		<div
-			className="flex min-h-9 items-center gap-2 border-b border-neutral-100 px-4 py-1"
+			className="flex min-h-9 items-center gap-2 border-b border-line-subtle px-4 py-1"
 			onClick={() => inputRef.current?.focus()}
 		>
-			<Label htmlFor={id} className="w-8 shrink-0 text-sm text-neutral-500">
+			<Label htmlFor={id} className="w-8 shrink-0 text-sm text-fg-subtle">
 				{label}
 			</Label>
 			<div className="relative flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
@@ -138,10 +138,10 @@ export function RecipientInput({
 							key={entry}
 							title={getEmailAddress(entry)}
 							className={cn(
-								"inline-flex max-w-full items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs",
+								"inline-flex max-w-full items-center gap-1 border px-2 py-0.5 text-xs",
 								valid
-									? "border-neutral-200 bg-neutral-50 text-neutral-800"
-									: "border-red-200 bg-red-50 text-red-700",
+									? "border-line bg-canvas-subtle text-fg"
+									: "border-danger bg-danger-subtle text-danger-text",
 							)}
 						>
 							<span className="truncate">{getRecipientLabel(entry)}</span>
@@ -149,7 +149,7 @@ export function RecipientInput({
 								<button
 									type="button"
 									aria-label={t("recipient.remove", { address: getEmailAddress(entry) })}
-									className="rounded-full p-0.5 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-700"
+									className="p-0.5 text-fg-subtle hover:bg-surface-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-focus"
 									onClick={(event) => {
 										event.stopPropagation();
 										onChange(value.filter((item) => item !== entry));
@@ -188,7 +188,7 @@ export function RecipientInput({
 					aria-controls={`${id}-suggestions`}
 					aria-activedescendant={activeSuggestion ? `${id}-suggestion-${activeIndex}` : undefined}
 					aria-autocomplete="list"
-					className="h-7 min-w-32 flex-1 border-0 bg-transparent p-0 text-sm outline-none placeholder:text-neutral-400 disabled:cursor-not-allowed"
+					className="h-7 min-w-32 flex-1 border-0 bg-transparent p-0 text-sm text-fg outline-none placeholder:text-fg-subtle disabled:cursor-not-allowed"
 				/>
 				{mailboxId && visibleSuggestions.length > 0 && (
 					<RecipientSuggestions
@@ -204,7 +204,7 @@ export function RecipientInput({
 			{trailing && (
 				// Toggles live inside the clickable row; keep their clicks from refocusing this field.
 				<div
-					className="flex shrink-0 items-center gap-1 text-xs text-neutral-500"
+					className="flex shrink-0 items-center gap-1 text-xs text-fg-subtle"
 					onClick={(event) => event.stopPropagation()}
 				>
 					{trailing}

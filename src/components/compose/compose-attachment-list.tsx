@@ -27,16 +27,16 @@ export function ComposeAttachmentList({
 			{storedAttachments.map((attachment) => (
 				<div
 					key={attachment.id}
-					className="flex max-w-full shrink-0 items-center gap-2 rounded-lg bg-neutral-100 px-2 py-1 text-xs"
+					className="flex max-w-full shrink-0 items-center gap-2 border border-line bg-canvas-subtle px-2 py-1 text-xs text-fg"
 					title={t("compose.carriedOver")}
 				>
-					<FileText className="h-4 w-4 shrink-0 text-neutral-500" />
+					<FileText className="h-4 w-4 shrink-0 text-fg-subtle" />
 					<span className="max-w-48 truncate">{attachment.filename}</span>
-					<span className="text-xs text-neutral-500">{formatAttachmentSize(attachment.size)}</span>
+					<span className="font-mono text-xs text-fg-subtle">{formatAttachmentSize(attachment.size)}</span>
 					<button
 						type="button"
 						onClick={() => onRemoveStored(attachment.id)}
-						className="rounded-full p-1 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-700"
+						className="p-1 text-fg-subtle hover:bg-surface-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-focus"
 					>
 						<X className="h-3.5 w-3.5" />
 						<span className="sr-only">{t("compose.removeAttachment")}</span>
@@ -46,17 +46,17 @@ export function ComposeAttachmentList({
 			{attachments.map((attachment) => (
 				<div
 					key={attachment.id}
-					className="flex max-w-full shrink-0 items-center gap-2 rounded-lg bg-neutral-100 px-2 py-1 text-xs"
+					className="flex max-w-full shrink-0 items-center gap-2 border border-line bg-canvas-subtle px-2 py-1 text-xs text-fg"
 				>
-					<FileText className="h-4 w-4 shrink-0 text-neutral-500" />
+					<FileText className="h-4 w-4 shrink-0 text-fg-subtle" />
 					<span className="max-w-48 truncate font-medium">{attachment.file.name}</span>
-					<span className="text-xs text-neutral-500">
+					<span className="font-mono text-xs text-fg-subtle">
 						{formatAttachmentSize(attachment.file.size)}
 					</span>
 					<button
 						type="button"
 						onClick={() => onRemove(attachment.id)}
-						className="rounded-full p-1 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-700"
+						className="p-1 text-fg-subtle hover:bg-surface-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-focus"
 					>
 						<X className="h-3.5 w-3.5" />
 						<span className="sr-only">{t("compose.removeAttachment")}</span>
@@ -64,7 +64,7 @@ export function ComposeAttachmentList({
 				</div>
 			))}
 		</div>
-		<p className="px-3 pb-2 text-xs text-amber-700">{sizes.some((size) => size > cloudThresholdBytes) ? t("compose.cloudWarning.will") : t("compose.cloudWarning.may")}</p>
+		<p className="px-3 pb-2 text-xs text-warning-text">{sizes.some((size) => size > cloudThresholdBytes) ? t("compose.cloudWarning.will") : t("compose.cloudWarning.may")}</p>
 		</div>
 	);
 }

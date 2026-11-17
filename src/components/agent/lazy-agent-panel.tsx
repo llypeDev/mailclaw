@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2 } from "@/components/icons";
+import { Spinner } from "@orangesys/ui";
 import { useLanguage } from "@/components/language-provider";
 import type { AgentPanel as AgentPanelComponent } from "@/components/agent/agent-panel";
 import type { AgentPanelProps } from "./types";
@@ -50,7 +50,7 @@ export function LazyAgentPanel(props: AgentPanelProps) {
 	if (!open) return null;
 	return (
 		<div className="flex h-full items-center justify-center" role="status">
-			<Loader2 className="h-5 w-5 animate-spin text-neutral-500" aria-hidden="true" />
+			<Spinner tone="neutral" decorative />
 			<span className="sr-only">{t("nav.loading")}</span>
 		</div>
 	);

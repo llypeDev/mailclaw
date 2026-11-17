@@ -11,6 +11,9 @@ import { followUpOptionKey } from "@/components/follow-ups/follow-up-client-util
 import { ScheduleSendMenu } from "@/components/compose/schedule-send-menu";
 import { cn } from "@/lib/utils";
 
+/** A square icon button in the editor toolbar. */
+const TOOL_BUTTON_CLASS = "p-1.5 hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus disabled:pointer-events-none disabled:text-fg-disabled max-md:px-2";
+
 /** Start of the editor toolbar: Cancel (phones only), Send and the schedule/template menu. */
 export function ComposeSendControls({
 	sendLabel,
@@ -37,12 +40,12 @@ export function ComposeSendControls({
 			<Button type="button" variant="secondary" size="sm" onClick={onCancel} className="md:hidden max-md:h-10 max-md:px-3.5 max-md:text-[15px]">
 				{t("common.cancel")}
 			</Button>
-			<div className="flex items-center max-md:order-last max-md:ml-auto">
+			<div className="flex items-center max-md:order-last max-md:ms-auto">
 				<Button
 					type="submit"
 					size="sm"
 					disabled={disabled}
-					className="rounded-r-none px-4 max-md:h-10 max-md:px-5 max-md:text-[15px]"
+					className="px-4 max-md:h-10 max-md:px-5 max-md:text-[15px]"
 				>
 					{sendLabel}
 				</Button>
@@ -86,7 +89,6 @@ export function ComposeToolbarActions({
 	const { t } = useLanguage();
 	return (
 		<>
-			{/* <span className="mx-1 h-5 w-px bg-neutral-200" /> */}
 			<Input
 				ref={attachmentInput}
 				type="file"
@@ -100,7 +102,7 @@ export function ComposeToolbarActions({
 					aria-label={t("compose.attachFiles")}
 					onClick={() => attachmentInput.current?.click()}
 					disabled={disabled}
-					className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 disabled:pointer-events-none disabled:opacity-50 max-md:px-2"
+					className={cn(TOOL_BUTTON_CLASS, "text-fg-subtle hover:text-fg")}
 				>
 					<Paperclip className="h-4 w-4" />
 				</button>
@@ -113,8 +115,8 @@ export function ComposeToolbarActions({
 					onClick={() => onTrackOpensChange(!trackOpens)}
 					disabled={disabled}
 					className={cn(
-						"rounded-md p-1.5 hover:bg-neutral-100 disabled:pointer-events-none disabled:opacity-50 max-md:px-2",
-						trackOpens ? "text-blue-600 hover:text-blue-700" : "text-neutral-500 hover:text-neutral-900",
+						TOOL_BUTTON_CLASS,
+						trackOpens ? "bg-accent-subtle text-accent-text hover:bg-accent-subtle" : "text-fg-subtle hover:text-fg",
 					)}
 				>
 					{trackOpens ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -130,8 +132,8 @@ export function ComposeToolbarActions({
 							type="button"
 							aria-label={t("followUp.remindMe")}
 							className={cn(
-								"rounded-md p-1.5 hover:bg-neutral-100 disabled:pointer-events-none disabled:opacity-50 max-md:px-2",
-								followUpDays ? "text-amber-600 hover:text-amber-700" : "text-neutral-500 hover:text-neutral-900",
+								TOOL_BUTTON_CLASS,
+								followUpDays ? "bg-warning-subtle text-warning-text hover:bg-warning-subtle" : "text-fg-subtle hover:text-fg",
 							)}
 						>
 							<BellRing className="h-4 w-4" />
@@ -146,7 +148,7 @@ export function ComposeToolbarActions({
 					aria-label={t("compose.deleteDraft")}
 					onClick={onDeleteDraft}
 					disabled={deleteDisabled}
-					className="rounded-md p-1.5 text-neutral-500 hover:bg-red-50 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50 max-md:px-2"
+					className={cn(TOOL_BUTTON_CLASS, "text-fg-subtle hover:bg-danger-subtle hover:text-danger-text")}
 				>
 					<Trash2 className="h-4 w-4" />
 				</button>

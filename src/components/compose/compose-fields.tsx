@@ -38,8 +38,8 @@ export function ComposeFields({
 	const { to, setTo, cc, setCc, bcc, setBcc, showCc, setShowCc, showBcc, setShowBcc } = recipients;
 	return (
 		<>
-			<div className="border-b border-neutral-100 px-4 py-1 flex flex-row items-center">
-				<Label htmlFor={`${mode}-from`} className="text-sm text-neutral-500">{t("compose.from")}</Label>
+			<div className="flex flex-row items-center border-b border-line-subtle px-4 py-1">
+				<Label htmlFor={`${mode}-from`} className="text-sm text-fg-subtle">{t("compose.from")}</Label>
 				<Select
 					id={`${mode}-from`}
 					value={senderValue}
@@ -69,12 +69,12 @@ export function ComposeFields({
 				trailing={
 					<>
 						{!showCc && (
-							<button type="button" className="rounded px-1 hover:text-neutral-800" onClick={() => setShowCc(true)}>
+							<button type="button" className="px-1 hover:bg-surface-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-focus" onClick={() => setShowCc(true)}>
 								{t("compose.cc")}
 							</button>
 						)}
 						{!showBcc && (
-							<button type="button" className="rounded px-1 hover:text-neutral-800" onClick={() => setShowBcc(true)}>
+							<button type="button" className="px-1 hover:bg-surface-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-focus" onClick={() => setShowBcc(true)}>
 								{t("compose.bcc")}
 							</button>
 						)}
@@ -105,7 +105,7 @@ export function ComposeFields({
 					autoFocus={!disabled && bcc.length === 0}
 				/>
 			)}
-			<div className="border-b border-neutral-100 px-4 py-1">
+			<div className="border-b border-line-subtle px-4 py-1">
 				<Label htmlFor={`${mode}-subject`} className="sr-only">{t("compose.subject")}</Label>
 				<Input
 					id={`${mode}-subject`}

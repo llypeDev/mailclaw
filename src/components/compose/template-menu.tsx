@@ -8,7 +8,7 @@ import { authFetch } from "@/lib/auth/client";
 import { textToHtml } from "./rich-text-utils";
 import type { ComposeTemplate, TemplateMenuProps } from "./template-types";
 
-const itemClass = "flex cursor-pointer items-center rounded-md px-3 py-2 outline-none hover:bg-neutral-100 focus:bg-neutral-100";
+const itemClass = "flex cursor-pointer items-center px-3 py-2 outline-none hover:bg-surface-hover focus:bg-surface-hover";
 
 export function TemplateMenu({ onApply, onNew }: TemplateMenuProps) {
 	const { t } = useLanguage();
@@ -28,17 +28,17 @@ export function TemplateMenu({ onApply, onNew }: TemplateMenuProps) {
 
 	return (
 		<DropdownMenu.Sub>
-				<DropdownMenu.SubTrigger className={`${itemClass} justify-between data-[state=open]:bg-neutral-100`}>
-					<span className="flex items-center"><FileText className="mr-2 h-4 w-4" />{t("template.menu")}</span>
-					<ChevronRight className="ml-4 h-4 w-4 text-neutral-400" />
+				<DropdownMenu.SubTrigger className={`${itemClass} justify-between data-[state=open]:bg-surface-active`}>
+					<span className="flex items-center"><FileText className="me-2 h-4 w-4" />{t("template.menu")}</span>
+					<ChevronRight className="ms-4 h-4 w-4 text-fg-subtle rtl:rotate-180" />
 				</DropdownMenu.SubTrigger>
 				<DropdownMenu.Portal>
 					<DropdownMenu.SubContent
 						sideOffset={4}
-						className="z-50 flex max-h-80 w-64 flex-col rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg"
+						className="z-50 flex max-h-80 w-64 flex-col border border-line-strong bg-surface-raised p-1 text-sm text-fg shadow-lg"
 					>
 						<div className="min-h-0 flex-1 overflow-y-auto">
-							{templates.length === 0 && <p className="px-3 py-2 text-xs text-neutral-500">{t("template.none")}</p>}
+							{templates.length === 0 && <p className="px-3 py-2 text-xs text-fg-subtle">{t("template.none")}</p>}
 							{templates.map((template) => (
 								<DropdownMenu.Item
 									key={template.id}
@@ -51,16 +51,16 @@ export function TemplateMenu({ onApply, onNew }: TemplateMenuProps) {
 										aria-label={t("template.delete")}
 										onPointerDown={(event) => event.stopPropagation()}
 										onClick={(event) => { event.stopPropagation(); void remove(template.id); }}
-										className="shrink-0 rounded p-1 text-neutral-400 opacity-0 hover:text-red-600 group-hover:opacity-100 group-focus:opacity-100"
+										className="shrink-0 p-1 text-fg-subtle opacity-0 hover:bg-danger-subtle hover:text-danger-text group-hover:opacity-100 group-focus:opacity-100"
 									>
 										<Trash2 className="h-3.5 w-3.5" />
 									</button>
 								</DropdownMenu.Item>
 							))}
 						</div>
-						<DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
-						<DropdownMenu.Item onSelect={onNew} className={`${itemClass} text-blue-600`}>
-							<Plus className="mr-2 h-4 w-4" />{t("template.new")}
+						<DropdownMenu.Separator className="my-1 h-px bg-line-subtle" />
+						<DropdownMenu.Item onSelect={onNew} className={`${itemClass} text-accent-text`}>
+							<Plus className="me-2 h-4 w-4" />{t("template.new")}
 						</DropdownMenu.Item>
 					</DropdownMenu.SubContent>
 				</DropdownMenu.Portal>

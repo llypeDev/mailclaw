@@ -109,11 +109,15 @@ export function composeTitleKey({
 }
 
 // Below md the popup is a bottom sheet: full width, anchored to the visual viewport (so the keyboard never covers the toolbar) and padded by the bottom safe area.
-const SHEET_CLASS = "compose-sheet max-md:inset-x-0 max-md:bottom-[var(--sheet-bottom,0px)] max-md:left-0 max-md:right-0 max-md:top-auto max-md:z-50 max-md:h-[var(--sheet-height,100dvh)] max-md:w-full max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:border-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[var(--sheet-pad,max(env(safe-area-inset-bottom),1rem))]";
+const SHEET_CLASS = "compose-sheet max-md:inset-x-0 max-md:bottom-[var(--sheet-bottom,0px)] max-md:left-0 max-md:right-0 max-md:top-auto max-md:z-50 max-md:h-[var(--sheet-height,100dvh)] max-md:w-full max-md:translate-x-0 max-md:translate-y-0 max-md:border-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[var(--sheet-pad,max(env(safe-area-inset-bottom),1rem))]";
+
+// The popup is an overlay: raised surface, Orange's overlay shadow and a 1px strong border, square.
+// `--editor-surface` tells the editor's sticky phone toolbar which surface it sits on.
+const OVERLAY_CLASS = "flex-col overflow-hidden border border-line-strong bg-surface-raised text-fg shadow-lg [--editor-surface:var(--color-surface-raised)]";
 
 export function composeFrameClass(mode: ComposeFormMode, minimized: boolean, modalMode: boolean): string {
-	if (mode !== "popup") return "relative flex h-full min-h-[720px] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm";
-	if (minimized) return cn("fixed bottom-0 right-8 z-40 flex h-9 w-[min(260px,calc(100vw-32px))] flex-col overflow-hidden rounded-t-lg border border-neutral-200 bg-white shadow-2xl", SHEET_CLASS);
-	if (modalMode) return cn("fixed left-1/2 top-1/2 z-50 flex h-[86vh] w-[min(860px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg bg-white shadow-2xl", SHEET_CLASS);
-	return cn("fixed bottom-0 right-8 z-40 flex h-[min(520px,calc(100vh-88px))] w-[min(560px,calc(100vw-32px))] flex-col overflow-hidden rounded-t-lg border border-neutral-200 bg-white shadow-2xl", SHEET_CLASS);
+	if (mode !== "popup") return "relative flex h-full min-h-[720px] w-full max-w-4xl flex-col overflow-hidden border border-line bg-surface text-fg";
+	if (minimized) return cn("fixed bottom-0 end-8 z-40 flex h-9 w-[min(260px,calc(100vw-32px))]", OVERLAY_CLASS, SHEET_CLASS);
+	if (modalMode) return cn("fixed left-1/2 top-1/2 z-50 flex h-[86vh] w-[min(860px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2", OVERLAY_CLASS, SHEET_CLASS);
+	return cn("fixed bottom-0 end-8 z-40 flex h-[min(520px,calc(100vh-88px))] w-[min(560px,calc(100vw-32px))]", OVERLAY_CLASS, SHEET_CLASS);
 }

@@ -6,6 +6,7 @@ import { useCompose } from "@/components/compose/compose-context";
 import { useLanguage } from "@/components/language-provider";
 import { useSidebar } from "@/components/sidebar-state";
 import type { FloatingComposer as FloatingComposerComponent } from "@/components/compose/floating-composer";
+import { COMPOSE_FAB_CLASS } from "./compose-fab-utils";
 
 type FloatingComposerType = typeof FloatingComposerComponent;
 
@@ -82,7 +83,7 @@ export function LazyFloatingComposer({ showButton = false }: { showButton?: bool
 			type="button"
 			onClick={() => openComposer()}
 			aria-label={t("navigation.compose")}
-			className="fixed right-[max(1rem,env(safe-area-inset-right))] bottom-[max(1rem,env(safe-area-inset-bottom))] z-30 flex h-12 items-center gap-3 rounded-2xl bg-blue-100 px-5 text-base font-medium text-blue-950 shadow-sm transition-colors hover:bg-blue-200 active:bg-blue-200 md:hidden"
+			className={COMPOSE_FAB_CLASS}
 		>
 			<MailPlus size={19} />
 			{t("navigation.compose")}

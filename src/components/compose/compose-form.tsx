@@ -303,13 +303,13 @@ export function ComposeForm({
 	return (
 		<>
 			{agentReview && <SendReview approvalId={agentReview.approvalId} snapshot={agentReview.snapshot} onClose={() => { reviewInProgressRef.current = false; setAgentReview(null); }} onSent={() => { reviewInProgressRef.current = false; setAgentReview(null); if (onClose) dismiss(); else router.push("/sent"); }} />}
-			{mode === "popup" && modalMode && !minimized && <div className="fixed inset-0 z-40 bg-black/65 dark:bg-black/75" aria-hidden="true" />}
+			{mode === "popup" && modalMode && !minimized && <div className="fixed inset-0 z-40 bg-overlay" aria-hidden="true" />}
 			{toast && (
 				<div
 					role={toast.type === "error" ? "alert" : "status"}
 					className={cn(
-						"fixed right-6 top-6 z-[60] rounded-lg px-4 py-3 text-sm font-medium shadow-lg",
-						toast.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white",
+						"fixed end-6 top-6 z-[60] max-w-[calc(100vw-3rem)] border border-line-strong border-s-[length:var(--or-border-accent)] bg-surface-raised px-4 py-3 text-sm font-medium text-fg shadow-lg",
+						toast.type === "success" ? "border-s-success" : "border-s-danger",
 					)}
 				>
 					{toast.message}
@@ -317,7 +317,7 @@ export function ComposeForm({
 			)}
 			<form onSubmit={onSubmit} className={cn(composeFrameClass(mode, minimized, modalMode), closing && "compose-sheet-closing")} style={dragY ? { transform: `translateY(${dragY}px)`, transition: "none" } : undefined} ref={formRef} role={modalMode && !minimized ? "dialog" : mode === "popup" ? "region" : undefined} aria-modal={modalMode && !minimized || undefined} aria-label={mode === "popup" ? t("compose.dialogLabel") : undefined} onKeyDown={(event) => { if (modalMode && !minimized && event.key === "Escape") { event.preventDefault(); setModalMode(false); } }} {...(minimized ? {} : files.fileDragHandlers)}>
 				{files.draggingFiles && !minimized && (
-					<div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center border-2 border-dashed border-blue-400 bg-blue-50/90 text-sm font-medium text-blue-700" aria-hidden="true">
+					<div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center border-2 border-dashed border-accent-border bg-accent-subtle/90 font-display text-sm font-medium text-accent-text" aria-hidden="true">
 						{t("compose.dropFiles")}
 					</div>
 				)}
