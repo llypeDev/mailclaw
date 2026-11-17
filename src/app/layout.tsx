@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import { preload } from "react-dom";
 import { Providers } from "@/components/providers";
 import { LanguageProvider } from "@/components/language-provider";
@@ -11,14 +11,25 @@ import { getHomeBranding } from "./home-server-utils";
 import { DEFAULT_ICON_HREF } from "./home-server-icon-utils";
 import "./globals.css";
 
-const geistSans = Geist({
-	variable: "--font-geist-sans",
-	subsets: ["latin"],
+// Orange's three typefaces, self-hosted by next/font (the CSP only allows fonts from this origin).
+// Scripts these do not cover (Arabic, Devanagari, Thai, CJK…) fall back to the system font. No preload:
+// vinext would preload every subset file, while the browser only fetches the unicode ranges a page uses.
+const inter = Inter({
+	variable: "--font-inter",
+	subsets: ["latin", "latin-ext", "cyrillic", "greek", "vietnamese"],
+	preload: false,
 });
 
-const geistMono = Geist_Mono({
-	variable: "--font-geist-mono",
-	subsets: ["latin"],
+const spaceGrotesk = Space_Grotesk({
+	variable: "--font-space-grotesk",
+	subsets: ["latin", "latin-ext", "vietnamese"],
+	preload: false,
+});
+
+const jetbrainsMono = JetBrains_Mono({
+	variable: "--font-jetbrains-mono",
+	subsets: ["latin", "latin-ext", "cyrillic"],
+	preload: false,
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -63,13 +74,13 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 	preload(catalogPath(catalogLocale), { as: "fetch", crossOrigin: "anonymous" });
 	const { iconHref, ...branding } = await getHomeBranding();
 	return (
-		<html lang={locale} dir={getDirection(locale)} data-remote-image-proxy="enabled" suppressHydrationWarning>
+		<html lang={locale} dir={getDirection(locale)} className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`} data-remote-image-proxy="enabled" suppressHydrationWarning>
 			<head>
 				<script dangerouslySetInnerHTML={{ __html: sidebarBootstrapScript }} />
 				<script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
 				<link rel="icon" href={iconHref ?? DEFAULT_ICON_HREF}></link>
 			</head>
-			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+			<body className="antialiased">
 				<LanguageProvider initialLocale={locale} catalogLocale={catalogLocale === locale ? undefined : catalogLocale}><Providers initialBranding={branding}>{children}</Providers></LanguageProvider>
 			</body>
 		</html>

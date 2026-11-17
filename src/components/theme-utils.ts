@@ -1,22 +1,29 @@
-export type ThemePreference = "light" | "dark" | "system";
+export type ThemePreference = "light" | "dark" | "light-hc" | "dark-hc" | "system";
+export type ResolvedTheme = Exclude<ThemePreference, "system">;
 
 export const THEME_STORAGE_KEY = "mailclaw-theme";
 export const THEME_CHANGED_EVENT = "mailclaw:theme-changed";
 
 // Runs in <head> before paint, so the first frame already has the right theme (same approach as the
-// sidebar width). Keep it in sync with resolveTheme/applyTheme below.
+// sidebar width). It sets Orange's `data-theme` and keeps the `.dark` class for `dark:` variants.
+// Keep it in sync with resolveTheme/applyTheme below.
 export const themeBootstrapScript = `(() => {
 	try {
 		const saved = localStorage.getItem("mailclaw-theme");
-		const preference = saved === "light" || saved === "dark" ? saved : "system";
-		const dark = preference === "dark" || (preference === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
-		document.documentElement.classList.toggle("dark", dark);
-		document.documentElement.classList.toggle("light", !dark);
+		let theme = /^(light|dark)(-hc)?$/.test(saved || "") ? saved : "";
+		if (!theme) {
+			theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+			if (matchMedia("(prefers-contrast: more)").matches) theme += "-hc";
+		}
+		const root = document.documentElement;
+		root.setAttribute("data-theme", theme);
+		root.classList.toggle("dark", theme.startsWith("dark"));
+		root.classList.toggle("light", theme.startsWith("light"));
 	} catch {}
 })();`;
 
 export function isThemePreference(value: unknown): value is ThemePreference {
-	return value === "light" || value === "dark" || value === "system";
+	return value === "light" || value === "dark" || value === "light-hc" || value === "dark-hc" || value === "system";
 }
 
 export function readThemePreference(): ThemePreference {
@@ -29,17 +36,20 @@ export function readThemePreference(): ThemePreference {
 	}
 }
 
-export function resolveTheme(preference: ThemePreference): "light" | "dark" {
+export function resolveTheme(preference: ThemePreference): ResolvedTheme {
 	if (preference !== "system") return preference;
 	if (typeof window === "undefined") return "light";
-	return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+	const base = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+	return window.matchMedia("(prefers-contrast: more)").matches ? `${base}-hc` : base;
 }
 
 export function applyTheme(preference: ThemePreference): void {
 	if (typeof document === "undefined") return;
-	const dark = resolveTheme(preference) === "dark";
-	document.documentElement.classList.toggle("dark", dark);
-	document.documentElement.classList.toggle("light", !dark);
+	const theme = resolveTheme(preference);
+	const root = document.documentElement;
+	root.setAttribute("data-theme", theme);
+	root.classList.toggle("dark", theme.startsWith("dark"));
+	root.classList.toggle("light", theme.startsWith("light"));
 }
 
 export function saveThemePreference(preference: ThemePreference): void {

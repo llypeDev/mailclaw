@@ -16,7 +16,7 @@ after(() => rmSync(outDir, { recursive: true, force: true }));
 const flightDir = join(root, "node_modules/@vitejs/plugin-rsc/dist/vendor/react-server-dom");
 
 const stubs = new Map([
-	["next/font/google", "export const Geist = () => ({ variable: 'geist' }); export const Geist_Mono = () => ({ variable: 'geist-mono' });"],
+	["next/font/google", "export const Inter = () => ({ variable: 'inter' }); export const Space_Grotesk = () => ({ variable: 'space-grotesk' }); export const JetBrains_Mono = () => ({ variable: 'jetbrains-mono' });"],
 	["@/components/providers", "export function Providers({ children }) { return children; }"],
 	["@/components/language-provider", "export function LanguageProvider({ children }) { return children; }"],
 	["@/lib/i18n/server", "export async function getRequestLocale() { return globalThis.layoutTestLocale; } export async function loadServerMessages(locale) { return locale === globalThis.layoutUnreadableLocale ? undefined : { ok: 'ok' }; }"],

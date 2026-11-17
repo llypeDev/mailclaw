@@ -9,6 +9,7 @@ import type { Branding } from "@/lib/branding/types";
 import { NewMessagePopup } from "@/components/new-message-popup";
 import { PwaServiceWorker } from "@/components/pwa-service-worker";
 import { ThemeSync } from "@/components/theme-sync";
+import { MailclawOrangeProvider } from "@/components/orange-provider";
 import { useMessagePolling } from "@/hooks/use-message-polling";
 import { clearMessageClientState } from "@/hooks/utils";
 import { clearMessageDetailCache } from "@/lib/messages/detail-cache";
@@ -51,21 +52,23 @@ export function Providers({ children, initialBranding }: { children: React.React
 	}, [client]);
 
 	return (
-		<QueryClientProvider client={client}>
-			<BrandingProvider initialBranding={initialBranding}>
-				<PwaServiceWorker />
-				{children}
-				<ThemeSync />
-				<ConfirmDialogHost />
-				<div role="status" aria-live="polite">
-					{realtime.notification && (
-						<NewMessagePopup
-							notification={realtime.notification}
-							onDismiss={realtime.dismissNotification}
-						/>
-					)}
-				</div>
-			</BrandingProvider>
-		</QueryClientProvider>
+		<MailclawOrangeProvider>
+			<QueryClientProvider client={client}>
+				<BrandingProvider initialBranding={initialBranding}>
+					<PwaServiceWorker />
+					{children}
+					<ThemeSync />
+					<ConfirmDialogHost />
+					<div role="status" aria-live="polite">
+						{realtime.notification && (
+							<NewMessagePopup
+								notification={realtime.notification}
+								onDismiss={realtime.dismissNotification}
+							/>
+						)}
+					</div>
+				</BrandingProvider>
+			</QueryClientProvider>
+		</MailclawOrangeProvider>
 	);
 }
