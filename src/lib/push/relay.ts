@@ -5,6 +5,12 @@
  * then one POST to the relay, which signs and forwards it to Apple.
  */
 
+/**
+ * Same as PUSH_TIMEOUT_MS in src/lib/http/fetch-timeout.ts. This module stays free of
+ * imports because tests/push-relay.test.mjs loads it directly with Node's type stripping.
+ */
+const PUSH_TIMEOUT_MS = 10_000;
+
 /** Handles the relay issues start with this; APNs tokens are plain hex. */
 export const RELAY_HANDLE_PREFIX = "mfr1.";
 
@@ -46,8 +52,10 @@ export async function sendViaRelay(
 			method: "POST",
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify({ handle, payload, ...(collapseId ? { collapseId } : {}) }),
+			signal: AbortSignal.timeout(PUSH_TIMEOUT_MS),
 		});
 	} catch {
+		// Network failure or no answer before the deadline.
 		return { kind: "retry", status: 0 };
 	}
 	if (response.ok) return { kind: "sent" };

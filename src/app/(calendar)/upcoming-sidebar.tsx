@@ -24,7 +24,8 @@ export function UpcomingSidebar({ events, onSelect, drawer = false, refreshKey }
 	const [visibleCount, setVisibleCount] = useState(UPCOMING_BATCH_SIZE);
 	const scrollRef = useRef<HTMLDivElement | null>(null);
 	const sentinelRef = useRef<HTMLDivElement | null>(null);
-	const today = useMemo(() => startOfDay(new Date()), []);
+	// Fixed for the life of the sidebar, like the fetch window that depends on it.
+	const [today] = useState(() => startOfDay(new Date()));
 	const shownEvents = events ?? loadedEvents;
 	const groups = useMemo(() => groupUpcomingEvents(shownEvents, today, t), [shownEvents, today, t]);
 	const total = useMemo(() => groups.reduce((count, group) => count + group.events.length, 0), [groups]);

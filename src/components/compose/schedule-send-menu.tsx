@@ -24,12 +24,15 @@ export function ScheduleSendMenu({ disabled, value, onChange, mailboxId, from, o
 	const [sheetOpen, setSheetOpen] = useState(false);
 	const isPhone = useIsMobile();
 	const [pickedText, setPickedText] = useState<string | null>(null);
+	// The picker's lower bound, read when the menu opens and on every edit rather than during render.
+	const [minText, setMinText] = useState(() => formatDateTimeLocal(new Date()));
 	const options = getScheduleSendOptions();
 	const picked = pickedText === null ? null : parseDateTimeLocal(pickedText);
 	const pastPicked = picked !== null && isPastSchedule(picked);
 
 	function pick(text: string) {
 		const parsed = parseDateTimeLocal(text);
+		setMinText(formatDateTimeLocal(new Date()));
 		setPickedText(text);
 		if (!parsed) onChange(null);
 		else if (!isPastSchedule(parsed)) onChange(parsed);
@@ -49,7 +52,7 @@ export function ScheduleSendMenu({ disabled, value, onChange, mailboxId, from, o
 
 	return (
 		<>
-		<DropdownMenu.Root onOpenChange={() => setPickedText(null)}>
+		<DropdownMenu.Root onOpenChange={(open) => { setPickedText(null); if (open) setMinText(formatDateTimeLocal(new Date())); }}>
 			<DropdownMenu.Trigger
 				type="button"
 				disabled={disabled}
@@ -97,7 +100,7 @@ export function ScheduleSendMenu({ disabled, value, onChange, mailboxId, from, o
 					</DropdownMenu.Label>
 					<input
 						type="datetime-local"
-						min={formatDateTimeLocal(new Date())}
+						min={minText}
 						value={pickedText ?? (value ? formatDateTimeLocal(value) : "")}
 						onChange={(event) => pick(event.target.value)}
 						onKeyDown={(event) => event.stopPropagation()}

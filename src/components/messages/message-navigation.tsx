@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import type { MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { fetchCachedMessageDetail, getCachedMessageDetail, primeMessageDetail } from "@/lib/messages/detail-cache";
-import { FULL_ROUTE_PREFETCH } from "@/lib/navigation/prefetch";
+import { prefetchRouteTemplate } from "@/lib/navigation/prefetch";
 import type { Message } from "@/hooks/types";
 import type { MessageNavigationState } from "./message-navigation-types";
 
@@ -14,7 +14,6 @@ export function useMessageNavigation(href: string, message: Message): MessageNav
 	const router = useRouter();
 	const hoverTimer = useRef<number | null>(null);
 	const idleCallback = useRef<number | null>(null);
-	const routePrefetched = useRef(false);
 
 	useEffect(() => () => {
 		if (hoverTimer.current) window.clearTimeout(hoverTimer.current);
@@ -22,10 +21,8 @@ export function useMessageNavigation(href: string, message: Message): MessageNav
 	}, []);
 
 	function prefetchRoute() {
-		if (routePrefetched.current) return;
-		routePrefetched.current = true;
-		// A dynamic route only gets a shell from automatic prefetch.
-		router.prefetch(href, FULL_ROUTE_PREFETCH);
+		// Once per folder, not per row: sibling messages share the route payload.
+		prefetchRouteTemplate(router, href);
 	}
 
 	function warmDetail() {

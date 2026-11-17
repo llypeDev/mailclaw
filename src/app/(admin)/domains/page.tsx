@@ -19,6 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { List } from "@/components/ui/list";
 import { CheckCircle2, LoaderCircle, Plus } from "@/components/icons";
 import { authFetch } from "@/lib/auth/client";
+import { fetchSessionInfo } from "@/hooks/use-current-user";
 import type { DnsAuthRecord, DnsStatusSummary, Domain, DomainDnsCache, DomainDnsView, DomainPreflight, ReceivingProvider, SendingProvider } from "./types";
 import DomainItemCard from "./DomainItemCard";
 import { SectionRowSkeleton } from "@/components/page-skeletons";
@@ -33,7 +34,8 @@ export default function DomainsPage() {
   // Self-hosted installs without Cloudflare credentials manage DNS by hand.
   const { data: me } = useQuery({
     queryKey: ["me"],
-    queryFn: async () => (await (await authFetch("/api/auth/me")).json()) as { managesDns?: boolean },
+    // The cached session (`/api/auth/me` or `/api/bootstrap`) already carries `managesDns`.
+    queryFn: async () => ((await fetchSessionInfo()) ?? {}) as { managesDns?: boolean },
   });
   const managesDns = me?.managesDns ?? true;
   const [domainCheck, setDomainCheck] = useState<DomainPreflight | null>(null);
@@ -291,7 +293,7 @@ export default function DomainsPage() {
               {t("domains.new")}
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{t("domains.addTitle")}</DialogTitle>
               <DialogDescription>

@@ -4,6 +4,11 @@ const scriptEval = process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"
 const csp = [
 	"default-src 'self'",
 	`script-src 'self' 'unsafe-inline'${scriptEval} https://challenges.cloudflare.com`,
+	// The framework's inline bootstrap needs 'unsafe-inline' for <script>
+	// elements, but nothing in the app uses handler attributes (React binds
+	// events in script). Refusing them disarms the usual mail-HTML injection,
+	// <img onerror=…>, should a payload ever get past the sanitizer.
+	"script-src-attr 'none'",
 	"style-src 'self' 'unsafe-inline'",
 	"img-src 'self' data: blob: https:",
 	"font-src 'self' data:",

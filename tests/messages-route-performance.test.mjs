@@ -173,12 +173,33 @@ function schedule(f) {
 	f.database.db.exec("INSERT INTO outbound_jobs (id, user_id, message_id, payload, scheduled_at, created_at, updated_at) VALUES ('job', 'owner', 'scheduled', '{}', 2000000000, 0, 0)");
 }
 
-test("ungrouped total and page reads start together", async (t) => {
+test("pages never count the folder unless the page cannot prove the total", async (t) => {
 	const f = await fixture(t);
-	schedule(f);
-	const body = await holdReads(f, ["total"], () => assert.ok(f.started.includes("rows"), "page read must start before count resolves"));
-	assert.equal(body.total, 1);
-	assert.equal(body.messages.length, 1);
+	for (let index = 0; index < 5; index += 1) f.message(`m${index}`, { thread: `t${index}`, time: index + 1 });
+	// The per-thread "(3)" sizes are a grouped count over the page's threads; a folder count has no group by.
+	const folderCounts = () => f.queries.filter((sql) => sql.includes("count(") && !sql.includes("group by")).length;
+	for (const group of ["", "&group=thread"]) {
+		f.queries.length = 0;
+		const full = await (await GET(request(`mailboxId=mine&status=received&limit=2${group}`))).json();
+		assert.deepEqual(full.messages.map((row) => row.id), ["m4", "m3"]);
+		assert.equal(full.hasMore, true);
+		// A conversation scan that reached the end of a small folder already knows the total.
+		assert.equal(full.total, group ? 5 : null, "a full page leaves the total to count=only");
+		assert.equal(folderCounts(), 0, "no count on a page with more after it");
+
+		const last = await (await GET(request(`mailboxId=mine&status=received&limit=2&offset=4${group}`))).json();
+		assert.deepEqual(last.messages.map((row) => row.id), ["m0"]);
+		assert.equal(last.hasMore, false);
+		assert.equal(last.total, 5, "the last page proves the total");
+		assert.equal(folderCounts(), 0);
+
+		const counted = await (await GET(request(`mailboxId=mine&status=received&count=only${group}`))).json();
+		assert.equal(counted.total, 5);
+		assert.equal("messages" in counted, false);
+	}
+	f.message("reply", { thread: "t4", time: 10 });
+	assert.equal((await (await GET(request("mailboxId=mine&status=received&count=only&group=thread"))).json()).total, 5);
+	assert.equal((await (await GET(request("mailboxId=mine&status=received&count=only"))).json()).total, 6);
 });
 
 test("thread, schedule, tracking and contact enrichment reads overlap", async (t) => {
@@ -278,4 +299,30 @@ test("empty pages preserve total and skip unnecessary thread and scheduled reads
 	assert.ok(!f.started.includes("threads"));
 	assert.ok(!f.started.includes("jobs"));
 	assert.ok(!f.started.some((label) => label.startsWith("contacts:")));
+});
+
+test("conversation rows and members are read by key, not by walking the folder", async (t) => {
+	const f = await fixture(t);
+	f.message("a1", { thread: "ta", time: 1 });
+	f.message("a2", { thread: "ta", time: 3, read: true });
+	f.message("lonely", { thread: null, time: 2 });
+	f.message("archived", { thread: "ta", status: "archived", time: 4 });
+	f.queries.length = 0;
+	const body = await (await GET(request("mailboxId=mine&status=received&group=thread"))).json();
+	assert.deepEqual(body.messages.map((row) => [row.id, [...row.threadMessageIds].sort(), row.threadUnread]), [
+		["a2", ["a1", "a2"], 1],
+		["lonely", ["lonely"], 1],
+	]);
+	const plan = (sql) => {
+		const params = Array.from({ length: (sql.match(/\?/g) ?? []).length }, () => null);
+		return f.database.db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...params).map((row) => row.detail).join(" | ");
+	};
+	const pageRows = f.queries.find((sql) => sql.includes('"snippet"') && sql.includes('where "messages"."id" in'));
+	assert.ok(pageRows, "page rows are fetched by id alone");
+	assert.match(plan(pageRows), /sqlite_autoindex_messages_1/);
+	const members = f.queries.find((sql) => sql.includes('"thread_member"'));
+	assert.ok(members);
+	const memberPlan = plan(members);
+	assert.match(memberPlan, /SEARCH thread_member USING INDEX messages_thread_idx/, memberPlan);
+	assert.match(memberPlan, /SEARCH messages (EXISTS )?USING INDEX sqlite_autoindex_messages_1/, memberPlan);
 });

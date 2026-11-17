@@ -4,14 +4,16 @@ import { ZodError } from "zod";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { syncPersonalIdentity } from "@/lib/profile/sync";
 import type { UpdateProfileInput } from "./types";
 import { parseUpdateProfileRequest } from "./utils";
 
 export async function PATCH(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	let parsed: UpdateProfileInput;
 	try {
 		parsed = await parseUpdateProfileRequest(request);

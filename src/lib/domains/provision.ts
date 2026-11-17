@@ -12,7 +12,7 @@ import { hasCloudflareCredentials, isNodeRuntime } from "@/lib/runtime";
 import type { DomainProvisioningChanges, DomainProvisioningResult } from "@/lib/domains/types";
 import { removeMxRecords } from "@/lib/domains/mx-records";
 import { rollbackDomainProvisioning } from "@/lib/domains/rollback";
-import { ensureSendingSubdomain } from "@/lib/domains/sending-subdomain";
+import { ensureSendingSubdomain, isSendingAuthorizationError } from "@/lib/domains/sending-subdomain";
 
 /** Node/Docker has no Email Worker; a catch-all PUT to one 404s (CF 2016). */
 export function shouldBindEmailCatchAllToWorker(
@@ -67,6 +67,7 @@ export async function provisionDomainOnCloudflare(
 	let sendingEnabled = false;
 	let sendingSubdomainTag: string | null = null;
 	let routingStatus: string | undefined;
+	let sendingUnavailable: DomainProvisioningResult["sendingUnavailable"];
 	const changes: DomainProvisioningChanges = {
 		zoneId: zone.id,
 		enabledEmailRouting: false,
@@ -108,13 +109,22 @@ export async function provisionDomainOnCloudflare(
 		if (enableSending) {
 			// Cloudflare refuses (401, code 2036) while another service's MX records
 			// are on the hostname; replacing them follows the same consent as routing.
-			const { subdomain, created } = await ensureSendingSubdomain(env, zone.id, normalized, {
-				replaceMx: options?.replaceMxRecords,
-				deletedMx: changes.deletedMxRecords,
-			});
-			sendingSubdomainTag = subdomain.tag;
-			sendingEnabled = subdomain.enabled;
-			if (created) changes.createdSendingSubdomainTag = subdomain.tag;
+			try {
+				const { subdomain, created } = await ensureSendingSubdomain(env, zone.id, normalized, {
+					replaceMx: options?.replaceMxRecords,
+					deletedMx: changes.deletedMxRecords,
+				});
+				sendingSubdomainTag = subdomain.tag;
+				sendingEnabled = subdomain.enabled;
+				if (created) changes.createdSendingSubdomainTag = subdomain.tag;
+			} catch (error) {
+				// Most often the account is not on Workers Paid, which Email Sending needs. Receiving
+				// works without it, so keep the domain as receive-only rather than failing the whole
+				// setup (on first run that would also discard the account being created).
+				if (!enableRouting || !isSendingAuthorizationError(error)) throw error;
+				console.warn(`Cloudflare Email Sending unavailable for ${normalized}; continuing receive-only`, error);
+				sendingUnavailable = { reason: "unauthorized", message: error.message };
+			}
 		}
 	} catch (error) {
 		await rollbackDomainProvisioning(env, changes);
@@ -125,10 +135,12 @@ export async function provisionDomainOnCloudflare(
 		hostname: normalized,
 		zone,
 		routingEnabled,
-		sendingRequested: enableSending,
+		// Receive-only after a refusal, so the domain row does not claim a sender it lacks.
+		sendingRequested: enableSending && !sendingUnavailable,
 		sendingEnabled,
 		sendingSubdomainTag,
 		routingStatus,
 		changes,
+		...(sendingUnavailable ? { sendingUnavailable } : {}),
 	};
 }

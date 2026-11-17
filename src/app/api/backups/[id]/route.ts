@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { assertPrimaryAdmin } from "@/lib/auth/admin";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { deleteBackup } from "@/lib/backups/service";
 import { getEnv } from "@/lib/cloudflare";
 
@@ -9,8 +9,9 @@ export async function DELETE(
 	{ params }: { params: Promise<{ id: string }> },
 ) {
 	const env = getEnv();
+	const { user, error } = await requireSessionUser(env, request);
+	if (error) return error;
 	try {
-		const user = await requireUser(env, request);
 		assertPrimaryAdmin(user);
 		const { id } = await params;
 		const deleted = await deleteBackup(env, id);

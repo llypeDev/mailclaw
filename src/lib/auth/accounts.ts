@@ -2,6 +2,7 @@ import { and, eq, gt, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { sessions, users } from "@/db/schema";
 import { hashSessionToken, SESSION_COOKIE } from "@/lib/auth/session";
+import { sessionCookieOptions } from "@/lib/auth/session-cookie";
 
 /**
  * Browser-wide set of signed-in accounts. Holds session tokens only; the
@@ -22,7 +23,13 @@ export function serializeAccountTokens(tokens: string[]): string {
 	return tokens.join(".");
 }
 
-export function cookieOptions(maxAge = COOKIE_MAX_AGE) {
+/**
+ * Same attributes as the session cookie: `Secure` only when the request came
+ * over HTTPS, so plain-http self-hosting keeps its cookies. Without a request
+ * (older callers) it falls back to Secure whenever NODE_ENV is production.
+ */
+export function cookieOptions(request?: Request, maxAge = COOKIE_MAX_AGE) {
+	if (request) return sessionCookieOptions(request, maxAge);
 	return {
 		httpOnly: true,
 		secure: process.env.NODE_ENV === "production",
@@ -93,19 +100,40 @@ export async function addAccountToken(
 	return serializeAccountTokens([...kept, token].slice(-MAX_ACCOUNTS));
 }
 
+type AccountsCookieTarget = {
+	cookies: {
+		set: (name: string, value: string, options: ReturnType<typeof cookieOptions>) => unknown;
+		get?: (name: string) => { secure?: boolean } | undefined;
+	};
+};
+
+/**
+ * Options for the accounts cookie written next to a new session cookie. With
+ * no request to inspect, it copies `Secure` from the session cookie already
+ * set on the response, so both cookies survive (or not) together over http.
+ */
+function rememberedCookieOptions(response: AccountsCookieTarget, request?: Request) {
+	if (request) return cookieOptions(request);
+	const options = cookieOptions();
+	const sessionSecure = response.cookies.get?.(SESSION_COOKIE)?.secure;
+	return typeof sessionSecure === "boolean" ? { ...options, secure: sessionSecure } : options;
+}
+
 /**
  * Record a fresh login in the accounts cookie. Switching accounts is a
  * convenience, so a failure here must never block the login itself.
  */
 export async function rememberLogin(
 	env: CloudflareEnv,
-	response: { cookies: { set: (name: string, value: string, options: ReturnType<typeof cookieOptions>) => unknown } },
+	response: AccountsCookieTarget,
 	existing: string | undefined,
 	token: string,
 	previousActive?: string,
+	request?: Request,
 ): Promise<void> {
 	try {
-		response.cookies.set(ACCOUNTS_COOKIE, await addAccountToken(env, existing, token, previousActive), cookieOptions());
+		const options = rememberedCookieOptions(response, request);
+		response.cookies.set(ACCOUNTS_COOKIE, await addAccountToken(env, existing, token, previousActive), options);
 	} catch (error) {
 		console.error("Could not record signed-in account", error);
 	}

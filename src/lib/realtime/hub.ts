@@ -3,6 +3,14 @@ import { getUserMailRevision } from "./revision";
 import type { NewMessageNotification, AgentDraftNotification, RevisionPing, RevisionNotification } from "./types";
 
 export class RealtimeHub extends DurableObject<CloudflareEnv> {
+	constructor(ctx: DurableObjectState, env: CloudflareEnv) {
+		super(ctx, env);
+		// The client's keep-alive is answered by the runtime without waking the
+		// object, so an idle socket lets it hibernate. Only the JSON revision
+		// check below reaches webSocketMessage.
+		ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
+	}
+
 	async fetch(request: Request): Promise<Response> {
 		const url = new URL(request.url);
 

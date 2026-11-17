@@ -6,6 +6,12 @@ import { getSesReceivingState, SES_OBJECT_PREFIX } from "@/lib/aws/ses-receiving
 import { intakeProviderMail } from "@/lib/email/provider-intake";
 import { parseSesNotification, safeEqual, type SnsEnvelope } from "@/lib/aws/ses-notification";
 import { verifySnsSignature } from "@/lib/aws/sns-signature";
+import { hasReplayMarker, rememberReplayMarker, SNS_REPLAY_WINDOW } from "@/lib/email/replay-markers";
+import { API_TIMEOUT_MS } from "@/lib/http/fetch-timeout";
+import { readBodyWithLimit } from "@/lib/http/limited-body";
+
+/** SNS messages are at most 256 KB; the envelope adds little. */
+const MAX_ENVELOPE_BYTES = 1024 * 1024;
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +30,9 @@ export async function POST(request: Request) {
 	if (!state || !safeEqual(token, state.token)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
 	let envelope: SnsEnvelope;
-	try { envelope = JSON.parse(await request.text()) as SnsEnvelope; } catch { return NextResponse.json({ error: "Invalid body" }, { status: 400 }); }
+	const body = await readBodyWithLimit(request, MAX_ENVELOPE_BYTES);
+	if (!body) return NextResponse.json({ error: "Body too large" }, { status: 413 });
+	try { envelope = JSON.parse(new TextDecoder().decode(body)) as SnsEnvelope; } catch { return NextResponse.json({ error: "Invalid body" }, { status: 400 }); }
 	if (envelope.TopicArn !== state.topicArn) return NextResponse.json({ error: "Unknown topic" }, { status: 403 });
 	if (!await verifySnsSignature(envelope)) return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
 
@@ -33,8 +41,8 @@ export async function POST(request: Request) {
 		if (!url || url.protocol !== "https:" || !/^sns\.[a-z0-9-]+\.amazonaws\.com$/.test(url.hostname)) {
 			return NextResponse.json({ error: "Invalid subscription URL" }, { status: 400 });
 		}
-		const confirmed = await fetch(url);
-		return NextResponse.json({ confirmed: confirmed.ok }, { status: confirmed.ok ? 200 : 502 });
+		const confirmed = await fetch(url, { signal: AbortSignal.timeout(API_TIMEOUT_MS) }).catch(() => null);
+		return NextResponse.json({ confirmed: !!confirmed?.ok }, { status: confirmed?.ok ? 200 : 502 });
 	}
 	if (envelope.Type !== "Notification") return NextResponse.json({ ignored: true });
 
@@ -45,8 +53,9 @@ export async function POST(request: Request) {
 	}
 
 	// A captured, still-fresh notification replays only once: remember delivered MessageIds.
-	const seenKey = envelope.MessageId ? `sns-seen/${envelope.MessageId.replace(/[^A-Za-z0-9-]/g, "")}` : null;
-	if (seenKey && await env.BUCKET.head(seenKey)) return NextResponse.json({ ignored: "Already processed" });
+	// Markers expire with the window in which the SNS signature still verifies.
+	const seenId = envelope.MessageId?.replace(/[^A-Za-z0-9-]/g, "") || null;
+	if (seenId && await hasReplayMarker(env.BUCKET, SNS_REPLAY_WINDOW, seenId)) return NextResponse.json({ ignored: "Already processed" });
 
 	const config = await requireAwsConfig(env);
 	if (notification.virusFailed) {
@@ -57,6 +66,6 @@ export async function POST(request: Request) {
 	const result = await intakeProviderMail(env, { from: notification.from, recipients: notification.recipients, raw, headers: notification.headers, verdicts: notification.verdicts });
 	// Only after intake succeeded: a failure above returns 500 so SNS retries with the object intact.
 	await deleteObject(config, state.bucket, notification.key);
-	if (seenKey) await env.BUCKET.put(seenKey, new Uint8Array(0));
+	if (seenId) await rememberReplayMarker(env.BUCKET, SNS_REPLAY_WINDOW, seenId);
 	return NextResponse.json(result);
 }

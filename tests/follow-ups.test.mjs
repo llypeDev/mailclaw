@@ -128,3 +128,25 @@ test("without migration 0071 reminders are absent instead of failing", async (t)
 	assert.deepEqual(await service.listDueFollowUps(env, "u1"), []);
 	assert.equal(await service.getMessageFollowUp(env, "u1", "m1"), null);
 });
+
+test("reply lookups read the thread index, not the whole mailbox, without planner statistics", async (t) => {
+	const { env, addMessage } = await createFixture(t);
+	const sentAt = new Date(Date.now() - 4 * DAY);
+	addMessage("sent-plan", { at: sentAt, threadId: "thread-plan" });
+	await service.setFollowUp(env, { messageId: "sent-plan", userId: "u1", days: 3, from: sentAt });
+	const seen = [];
+	const prepare = env.DB.prepare.bind(env.DB);
+	env.DB.prepare = (sql) => {
+		seen.push(sql);
+		return prepare(sql);
+	};
+	await service.runFollowUpReminders(env, new Date());
+	await service.getMessageFollowUp(env, "u1", "sent-plan");
+	const lookups = seen.filter((sql) => sql.includes('"messages"."direction" = ?') && sql.includes('"messages"."thread_id" in'));
+	assert.equal(lookups.length, 2);
+	for (const sql of lookups) {
+		const params = Array.from({ length: (sql.match(/\?/g) ?? []).length }, () => null);
+		const plan = env.DB.db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...params).map((row) => row.detail).join(" | ");
+		assert.match(plan, /messages_thread_idx/, plan);
+	}
+});

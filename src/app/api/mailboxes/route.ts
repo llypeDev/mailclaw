@@ -3,33 +3,25 @@ import { and, eq } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
 import { domains, mailboxAliases, mailboxes, users } from "@/db/schema";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { newId } from "@/lib/ids";
-import { tracksAccountIdentity } from "@/lib/profile/identity-utils";
 import { mailboxSchema } from "@/lib/validators";
-import { ensureMailboxDomainRouting, getMailboxDomainAddresses } from "@/lib/mailboxes/domain-addresses";
-import { ensurePersonalMailbox } from "./utils";
+import { ensureMailboxDomainRouting } from "@/lib/mailboxes/domain-addresses";
+import { listMailboxOptions } from "@/lib/mailboxes/mailbox-options";
 
 export async function GET(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
-	const db = getDb(env);
-	const rows = await ensurePersonalMailbox(env, db, user);
-	return NextResponse.json({
-		mailboxes: await Promise.all(rows.map(async (mailbox) => ({
-			...mailbox,
-			...(mailbox.userId === user.id && tracksAccountIdentity(mailbox, user.email)
-				? { displayName: user.name, hasAvatar: !!user.avatarKey }
-				: {}),
-			senderAddresses: await getMailboxDomainAddresses(db, mailbox),
-		}))),
-		canCreateShared: user.role === "admin",
-	});
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
+	return NextResponse.json(await listMailboxOptions(env, getDb(env), user));
 }
 
 export async function POST(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	const parsed = mailboxSchema.safeParse(await request.json());
 	if (!parsed.success) {
 		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

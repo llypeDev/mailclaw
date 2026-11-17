@@ -67,7 +67,7 @@ export async function updateAccountCredentials(
 		...(input.email ? { email: input.email.trim().toLowerCase() } : {}),
 		name: input.name,
 		...(typeof input.disabled === "boolean" ? { disabled: input.disabled } : {}),
-		...(input.password ? { passwordHash: hashPassword(input.password) } : {}),
+		...(input.password ? { passwordHash: await hashPassword(input.password) } : {}),
 	};
 	if (!passwordSnapshot) {
 		await db.update(users).set(values).where(eq(users.id, id));

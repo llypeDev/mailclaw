@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ACCOUNTS_COOKIE, rememberLogin } from "@/lib/auth/accounts";
 import { createSession, SESSION_COOKIE } from "@/lib/auth/session";
+import { setSessionCookie } from "@/lib/auth/session-cookie";
 import { recordAuthActivity } from "@/lib/auth/activity";
 import type { AuthActivityAction } from "@/lib/auth/activity-types";
+import { shouldReturnSessionToken } from "./login-response-utils";
 
 /**
- * The one place a verified sign-in turns into a session: cookie, Bearer token
- * for the client, account switcher entry, and audit log.
+ * The one place a verified sign-in turns into a session: the httpOnly cookie,
+ * account switcher entry, and audit log. Browsers never see the token itself;
+ * `authenticated: true` tells the client a session now exists. Non-browser
+ * callers (no Sec-Fetch-Site/Origin) still get `token` for Bearer use.
  */
 export async function completeLogin(
 	env: CloudflareEnv,
@@ -19,18 +23,13 @@ export async function completeLogin(
 	await recordAuthActivity(env, { action: options.activity ?? "auth.login", userId, request });
 	const response = NextResponse.json({
 		ok: true,
-		token,
+		authenticated: true,
+		...(shouldReturnSessionToken(request) ? { token } : {}),
 		redirect: "/inbox",
 		...options.body,
 	});
 	response.headers.set("Cache-Control", "no-store");
-	response.cookies.set(SESSION_COOKIE, token, {
-		httpOnly: true,
-		secure: process.env.NODE_ENV === "production",
-		sameSite: "lax",
-		path: "/",
-		maxAge: 60 * 60 * 24 * 30,
-	});
+	setSessionCookie(response, request, token);
 	const accountsJar = await cookies();
 	await rememberLogin(env, response, accountsJar.get(ACCOUNTS_COOKIE)?.value, token, accountsJar.get(SESSION_COOKIE)?.value);
 	return response;

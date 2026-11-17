@@ -1,58 +1,87 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { getDb } from "@/db";
 import { contacts, routingRules } from "@/db/schema";
 import { getFirstEmailAddressEntry, normalizeEmailAddress } from "@/lib/email/address";
-import type { BlockContactInput, ContactCard, ContactDisplayName, ContactInput, MessageContactNames } from "@/lib/contacts/types";
+import type { BlockContactInput, ContactCard, ContactDisplayName, ContactInput, ContactRow, MessageContactNames } from "@/lib/contacts/types";
 import type { ContactSource } from "@/lib/email/address-types";
 import { getContactId, getContactNameFromAddress, getPartyDisplayName } from "@/lib/contacts/utils";
 import { importGravatarAvatar } from "@/lib/contacts/gravatar";
 
 export async function upsertContactFromAddress(env: CloudflareEnv, input: ContactInput) {
+	const recorded = await recordContactFromAddress(env, input);
+	if (!recorded) return null;
+	if (!recorded.created || input.lookupAvatar === false) return recorded.contact;
+	const avatarKey = await importContactAvatar(env, input.userId, recorded.contact.email);
+	return avatarKey ? { ...recorded.contact, avatarKey } : recorded.contact;
+}
+
+/**
+ * Records that `input.address` was seen, without the Gravatar lookup: an existing contact is
+ * updated in one statement (the name and source rules of `getNextDisplayName` evaluated in SQL),
+ * a new one inserted. `created` tells the caller to fetch the avatar when it suits it.
+ */
+export async function recordContactFromAddress(env: CloudflareEnv, input: ContactInput): Promise<{ contact: ContactRow; created: boolean } | null> {
 	const email = normalizeEmailAddress(input.address);
 	if (!email) return null;
 
 	const displayName = getContactNameFromAddress(input.address);
 	const db = getDb(env);
-	const [existing] = await db
-		.select()
-		.from(contacts)
-		.where(and(eq(contacts.userId, input.userId), eq(contacts.email, email)))
-		.limit(1);
 	const now = new Date();
+	const touch = () => db
+		.update(contacts)
+		.set({
+			...(displayName ? { displayName: nextDisplayNameSql(displayName, input.source) } : {}),
+			source: nextSourceSql(input.source),
+			lastSeenAt: now,
+		})
+		.where(and(eq(contacts.userId, input.userId), eq(contacts.email, email)))
+		.returning();
 
-	if (existing) {
-		const nextDisplayName = getNextDisplayName(existing.displayName, existing.source, displayName, input.source);
-		const nextSource = existing.source === "manual" || (existing.source === "outbound" && input.source === "inbound")
-			? existing.source
-			: input.source;
+	const [updated] = await touch();
+	if (updated) return { contact: updated, created: false };
 
-		await db
-			.update(contacts)
-			.set({
-				displayName: nextDisplayName,
-				source: nextSource,
-				lastSeenAt: now,
-			})
-			.where(eq(contacts.id, existing.id));
-		return { ...existing, displayName: nextDisplayName, source: nextSource, lastSeenAt: now };
-	}
-
-	const id = getContactId(input.userId, email);
-	await db.insert(contacts).values({
-		id,
+	const [inserted] = await db.insert(contacts).values({
+		id: getContactId(input.userId, email),
 		userId: input.userId,
 		email,
 		displayName,
 		source: input.source,
 		lastSeenAt: now,
-	}).onConflictDoNothing(); // Two messages from a new sender can be processed at once.
-	const avatarKey = input.lookupAvatar === false ? null : await importGravatarAvatar(env, input.userId, email);
-	if (avatarKey) {
-		await db.update(contacts).set({ avatarKey }).where(eq(contacts.id, id));
-	}
+	}).onConflictDoNothing().returning();
+	if (inserted) return { contact: inserted, created: true };
+	// Two messages from a new sender can be processed at once; the other one inserted it first.
+	const [raced] = await touch();
+	return raced ? { contact: raced, created: false } : null;
+}
 
-	const [created] = await db.select().from(contacts).where(eq(contacts.id, id)).limit(1);
-	return created ?? null;
+/** Fetches the Gravatar for a contact and stores its key. Returns the key, or null when there is none. */
+export async function importContactAvatar(env: CloudflareEnv, userId: string, email: string): Promise<string | null> {
+	const avatarKey = await importGravatarAvatar(env, userId, email);
+	if (avatarKey) {
+		await getDb(env).update(contacts).set({ avatarKey }).where(and(eq(contacts.userId, userId), eq(contacts.email, email)));
+	}
+	return avatarKey;
+}
+
+/*
+ * SQL twins of getNextDisplayName and the source rule, for a single UPDATE. They read only the
+ * row's old values: SQLite and PostgreSQL evaluate every SET expression against the old row, and
+ * MySQL assigns left to right in table column order (display_name before source), so the
+ * display_name CASE still sees the old source there too.
+ */
+function nextDisplayNameSql(nextName: string, incomingSource: ContactSource): SQL {
+	// A sender chooses its own From name, so inbound mail may name a contact but never rename one.
+	if (incomingSource === "inbound") {
+		return sql`case when ${contacts.source} = 'manual' or coalesce(${contacts.displayName}, '') <> '' then ${contacts.displayName} else ${nextName} end`;
+	}
+	return sql`case when ${contacts.source} = 'manual' then ${contacts.displayName} else ${nextName} end`;
+}
+
+function nextSourceSql(incomingSource: ContactSource): SQL {
+	if (incomingSource === "inbound") {
+		return sql`case when ${contacts.source} in ('manual', 'outbound') then ${contacts.source} else ${incomingSource} end`;
+	}
+	return sql`case when ${contacts.source} = 'manual' then ${contacts.source} else ${incomingSource} end`;
 }
 
 const MAX_AVATAR_LOOKUPS = 20;

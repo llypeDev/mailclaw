@@ -27,6 +27,7 @@ export function BrandingProvider({ children, initialBranding }: { children: Reac
 		// The server layout already supplied the branding; refetching it on mount is
 		// a second round trip that competes with the rest of the boot.
 		if (!initialBranding) void fetchBranding().then(applyBranding);
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- `applyBranding` is a new function every render (it reads the current title); listing it would refetch on every render
 	}, [initialBranding]);
 
 	return (

@@ -29,7 +29,7 @@ export async function authorizeSecurityChange(
 			targetUserId: options.targetUserId,
 		});
 	}
-	if (!input.password || !verifyPassword(input.password, user.passwordHash)) return false;
+	if (!input.password || !(await verifyPassword(input.password, user.passwordHash))) return false;
 	if (!options.requireCode && !user.requireSecondFactor) return true;
 	return !!input.code && !!(await verifySecondFactor(env, user, input.code));
 }

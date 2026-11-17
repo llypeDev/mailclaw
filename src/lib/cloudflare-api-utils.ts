@@ -45,11 +45,15 @@ export function formatCloudflareError(path: string, status: number, statusText: 
 	return `Cloudflare API ${status} on ${path}: ${message}`;
 }
 
+export const SENDING_UNAUTHORIZED_HINT =
+	"Cloudflare Email Sending requires the Workers Paid plan; on the free plan Cloudflare refuses it with this error. If the account is on Workers Paid and the token has Email Sending permissions, check the domain for MX records pointing at another mail service; Cloudflare refuses sending setup until they are removed.";
+
 export function getCloudflareAuthHint(errors: CfApiError[], path = "") {
-	// Cloudflare answers a sending-subdomain create with 401/2036 when the hostname
-	// has another service's MX records, so a valid token is not the likely cause.
+	// Cloudflare answers a sending-subdomain create with 401/2036 when the account is
+	// not on the Workers Paid plan (by far the most common case) or when the hostname
+	// has another service's MX records, so a bad token is not the likely cause.
 	if (path.includes("/email/sending/") && errors.some((error) => error.code === 2036)) {
-		return " If the token has Email Sending permissions, check the domain for MX records pointing at another mail service; Cloudflare refuses sending setup until they are removed.";
+		return ` ${SENDING_UNAUTHORIZED_HINT}`;
 	}
 	const hasAuthError = errors.some(
 		(error) =>

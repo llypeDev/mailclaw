@@ -1,17 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { fetchSessionInfo, peekSessionInfo, updateCachedSessionUser } from "@/hooks/use-current-user";
 import { loadShortcutsEnabled, updateShortcutsEnabled } from "./use-shortcuts-enabled-utils";
+
+/** The preference from the cached session (it is part of `/api/auth/me`), or `/api/settings/shortcuts` when absent. */
+async function readShortcutsEnabled(): Promise<boolean> {
+	const session = peekSessionInfo() ?? await fetchSessionInfo();
+	const stored = session?.user?.keyboardShortcutsEnabled;
+	return typeof stored === "boolean" ? stored : loadShortcutsEnabled();
+}
 
 /** Loads and updates the signed-in account's keyboard shortcut preference. */
 export function useShortcutsEnabled() {
-	const [enabled, setEnabledState] = useState(false);
-	const [isLoading, setIsLoading] = useState(true);
+	// Providers mount after the auth guard has the session, so the cached answer is usually there already.
+	const [cached] = useState(() => peekSessionInfo()?.user?.keyboardShortcutsEnabled);
+	const [enabled, setEnabledState] = useState(cached ?? false);
+	const [isLoading, setIsLoading] = useState(typeof cached !== "boolean");
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
+		if (typeof cached === "boolean") return;
 		let cancelled = false;
-		loadShortcutsEnabled()
+		readShortcutsEnabled()
 			.then((storedEnabled) => {
 				if (!cancelled) setEnabledState(storedEnabled);
 			})
@@ -26,14 +37,16 @@ export function useShortcutsEnabled() {
 		return () => {
 			cancelled = true;
 		};
-	}, []);
+	}, [cached]);
 
 	const setEnabled = useCallback(async (next: boolean) => {
 		const previous = enabled;
 		setEnabledState(next);
 		setError(null);
 		try {
-			setEnabledState(await updateShortcutsEnabled(next));
+			const saved = await updateShortcutsEnabled(next);
+			setEnabledState(saved);
+			updateCachedSessionUser({ keyboardShortcutsEnabled: saved });
 		} catch (updateError) {
 			setEnabledState(previous);
 			const message = updateError instanceof Error ? updateError.message : "Failed to update shortcut settings";

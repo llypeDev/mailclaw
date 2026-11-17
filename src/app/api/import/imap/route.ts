@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { folders } from "@/db/schema";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
 import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { readJsonBody } from "@/lib/http/request";
@@ -14,7 +14,9 @@ import { parseImapImportRequest } from "./utils";
 
 export async function POST(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	let input: ReturnType<typeof parseImapImportRequest>;
 	try {
 		const body = await readJsonBody<ImapImportRequest>(request, 64 * 1024);

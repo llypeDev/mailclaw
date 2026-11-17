@@ -62,6 +62,7 @@ export default function AccountsPage() {
 			const text = error instanceof Error ? error.message : t("accounts.loadFailed");
 			setMessage(text);
 		}).finally(() => setLoading(false));
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount; `t` only words the error, and a language switch must not reset the chosen domain
 	}, []);
 
 	async function createAccount(event: React.FormEvent<HTMLFormElement>) {

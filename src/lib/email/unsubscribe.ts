@@ -87,6 +87,44 @@ export function extractUnsubscribeUrlFromRaw(raw: ArrayBuffer): UnsubscribeUrl {
 	return { url, oneClick: hasOneClickPost(headers), mailto, dkimCoversUnsubscribe: dkimCoveredHeaders(headers).has("list-unsubscribe") };
 }
 
+/**
+ * Where the importers store raw MIME. Rows written there set `has_unsubscribe` when they are
+ * stored (see `offersUnsubscribe`); rows imported earlier sit directly under `imports/` and
+ * `drafts/` with the flag false without ever having been checked, which is what the separate
+ * prefix tells apart without a migration.
+ */
+export const IMPORT_RAW_PREFIX = "imports/v2/";
+export const JMAP_DRAFT_RAW_PREFIX = "drafts/v2/";
+
+/** Prefixes whose rows always had `has_unsubscribe` decided when they were stored. */
+const FLAGGED_RAW_PREFIXES = ["inbound/", IMPORT_RAW_PREFIX, JMAP_DRAFT_RAW_PREFIX];
+
+/**
+ * Whether reading a stored message's raw MIME can find a List-Unsubscribe header. Everything
+ * stored under a flagged prefix had `has_unsubscribe` set when it was written, so false there
+ * means the 64 KB read is skipped. Older imported (`imports/`) and JMAP (`drafts/`) copies never
+ * had the flag set, so they are still read.
+ */
+export function mayHaveUnsubscribeHeader(message: { rawR2Key: string | null; hasUnsubscribe: boolean | null }): boolean {
+	const key = message.rawR2Key;
+	if (!key) return false;
+	return !!message.hasUnsubscribe || !FLAGGED_RAW_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
+
+/**
+ * The `has_unsubscribe` value for a message being stored: an inbound message whose header or
+ * body offers a way out, as the inbound pipeline decides it. Outbound copies (imported Sent mail,
+ * JMAP drafts) are the user's own mail, so they never offer one and their raw header is never read.
+ */
+export function offersUnsubscribe(direction: "inbound" | "outbound", raw: ArrayBuffer, html: string | null | undefined, text: string | null | undefined): boolean {
+	if (direction !== "inbound") return false;
+	return !!extractUnsubscribeUrlFromRaw(raw) || !!extractUnsubscribeLinkFromBody(html ?? null, text ?? null);
+}
+
+export async function getUnsubscribeUrlForMessage(env: CloudflareEnv, message: { rawR2Key: string | null; hasUnsubscribe: boolean | null }): Promise<UnsubscribeUrl> {
+	return mayHaveUnsubscribeHeader(message) ? getUnsubscribeUrlFromRawR2Key(env, message.rawR2Key) : null;
+}
+
 export async function getUnsubscribeUrlFromRawR2Key(env: CloudflareEnv, rawR2Key: string | null): Promise<UnsubscribeUrl> {
 	if (!rawR2Key) return null;
 	const raw = await env.BUCKET.get(rawR2Key, { range: { offset: 0, length: maxHeaderBytes } });

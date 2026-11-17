@@ -1,4 +1,18 @@
+import { z } from "zod";
 import type { BulkMessageAction, PermanentDeleteFolder } from "./types";
+
+/** Largest bulk request body: 5,000 ids (the action limit) with room for long ones. */
+export const BULK_BODY_MAX_BYTES = 512 * 1024;
+
+/**
+ * The shape of a bulk request. Which actions exist and how many ids are allowed are checked after
+ * parsing, so those keep their specific error messages.
+ */
+export const bulkMessagePayloadSchema = z.object({
+	messageIds: z.array(z.string().max(200)).optional(),
+	action: z.string().optional(),
+	folderId: z.string().max(200).nullish(),
+});
 
 const allowedBulkActions = new Set<BulkMessageAction>([
 	"archive",

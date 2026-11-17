@@ -4,7 +4,14 @@ import { getEnv } from "@/lib/cloudflare";
 import { deleteSession, getUserFromSession, SESSION_COOKIE } from "@/lib/auth/session";
 import { ACCOUNTS_COOKIE, cookieOptions, parseAccountTokens, resolveAccounts, serializeAccountTokens } from "@/lib/auth/accounts";
 import { recordAuthActivity } from "@/lib/auth/activity";
+import { shouldReturnSessionToken } from "@/lib/auth/login-response-utils";
 
+/**
+ * End the active session. When another account is signed in on this browser,
+ * it becomes active: the response says `authenticated: true` and the session
+ * cookie now holds that account. As after a sign-in, its token appears in the
+ * JSON only for non-browser callers.
+ */
 export async function POST(request: Request) {
 	const env = getEnv();
 	const jar = await cookies();
@@ -23,13 +30,22 @@ export async function POST(request: Request) {
 		parseAccountTokens(jar.get(ACCOUNTS_COOKIE)?.value).filter((entry) => entry !== token),
 	);
 	const next = remaining[remaining.length - 1];
-	const response = NextResponse.json({ ok: true, ...(next ? { token: next.token, redirect: "/inbox" } : {}) });
+	const response = NextResponse.json(
+		next
+			? {
+					ok: true,
+					authenticated: true,
+					...(shouldReturnSessionToken(request) ? { token: next.token } : {}),
+					redirect: "/inbox",
+				}
+			: { ok: true, authenticated: false },
+	);
 	response.headers.set("Cache-Control", "no-store");
-	response.cookies.set(SESSION_COOKIE, next?.token ?? "", cookieOptions(next ? undefined : 0));
+	response.cookies.set(SESSION_COOKIE, next?.token ?? "", cookieOptions(request, next ? undefined : 0));
 	response.cookies.set(
 		ACCOUNTS_COOKIE,
 		serializeAccountTokens(remaining.map((account) => account.token)),
-		cookieOptions(remaining.length ? undefined : 0),
+		cookieOptions(request, remaining.length ? undefined : 0),
 	);
 	return response;
 }

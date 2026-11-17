@@ -18,6 +18,8 @@ export function ScheduledSendReschedule({ scheduledAt, disabled, onPick }: { sch
 	const [sheetOpen, setSheetOpen] = useState(false);
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [pickedText, setPickedText] = useState<string | null>(null);
+	// The picker's lower bound, read when the menu opens and on every edit rather than during render.
+	const [minText, setMinText] = useState(() => formatDateTimeLocal(new Date()));
 	const options = getScheduleSendOptions();
 	const picked = pickedText === null ? null : parseDateTimeLocal(pickedText);
 	const pastPicked = picked !== null && isPastSchedule(picked);
@@ -50,7 +52,7 @@ export function ScheduledSendReschedule({ scheduledAt, disabled, onPick }: { sch
 	}
 
 	return (
-		<DropdownMenu.Root open={menuOpen} onOpenChange={(next) => { setMenuOpen(next); setPickedText(null); }}>
+		<DropdownMenu.Root open={menuOpen} onOpenChange={(next) => { setMenuOpen(next); setPickedText(null); if (next) setMinText(formatDateTimeLocal(new Date())); }}>
 			<DropdownMenu.Trigger type="button" disabled={disabled} className={buttonClass}>
 				{t("schedule.reschedule")}
 			</DropdownMenu.Trigger>
@@ -72,9 +74,9 @@ export function ScheduledSendReschedule({ scheduledAt, disabled, onPick }: { sch
 					</DropdownMenu.Label>
 					<input
 						type="datetime-local"
-						min={formatDateTimeLocal(new Date())}
+						min={minText}
 						value={pickedText ?? formatDateTimeLocal(new Date(scheduledAt))}
-						onChange={(event) => setPickedText(event.target.value)}
+						onChange={(event) => { setMinText(formatDateTimeLocal(new Date())); setPickedText(event.target.value); }}
 						onBlur={commit}
 						onKeyDown={(event) => {
 							event.stopPropagation();

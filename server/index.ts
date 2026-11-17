@@ -7,12 +7,14 @@ import { getUserFromSession } from "@/lib/auth/session";
 import { getSessionTokenFromRequest } from "@/lib/realtime/utils";
 import { processInboundMessage } from "@/lib/email/inbound";
 import { processAgentDraftJob } from "@/lib/agent/jobs/utils";
-import { processOutboundQueue, type OutboundQueueMessage } from "@/lib/email/send";
+import { processOutboundQueue, requeueScheduledOutboundJobs, type OutboundQueueMessage } from "@/lib/email/send";
 import { processWebhookRetry, type WebhookRetryMessage } from "@/lib/email/webhooks";
 import { processImportJob } from "@/lib/import/jobs";
 import { applyPendingMigrations } from "@/lib/migrations/service";
 import { isImportJobMessage, isInboundQueueMessage, isWebhookRetryMessage } from "../worker-utils";
 import { createNodeRuntime } from "./runtime/env";
+import { rejectCrossSiteNodeRequest } from "./runtime/http-guard";
+import { requeueUnprocessedInbound } from "./runtime/inbound-recovery";
 import { applyMigrations } from "./runtime/migrate";
 import { startScheduler } from "./runtime/scheduler";
 import { startSmtpListener } from "./runtime/smtp";
@@ -47,6 +49,16 @@ async function main() {
 		if (typeof body === "object" && body !== null && (body as { kind?: unknown }).kind === "agent.draft" && typeof (body as { jobId?: unknown }).jobId === "string") await processAgentDraftJob(env, (body as { jobId: string }).jobId);
 	});
 
+	// The queues are in memory, so the timers of scheduled and undo-window sends died with the last process.
+	await requeueScheduledOutboundJobs(env)
+		.then((count) => { if (count) console.log(`Re-queued ${count} scheduled message(s)`); })
+		.catch((error) => console.error("Could not re-queue scheduled messages", error));
+	// Likewise inbound mail stored on disk whose queue message died with it. This runs before
+	// the SMTP listener and the HTTP server start, so nothing new is being written meanwhile.
+	await requeueUnprocessedInbound(env)
+		.then((count) => { if (count) console.log(`Re-queued ${count} unprocessed inbound message(s)`); })
+		.catch((error) => console.error("Could not re-queue unprocessed inbound mail", error));
+
 	const app = next({ dev, dir: process.cwd(), hostname: host, port });
 	const handle = app.getRequestHandler();
 	await app.prepare();
@@ -71,7 +83,10 @@ async function main() {
 		delete request.headers["x-forwarded-for"];
 		delete request.headers["x-mailclaw-client-ip"];
 		if (clientIp) request.headers["x-mailclaw-client-ip"] = clientIp;
-		void handle(request, response, parse(request.url ?? "/", true));
+		// Cookie-authenticated /api mutations must come from this origin, as worker.ts enforces before vinext.
+		void rejectCrossSiteNodeRequest(request, response, trustProxy).then((blocked) => {
+			if (!blocked) return handle(request, response, parse(request.url ?? "/", true));
+		});
 	});
 
 	const wss = new WebSocketServer({ noServer: true });

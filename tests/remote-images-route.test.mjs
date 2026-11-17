@@ -49,7 +49,7 @@ test("authenticated Worker responses use private image headers and block the app
 	};
 	const response = await GET(request());
 	assert.equal(response.status, 200);
-	assert.equal(response.headers.get("Cache-Control"), "private, no-store");
+	assert.equal(response.headers.get("Cache-Control"), "private, max-age=86400");
 	assert.equal(response.headers.get("Cross-Origin-Resource-Policy"), "same-origin");
 	assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
 	assert.equal(response.headers.get("Content-Type"), "image/png");

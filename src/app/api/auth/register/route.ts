@@ -6,6 +6,7 @@ import { mailboxes, users } from "@/db/schema";
 import { hashPassword, PASSWORDLESS_PASSWORD_HASH } from "@/lib/auth/password";
 import { hasAdminAccount } from "@/lib/auth/setup";
 import { SESSION_COOKIE } from "@/lib/auth/session";
+import { sessionCookieOptions } from "@/lib/auth/session-cookie";
 import { createEnrollmentGrant, SETUP_COOKIE } from "@/lib/auth/webauthn/grants";
 import { newId } from "@/lib/ids";
 import { firstRunRegisterSchema } from "@/lib/validators";
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
 		remoteContentMode: "ask",
 		email,
 		resetEmail: firstRunParsed.data.resetEmail,
-		passwordHash: usePasskey ? PASSWORDLESS_PASSWORD_HASH : hashPassword(password!),
+		passwordHash: usePasskey ? PASSWORDLESS_PASSWORD_HASH : await hashPassword(password!),
 		name,
 		role: "admin",
 		isPrimaryAdmin: true,
@@ -87,6 +88,7 @@ export async function POST(request: Request) {
 	// domain row from ever being written, which is exactly when the orphaned zone
 	// config would go unnoticed.
 	let changes: DomainProvisioningChanges | null = null;
+	let sendingUnavailable: Awaited<ReturnType<typeof addDomainForUser>>["sendingUnavailable"];
 	try {
 		await ensureBookingUsername(env, userId, email);
 		const added = await addDomainForUser(env, userId, domainName, {
@@ -97,6 +99,7 @@ export async function POST(request: Request) {
 		});
 		const domain = added.domain;
 		changes = added.changes;
+		sendingUnavailable = added.sendingUnavailable;
 		await ensureEmailRoutingRuleToWorker(env, domain.zoneId, email);
 		changes.createdAddressRules.push(email);
 		const mailboxId = newId("mbx");
@@ -129,23 +132,12 @@ export async function POST(request: Request) {
 		ok: true,
 		redirect: setupToken ? "/setup/passkey" : "/login",
 		...(setupToken ? { requiresPasskeySetup: true } : {}),
+		...(sendingUnavailable ? { sendingUnavailable } : {}),
 	});
 	response.headers.set("Cache-Control", "no-store");
 	if (setupToken) {
-		response.cookies.set(SETUP_COOKIE, setupToken, {
-			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
-			sameSite: "lax",
-			path: "/",
-			maxAge: 24 * 60 * 60,
-		});
+		response.cookies.set(SETUP_COOKIE, setupToken, sessionCookieOptions(request, 24 * 60 * 60));
 	}
-	response.cookies.set(SESSION_COOKIE, "", {
-		httpOnly: true,
-		secure: process.env.NODE_ENV === "production",
-		sameSite: "lax",
-		path: "/",
-		maxAge: 0,
-	});
+	response.cookies.set(SESSION_COOKIE, "", sessionCookieOptions(request, 0));
 	return response;
 }

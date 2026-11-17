@@ -37,7 +37,14 @@ export type DomainProvisioningResult = {
 	sendingSubdomainTag: string | null;
 	routingStatus?: string;
 	changes: DomainProvisioningChanges;
+	/**
+	 * Set when Cloudflare refused Email Sending (401/2036, usually the free plan, or 403)
+	 * and the domain was set up receive-only instead; `message` is Cloudflare's error with its hint.
+	 */
+	sendingUnavailable?: DomainSendingUnavailable;
 };
+
+export type DomainSendingUnavailable = { reason: "unauthorized"; message: string };
 
 export type DomainPreflightResult = {
 	hostname: string;

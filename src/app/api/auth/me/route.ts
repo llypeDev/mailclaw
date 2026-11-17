@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/cookies";
+import { buildSessionInfo } from "@/lib/auth/session-info";
 import { getEnv } from "@/lib/cloudflare";
-import { hasPrimaryDomain, userHasMailboxes } from "@/lib/user";
-import { hasCloudflareCredentials, isNodeRuntime } from "@/lib/runtime";
 
 export async function GET(request: Request) {
 	const env = getEnv();
@@ -10,37 +9,5 @@ export async function GET(request: Request) {
 	if (!user) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
-
-	// Authentication remains valid when optional mailbox/setup metadata is unavailable.
-	const [hasMailboxes, isSetup] = await Promise.all([
-		userHasMailboxes(env, user.id),
-		hasPrimaryDomain(env),
-	]).catch((): [boolean, boolean] => [false, true]);
-	return NextResponse.json({
-		user: {
-			id: user.id,
-			email: user.email,
-			name: user.name,
-			timeZone: user.timeZone,
-			resetEmail: user.resetEmail,
-			forwardingEmail: user.forwardingEmail,
-			canForwardEmail: true,
-			role: user.role,
-			isPrimaryAdmin: user.isPrimaryAdmin,
-			canManageMailboxes: user.canManageMailboxes,
-			canManageDomains: user.canManageDomains,
-			canManageUsers: user.canManageUsers,
-			calendarEnabled: user.calendarEnabled,
-			driveEnabled: user.driveEnabled,
-			keyboardShortcutsEnabled: user.keyboardShortcutsEnabled,
-			spamProtectionEnabled: user.spamProtectionEnabled,
-			showFullRecipientAddresses: user.showFullRecipientAddresses,
-			hasAvatar: !!user.avatarKey,
-			mfaEnabled: user.totpEnabled,
-		},
-		runtime: isNodeRuntime(env) ? "node" : "cloudflare",
-		managesDns: hasCloudflareCredentials(env),
-		hasMailboxes,
-		isSetup,
-	});
+	return NextResponse.json(await buildSessionInfo(env, user));
 }

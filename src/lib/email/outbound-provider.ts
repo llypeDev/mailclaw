@@ -5,6 +5,7 @@ import { requireAwsConfig } from "@/lib/aws/config";
 import { sendSesEmail } from "@/lib/aws/ses";
 import { getEmailAddress } from "@/lib/email/address";
 import type { OutboundProviderConfig, OutboundProviderMessage, ResendKeyStatus } from "@/lib/email/outbound-provider-types";
+import { isTimeoutError, SEND_TIMEOUT_MS, timeoutMessage, withTimeout } from "@/lib/http/fetch-timeout";
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
@@ -70,30 +71,38 @@ async function sendWithResend(
 	idempotencyKey?: string,
 ): Promise<{ messageId: string }> {
 	const messageId = message.headers?.["Message-ID"] ?? mintMessageId(message.from);
-	const response = await fetch(RESEND_ENDPOINT, {
-		method: "POST",
-		headers: {
-			Authorization: `Bearer ${apiKey}`,
-			"Content-Type": "application/json",
-			...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
-		},
-		body: JSON.stringify({
-			from: message.from,
-			to: message.to,
-			...(message.cc?.length ? { cc: message.cc } : {}),
-			...(message.bcc?.length ? { bcc: message.bcc } : {}),
-			subject: message.subject,
-			html: message.html,
-			text: message.text,
-			headers: { ...message.headers, "Message-ID": messageId },
-			attachments: message.attachments?.map((attachment) => ({
-				filename: attachment.filename,
-				content: toBase64(attachment.content),
-				content_type: attachment.type,
-				...(attachment.disposition === "inline" && attachment.contentId ? { content_id: attachment.contentId } : {}),
-			})),
-		}),
-	});
+	let response: Response;
+	try {
+		response = await fetch(RESEND_ENDPOINT, withTimeout({
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${apiKey}`,
+				"Content-Type": "application/json",
+				...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+			},
+			body: JSON.stringify({
+				from: message.from,
+				to: message.to,
+				...(message.cc?.length ? { cc: message.cc } : {}),
+				...(message.bcc?.length ? { bcc: message.bcc } : {}),
+				subject: message.subject,
+				html: message.html,
+				text: message.text,
+				headers: { ...message.headers, "Message-ID": messageId },
+				attachments: message.attachments?.map((attachment) => ({
+					filename: attachment.filename,
+					content: toBase64(attachment.content),
+					content_type: attachment.type,
+					...(attachment.disposition === "inline" && attachment.contentId ? { content_id: attachment.contentId } : {}),
+				})),
+			}),
+		}, SEND_TIMEOUT_MS));
+	} catch (error) {
+		// Delivery treats any Error as a failed send. With an Idempotency-Key the retry is safe
+		// even if Resend accepted the message just before the deadline.
+		if (isTimeoutError(error)) throw new Error(`Resend: ${timeoutMessage("the API", SEND_TIMEOUT_MS)}`);
+		throw error;
+	}
 	if (!response.ok) {
 		const body = (await response.json().catch(() => null)) as { message?: string } | null;
 		throw new Error(`Resend: ${body?.message ?? `request failed (${response.status})`}`);

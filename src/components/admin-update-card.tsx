@@ -57,6 +57,7 @@ export function AdminUpdateCard() {
 		return () => {
 			isActive = false;
 		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- check once on mount; `t` only words the errors, and a language switch must not re-query the update and migration status
 	}, []);
 
 	async function handleUpdate() {

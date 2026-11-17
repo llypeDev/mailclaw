@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { domains } from "@/db/schema";
 import { normalizeEmailAddress } from "@/lib/email/address";
-import { inboundAttachmentLimitReasonFromRaw } from "@/lib/email/inbound-attachments";
+import { inboundAttachmentLimitReasonFromScan } from "@/lib/email/inbound-attachments";
 import { intakeIncomingMail } from "@/lib/email/intake";
 import { readHeaderMap, readSesTrace } from "@/lib/email/provider-trace";
 import type { ProviderVerdicts } from "@/lib/spam/types";
@@ -21,7 +21,9 @@ export async function intakeProviderMail(
 	input: { from: string; recipients: string[]; raw: ArrayBuffer; headers?: Record<string, string>; verdicts?: ProviderVerdicts },
 ): Promise<{ delivered: number; dropped: string | null }> {
 	if (input.raw.byteLength > MAX_PROVIDER_MESSAGE_BYTES) return { delivered: 0, dropped: "Message exceeds the 25 MiB receiving limit" };
-	const limit = await inboundAttachmentLimitReasonFromRaw(input.raw);
+	// A linear scan rather than a parse: the drop is silent either way, and the queue consumer
+	// parses once and re-applies every limit authoritatively.
+	const limit = inboundAttachmentLimitReasonFromScan(input.raw);
 	if (limit) return { delivered: 0, dropped: limit };
 	const trace = readSesTrace(input.raw);
 	const verdicts = input.verdicts ?? trace.verdicts;

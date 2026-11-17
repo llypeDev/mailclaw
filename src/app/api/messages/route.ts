@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq, desc, and, or, count, isNull, isNotNull, inArray, lte, gt, notInArray, ne, sql, sum } from "drizzle-orm";
+import { aliasedTable, eq, desc, and, or, count, isNull, isNotNull, inArray, lte, gt, notInArray, ne, sql, sum } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getCurrentUser } from "@/lib/auth/cookies";
@@ -13,11 +13,12 @@ import { tracksAccountIdentity } from "@/lib/profile/identity-utils";
 import { buildSearchConditions } from "@/lib/search/conditions";
 import { getRequestTimeZone } from "@/lib/time/utils";
 import { scheduledMessageCondition } from "@/lib/email/scheduled";
-import { getMessageListColumns, loadConversationPage } from "./utils";
+import { countMessageList, getMessageListColumns, loadConversationPage, pageTotalWithoutCount, splitPageRows } from "./utils";
 import type { ListMessage } from "./types";
 import { getOpenCounts } from "@/lib/tracking/open-tracking";
 import { summarizeNotesForRows } from "@/lib/notes/service";
 import { isMissingTableError } from "@/lib/database-errors";
+import { clampIntParam } from "@/lib/http/pagination";
 
 export async function GET(request: Request) {
 	const env = getEnv();
@@ -37,8 +38,8 @@ export async function GET(request: Request) {
 	const starred = url.searchParams.get("starred");
 	const snoozed = url.searchParams.get("snoozed");
 	const scheduled = url.searchParams.get("scheduled");
-	const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 100);
-	const offset = Math.max(Number(url.searchParams.get("offset") ?? 0), 0);
+	const limit = clampIntParam(url.searchParams.get("limit"), 50, 1, 100);
+	const offset = clampIntParam(url.searchParams.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER);
 	// Conversation view: one row per thread, represented by its newest message
 	// that matches the filter. Drafts are never grouped.
 	const groupByThread = url.searchParams.get("group") === "thread" && status !== "draft";
@@ -103,13 +104,25 @@ export async function GET(request: Request) {
 		conditions.push(...buildSearchConditions(title ? `${query ?? ""} subject:"${title}"` : query ?? "", getRequestTimeZone(request, user.timeZone)));
 	}
 	const where = and(...conditions);
-	// Messages that were never threaded (older rows, drafts) stand alone.
-	const threadKey = sql<string>`coalesce(${messages.threadId}, ${messages.id})`;
+	// `count=only` answers just the total, which lists ask for separately so paging never waits on
+	// (or repeats) a count over the whole folder.
+	if (url.searchParams.get("count") === "only") {
+		return NextResponse.json({ total: await countMessageList(db, where, groupByThread), grouped: groupByThread });
+	}
+	const accessibleMailboxIdSet = new Set(accessibleMailboxIds);
+	// The same scope as the first condition above, for rows read by id alone.
+	const inListScope = (row: { mailboxId: string | null; userId: string }) => mailboxId
+		? row.mailboxId === mailboxId
+		: accessibleMailboxIds.length > 0
+			? !!row.mailboxId && accessibleMailboxIdSet.has(row.mailboxId)
+			: row.userId === user.id;
 
 	// The list renders `snippet`. Bodies stay on the thread endpoint.
 	const messageListColumns = getMessageListColumns();
 
-	let total = 0;
+	// Null when only a full count could tell; the client then asks with `count=only`.
+	let total: number | null = 0;
+	let hasMore = false;
 	let rows: ListMessage[];
 	// Which stored messages each visible row stands for, so acting on a
 	// conversation row acts on the whole conversation within this folder.
@@ -120,40 +133,64 @@ export async function GET(request: Request) {
 	if (groupByThread) {
 		const page = await loadConversationPage({ db, where, offset, limit });
 		total = page.total;
+		hasMore = page.hasMore;
+		// By primary key alone: the ids were just selected under `where`, and repeating it here lets
+		// SQLite without statistics walk the folder's wide index instead. The scope is rechecked below.
 		rows = page.ids.length
-			? await db.select(messageListColumns).from(messages).where(and(where, inArray(messages.id, page.ids)))
+			? await db.select(messageListColumns).from(messages).where(inArray(messages.id, page.ids))
 			: [];
-		const rowById = new Map(rows.map((row) => [row.id, row]));
+		const rowById = new Map(rows.filter(inListScope).map((row) => [row.id, row]));
 		rows = page.ids.map((id) => rowById.get(id)).filter((row): row is ListMessage => !!row);
+		// A head without a thread id is its own conversation; other rows can still name it as thread.
 		const keys = rows.map((row) => row.threadId ?? row.id);
+		for (const row of rows) {
+			if (row.threadId) continue;
+			threadMessageIds.set(row.id, [row.id]);
+			scopedThreadCounts.set(row.id, { total: 1, unread: row.read ? 0 : 1 });
+		}
 		if (keys.length > 0) {
+			// Members come off the (mailbox_id, thread_id) index and each is checked against `where` by
+			// primary key. Filtering on `where` directly lets SQLite without statistics prefer the
+			// folder's covering index and scan the whole folder; selecting `user_id`, which no covering
+			// index holds, keeps it on the thread index.
+			const member = aliasedTable(messages, "thread_member");
+			const memberScope = mailboxId
+				? eq(member.mailboxId, mailboxId)
+				: accessibleMailboxIds.length > 0
+					? inArray(member.mailboxId, accessibleMailboxIds)
+					: eq(member.userId, user.id);
 			const members = await db
-				.select({ id: messages.id, key: threadKey, read: messages.read })
-				.from(messages)
-				.where(and(where, inArray(threadKey, keys)));
-			for (const member of members) {
-				const list = threadMessageIds.get(member.key) ?? [];
-				list.push(member.id);
-				threadMessageIds.set(member.key, list);
-				const counts = scopedThreadCounts.get(member.key) ?? { total: 0, unread: 0 };
+				.select({ id: member.id, threadId: member.threadId, read: member.read, userId: member.userId })
+				.from(member)
+				.where(and(
+					memberScope,
+					inArray(member.threadId, keys),
+					sql`exists (select 1 from ${messages} where ${messages.id} = ${member.id} and ${where})`,
+				));
+			for (const row of members) {
+				const key = row.threadId!;
+				const list = threadMessageIds.get(key) ?? [];
+				list.push(row.id);
+				threadMessageIds.set(key, list);
+				const counts = scopedThreadCounts.get(key) ?? { total: 0, unread: 0 };
 				counts.total += 1;
-				if (!member.read) counts.unread += 1;
-				scopedThreadCounts.set(member.key, counts);
+				if (!row.read) counts.unread += 1;
+				scopedThreadCounts.set(key, counts);
 			}
 		}
 	} else {
-		const [totals, pageRows] = await Promise.all([
-			db.select({ total: count() }).from(messages).where(where),
-			db
-				.select(messageListColumns)
-				.from(messages)
-				.where(where)
-				.orderBy(desc(messages.createdAt))
-				.limit(limit)
-				.offset(offset),
-		]);
-		total = totals[0]?.total ?? 0;
-		rows = pageRows;
+		const pageRows = await db
+			.select(messageListColumns)
+			.from(messages)
+			.where(where)
+			.orderBy(desc(messages.createdAt))
+			.limit(limit + 1)
+			.offset(offset);
+		const page = splitPageRows(pageRows, limit);
+		rows = page.rows;
+		hasMore = page.hasMore;
+		// The full count runs only for an offset past the end, so the client can step back to the last page.
+		total = pageTotalWithoutCount(offset, rows.length, hasMore) ?? (hasMore ? null : await countMessageList(db, where, false));
 	}
 	// Conversation sizes for the rows on this page, so the list can show "(3)"
 	// next to a subject the way threaded clients do.
@@ -245,5 +282,5 @@ export async function GET(request: Request) {
 		};
 	});
 
-	return NextResponse.json({ messages: enrichedRows, total, limit, offset, grouped: groupByThread });
+	return NextResponse.json({ messages: enrichedRows, total, hasMore, limit, offset, grouped: groupByThread });
 }

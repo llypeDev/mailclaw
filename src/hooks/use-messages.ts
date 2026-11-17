@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
-import type { Message, MessageFilterOptions, MessageFolder } from "./types";
+import { useEffect, useRef, useState } from "react";
+import type { Message, MessageFilterOptions, MessageFolder, MessageListResponse } from "./types";
+import { fetchMessageTotal, peekMessageTotal, rememberMessageTotal } from "./message-total-cache";
+import { getMessageTotalKey, hasNextMessagePage } from "./message-total-utils";
 import {
 	clearMessageCountsCache,
 	clearMessageListCache,
@@ -9,6 +11,11 @@ import {
 } from "./utils";
 
 const REFRESH_DEBOUNCE_MS = 150;
+
+function initialTotal(page: MessageListResponse | undefined, params: URLSearchParams): number | null {
+	if (!page) return null;
+	return typeof page.total === "number" ? page.total : peekMessageTotal(params) ?? null;
+}
 
 export function useMessages(
 	folder: MessageFolder,
@@ -23,7 +30,13 @@ export function useMessages(
 	));
 	const [messages, setMessages] = useState<Message[]>(initialPage?.messages ?? []);
 	const [isLoading, setIsLoading] = useState(enabled && !initialPage);
-	const [total, setTotal] = useState(initialPage?.total ?? 0);
+	// Null while the view's total is unknown: a full page does not carry it, and the count is fetched apart.
+	const [total, setTotal] = useState<number | null>(() => initialTotal(initialPage, getMessageQueryParams(folder, mailboxId, filters, folderId)));
+	const [hasMore, setHasMore] = useState(() => initialPage
+		? hasNextMessagePage(initialPage, initialPage.offset ?? 0, initialPage.messages?.length ?? 0)
+		: false);
+	// Which view `total` belongs to, so paging and refreshes keep it while a new count loads.
+	const totalKey = useRef<string | null>(initialPage ? getMessageTotalKey(getMessageQueryParams(folder, mailboxId, filters, folderId)) : null);
 	const [limit, setLimit] = useState(initialPage?.limit ?? filters?.limit ?? 25);
 	const [offset, setOffset] = useState(initialPage?.offset ?? filters?.offset ?? 0);
 
@@ -41,10 +54,28 @@ export function useMessages(
 				const params = getMessageQueryParams(folder, mailboxId, filters, folderId);
 				const data = await fetchMessageList(params, force);
 				if (!cancelled && currentRequest === requestNumber) {
+					const pageOffset = data.offset ?? filters?.offset ?? 0;
 					setMessages(data.messages ?? []);
-					setTotal(data.total ?? 0);
+					setHasMore(hasNextMessagePage(data, pageOffset, data.messages?.length ?? 0));
 					setLimit(data.limit ?? filters?.limit ?? 25);
-					setOffset(data.offset ?? filters?.offset ?? 0);
+					setOffset(pageOffset);
+					const key = getMessageTotalKey(params);
+					const sameView = totalKey.current === key;
+					totalKey.current = key;
+					if (typeof data.total === "number") {
+						rememberMessageTotal(params, data.total);
+						setTotal(data.total);
+					} else {
+						const known = peekMessageTotal(params);
+						if (known !== undefined) setTotal(known);
+						else {
+							// Keep this view's last total on screen until the new count arrives.
+							if (!sameView) setTotal(null);
+							void fetchMessageTotal(params).then((counted) => {
+								if (!cancelled && currentRequest === requestNumber && counted !== null) setTotal(counted);
+							});
+						}
+					}
 				}
 			} finally {
 				if (!cancelled && currentRequest === requestNumber) setIsLoading(false);
@@ -93,7 +124,8 @@ export function useMessages(
 			window.removeEventListener("mailclaw:messages-changed", patchReadState);
 			if (refreshTimer) window.clearTimeout(refreshTimer);
 		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on every field of `filters` (callers pass a new object each render, which would refetch on every render)
 	}, [enabled, filters?.group, filters?.limit, filters?.offset, filters?.query, filters?.read, filters?.title, folder, folderId, mailboxId]);
 
-	return { messages, unreadCount, isLoading, total, limit, offset, updateMessages: setMessages };
+	return { messages, unreadCount, isLoading, total, hasMore, limit, offset, updateMessages: setMessages };
 }

@@ -1,2 +1,5 @@
-/** Messages removed per request; each one costs an R2 delete and two D1 writes. */
-export const EMPTY_FOLDER_BATCH_SIZE = 100;
+/**
+ * Messages removed per request. They are deleted in batches of `MESSAGE_DELETE_BATCH` (90), each a
+ * handful of queries and one bucket delete per kind of object, so two batches fit one request.
+ */
+export const EMPTY_FOLDER_BATCH_SIZE = 180;

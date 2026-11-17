@@ -1,5 +1,6 @@
 import { queryDns } from "@/lib/dns-query";
 import { isPublicIpv4 } from "@/lib/spam/domain-utils";
+import { createCachedHostResolver } from "./host-cache";
 
 export const REMOTE_IMAGE_MAX_URL_LENGTH = 4096;
 export const REMOTE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
@@ -29,7 +30,7 @@ export class RemoteImageError extends Error {
 }
 
 export type RemoteImageResult = {
-	body: Uint8Array;
+	body: Uint8Array<ArrayBuffer>;
 	contentType: string;
 };
 
@@ -136,7 +137,7 @@ function signatureMatches(contentType: string, bytes: Uint8Array): boolean {
 	}
 }
 
-async function readLimitedBody(response: Response, maxBytes: number): Promise<Uint8Array> {
+async function readLimitedBody(response: Response, maxBytes: number): Promise<Uint8Array<ArrayBuffer>> {
 	const declaredLength = Number(response.headers.get("content-length"));
 	if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
 		await response.body?.cancel().catch(() => undefined);
@@ -182,10 +183,12 @@ export function isPublicAddress(address: string): boolean {
 	return !/^(f[cd]|fe[89ab]|ff)/.test(value);
 }
 
-async function defaultResolveHost(hostname: string): Promise<string[]> {
+async function resolveHostOverDns(hostname: string): Promise<string[]> {
 	const [v4, v6] = await Promise.all([queryDns(hostname, "A"), queryDns(hostname, "AAAA")]);
 	return [...v4, ...v6];
 }
+
+const defaultResolveHost = createCachedHostResolver(resolveHostOverDns);
 
 /** A public-looking name can still resolve to a private address, so check what it resolves to. */
 async function assertPublicHost(resolve: (hostname: string) => Promise<string[]>, hostname: string): Promise<void> {
@@ -250,7 +253,7 @@ export async function fetchRemoteImage(value: string, options: RemoteImageFetchO
 				const receivedType = (response.headers.get("content-type") ?? "missing content type").split(";", 1)[0].slice(0, 100);
 				throw new RemoteImageError(`Remote resource is not a supported image (${receivedType})`, 415, "unsupported_type");
 			}
-			let body: Uint8Array;
+			let body: Uint8Array<ArrayBuffer>;
 			try {
 				body = await readLimitedBody(response, maxBytes);
 			} catch (error) {

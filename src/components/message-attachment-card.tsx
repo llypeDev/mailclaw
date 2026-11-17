@@ -24,6 +24,7 @@ export function MessageAttachmentCard({
 			className="group flex w-full items-center gap-3 rounded-lg border border-neutral-200 p-2.5 text-left transition-colors hover:border-blue-200 hover:bg-blue-50/40"
 		>
 			{visual.thumbnail === "image" && (
+				// eslint-disable-next-line @next/next/no-img-element -- attachment served by an authenticated API route
 				<img
 					src={previewUrl}
 					alt=""

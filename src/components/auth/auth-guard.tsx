@@ -6,6 +6,7 @@ import { fetchSessionInfo, peekSessionInfo } from "@/hooks/use-current-user";
 import type { AuthGuardProps } from "./auth-guard-types";
 import { LoadingTransition } from "@/components/loading-transition";
 import { saveUserTimeZonePreference } from "@/lib/time/client";
+import { earlyBootstrapScript } from "@/lib/bootstrap/utils";
 
 export function AuthGuard({ children, mode = "protected", requireMailbox, requireRole, requirePrimary, requireFeature, allowAuthenticated }: AuthGuardProps) {
 	const pathname = usePathname();
@@ -89,5 +90,11 @@ export function AuthGuard({ children, mode = "protected", requireMailbox, requir
 	}, []);
 
 	if (mode === "public") return <>{children}</>;
-	return <LoadingTransition ready={authorized}>{children}</LoadingTransition>;
+	return (
+		<>
+			{/* Starts /api/bootstrap during HTML parsing, so the session check below finds it under way. */}
+			<script dangerouslySetInnerHTML={{ __html: earlyBootstrapScript }} suppressHydrationWarning />
+			<LoadingTransition ready={authorized}>{children}</LoadingTransition>
+		</>
+	);
 }

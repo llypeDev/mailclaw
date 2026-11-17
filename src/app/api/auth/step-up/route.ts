@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 	const { action, targetUserId } = parsed.data;
 	if (targetUserId && !action.startsWith("admin.")) return authError("invalid_request", 400);
 	if (action.startsWith("admin.") && auth.user.role !== "admin") return authError("verification_failed", 403);
-	if (!verifyPassword(parsed.data.password, auth.user.passwordHash)) {
+	if (!(await verifyPassword(parsed.data.password, auth.user.passwordHash))) {
 		return authError("password_incorrect", 400);
 	}
 	// A password alone is not enough when password sign-ins require a second

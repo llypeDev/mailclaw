@@ -1,4 +1,4 @@
-import type { ParsedSearchQuery, SearchToken } from "./types";
+import type { FtsMatch, ParsedSearchQuery, SearchToken } from "./types";
 import { dateFromZonedFields, normalizeTimeZone } from "@/lib/time/utils";
 
 /**
@@ -113,7 +113,7 @@ function ftsTerm(term: string, phrase: boolean): string {
  * column; free text is ANDed across the whole row. Returns null when there is
  * nothing to match, so callers skip the index entirely.
  */
-export function buildFtsMatch(parsed: ParsedSearchQuery): string | null {
+export function buildFtsMatch(parsed: ParsedSearchQuery): FtsMatch | null {
 	const parts: string[] = [];
 
 	for (const token of tokenizeSearchText(parsed.text)) {
@@ -134,10 +134,11 @@ export function buildFtsMatch(parsed: ParsedSearchQuery): string | null {
 	column("{to_addr cc_addr}", parsed.to);
 
 	if (parts.length === 0) return null;
-	// FTS5 has no unary NOT: "a NOT b" is binary. A leading negation is turned
-	// into "match anything" minus the term.
+	// FTS5 has no unary NOT ("a NOT b" is binary) and no expression matching
+	// every row, so a query of only negations is returned as the rows to exclude.
 	const positives = parts.filter((part) => !part.startsWith("NOT "));
 	const negatives = parts.filter((part) => part.startsWith("NOT ")).map((part) => part.slice(4));
-	const base = positives.length > 0 ? positives.join(" AND ") : `${ftsString("")}*`;
-	return negatives.length > 0 ? `(${base}) NOT (${negatives.join(" OR ")})` : base;
+	if (positives.length === 0) return { mode: "exclude", expression: negatives.join(" OR ") };
+	const base = positives.join(" AND ");
+	return { mode: "include", expression: negatives.length > 0 ? `(${base}) NOT (${negatives.join(" OR ")})` : base };
 }

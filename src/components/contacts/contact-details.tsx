@@ -64,6 +64,7 @@ export function ContactDetailsTrigger({
 		return () => {
 			cancelled = true;
 		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- `t` only words the error; a language switch must not refetch over the name being edited
 	}, [address, mailboxId, name, open]);
 
 	async function saveContact() {
@@ -98,7 +99,7 @@ export function ContactDetailsTrigger({
 				{shownName}
 			</button>
 			<Dialog open={open} onOpenChange={handleOpenChange}>
-				<DialogContent>
+				<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto">
 					<DialogHeader>
 						<DialogTitle>{t("contact.title")}</DialogTitle>
 						<DialogDescription>{t("contact.description")}</DialogDescription>

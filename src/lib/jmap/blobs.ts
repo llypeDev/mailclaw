@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { messageAttachments, messages } from "@/db/schema";
 import { newId } from "@/lib/ids";
+import { JMAP_DRAFT_RAW_PREFIX } from "@/lib/email/unsubscribe";
 import { LIMITS } from "./constants";
 import { decodeBlobId, uploadBlobId } from "./ids";
 import { listAccessibleMailboxIdSet } from "./access";
@@ -41,7 +42,8 @@ export async function deleteUpload(ctx: JmapContext, uploadId: string): Promise<
  * back instead of the rebuilt minimal message.
  */
 export async function storeRawDraftMime(ctx: JmapContext, messageId: string, raw: ArrayBuffer): Promise<string> {
-	const key = `drafts/${messageId}.eml`;
+	// Drafts are outbound, so `has_unsubscribe` stays false and the prefix says that was decided.
+	const key = `${JMAP_DRAFT_RAW_PREFIX}${messageId}.eml`;
 	await ctx.env.BUCKET.put(key, raw, {
 		httpMetadata: { contentType: "message/rfc822" },
 		customMetadata: { userId: ctx.auth.userId, messageId },

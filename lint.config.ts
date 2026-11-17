@@ -138,9 +138,13 @@ const lintConfig = {
         "allowTernary": false
       }
     ],
+    // A leading underscore marks a parameter kept on purpose: an interface or call-site shape the body
+    // does not need (e.g. `withSession(_bookmark)`), or a prop/field dropped from a rest spread.
     "no-unused-vars": [
       "warn",
-      {}
+      {
+        "argsIgnorePattern": "^_"
+      }
     ],
     "typescript/no-wrapper-object-types": "error",
     "typescript/prefer-as-const": "error",

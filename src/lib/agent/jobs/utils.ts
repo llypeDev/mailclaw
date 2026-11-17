@@ -28,10 +28,13 @@ export async function scheduleAutoDraft(env: CloudflareEnv, input: { mailboxId: 
 	if (input.status !== "received" || input.folderId || input.spamAnalysisError || (input.spamVerdict && input.spamVerdict !== "inbox") || isAutomaticMessage(input.sender, input.headers)) return;
 	if (!await getAgentEnabled(env)) return;
 	const db = getDb(env);
+	// Switches before addresses: resolving the mailbox's addresses takes several queries, and most
+	// mailboxes have auto-drafts off.
 	const [settings] = await db.select().from(mailboxAgentSettings).where(eq(mailboxAgentSettings.mailboxId, input.mailboxId)).limit(1);
+	if (!settings?.autoDraftEnabled) return;
 	const [mailbox] = await db.select().from(mailboxes).where(eq(mailboxes.id, input.mailboxId)).limit(1);
+	if (mailbox?.autoReplyEnabled) return;
 	if (mailbox && (await getMailboxDomainAddresses(db, mailbox)).includes(normalizeEmailAddress(input.sender))) return;
-	if (!settings?.autoDraftEnabled || mailbox?.autoReplyEnabled) return;
 	const reviewerUserId = settings.reviewerUserId || input.ownerUserId;
 	const [reviewer] = await db.select().from(users).where(eq(users.id, reviewerUserId)).limit(1);
 	if (!reviewer || reviewer.disabled || !(await getMailboxAccessLevel(db, reviewer, input.mailboxId))?.canSendOnBehalf) return;

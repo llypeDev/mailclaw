@@ -24,11 +24,14 @@ export async function POST(request: Request) {
 	}
 	const parsed = mfaVerifySchema.safeParse(body);
 	if (!parsed.success) return authError("invalid_request", 400);
-	// Codes are six digits; the login limiter is what stops brute force.
+	// Codes are six digits: the login limiter caps guesses per IP, and each
+	// challenge allows MAX_LOGIN_CHALLENGE_ATTEMPTS before the password has to
+	// be entered again.
 	if (!(await allowLoginAttempt(env, request))) {
 		return authError("rate_limited", 429, { "Retry-After": "60" });
 	}
 
+	// Counts this try against the challenge; one that ran out reads as expired.
 	const userId = await getLoginChallengeUserId(env, parsed.data.challengeToken);
 	if (!userId) return authError("passkey_expired", 401);
 	const db = getDb(env);

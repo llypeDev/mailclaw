@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { contacts } from "@/db/schema";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { deleteAvatarImages } from "@/lib/avatar-images";
 import { getEnv } from "@/lib/cloudflare";
 import { normalizeEmailAddress } from "@/lib/email/address";
@@ -15,7 +15,9 @@ import { getContactByEmail, listContacts, parseContactsLimit, saveManualContact,
 
 export async function GET(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	const url = new URL(request.url);
 	const mailboxId = url.searchParams.get("mailboxId");
 	const email = normalizeEmailAddress(url.searchParams.get("address") ?? "");
@@ -69,7 +71,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	const body = (await request.json()) as ContactRequestInput;
 	const email = normalizeEmailAddress(body.address ?? "");
 	const displayName = body.displayName?.trim() || null;
@@ -110,7 +114,9 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	const body = (await request.json()) as ContactRequestInput;
 	const email = normalizeEmailAddress(body.address ?? "");
 	const displayName = body.displayName?.trim() ?? "";
@@ -144,7 +150,9 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	const url = new URL(request.url);
 	const mailboxId = url.searchParams.get("mailboxId");
 	const email = normalizeEmailAddress(url.searchParams.get("address") ?? "");

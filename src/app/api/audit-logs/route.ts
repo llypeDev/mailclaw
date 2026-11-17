@@ -3,12 +3,14 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { auditLogs, domains, mailboxes, users } from "@/db/schema";
 import { assertPrimaryAdmin } from "@/lib/auth/admin";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
+import { clampIntParam } from "@/lib/http/pagination";
 
 export async function GET(request: Request) {
 	const env = getEnv();
-	const admin = await requireUser(env, request);
+	const { user: admin, error } = await requireSessionUser(env, request);
+	if (error) return error;
 	try {
 		assertPrimaryAdmin(admin);
 	} catch {
@@ -16,7 +18,7 @@ export async function GET(request: Request) {
 	}
 
 	const url = new URL(request.url);
-	const limit = Math.min(Number(url.searchParams.get("limit") ?? 100), 200);
+	const limit = clampIntParam(url.searchParams.get("limit"), 100, 1, 200);
 	const db = getDb(env);
 	const targetUsers = aliasedTable(users, "target_users");
 	const rows = await db

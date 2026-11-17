@@ -99,6 +99,7 @@ export default function BackupsPage() {
   const download = useMutation({ mutationFn: downloadBackup });
   const restore = useMutation({
     mutationFn: restoreBackup,
+    // eslint-disable-next-line nextjs-js/no-location-assign-relative-destination -- after a restore the app reloads from scratch, dropping all client state from before it
     onSuccess: () => window.location.assign("/login"),
   });
   const error =

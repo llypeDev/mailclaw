@@ -3,6 +3,7 @@ import { getDb } from "@/db";
 import { pushSubscriptions, sessions } from "@/db/schema";
 import type { NewMessageNotification } from "@/lib/realtime/types";
 import { formatSenderLabel } from "@/lib/email/sender-label";
+import { PUSH_TIMEOUT_MS } from "@/lib/http/fetch-timeout";
 
 type VapidConfig = {
 	publicKey: string;
@@ -240,6 +241,8 @@ async function sendSubscriptionPush(
 			Urgency: "normal",
 		},
 		body: toArrayBuffer(body),
+		// The caller logs a rejection like any other failed delivery.
+		signal: AbortSignal.timeout(PUSH_TIMEOUT_MS),
 	});
 }
 

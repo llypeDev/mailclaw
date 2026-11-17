@@ -9,7 +9,7 @@ const fixture = await loadFixture({
 		"next/server": "export const NextResponse={json:(data,init)=>Response.json(data,init)};",
 		"@/db": "export function getDb(){return globalThis.passwordTest.db}",
 		"@/lib/cloudflare": "export function getEnv(){return {}}",
-		"@/lib/auth/cookies": "export async function requireUser(){return globalThis.passwordTest.user}",
+		"@/lib/api/auth": "export async function requireSessionUser(){return {user:globalThis.passwordTest.user,error:null}}",
 		"@/lib/auth/session": "export function getSessionTokenFromRequestHeaders(){return 'session'} export async function deleteUserSessions(){}",
 		"@/lib/auth/password": "export const PASSWORDLESS_PASSWORD_HASH='!passkey-only'; export function hasPasswordHash(value){return value!=='!passkey-only'} export function hashPassword(value){return 'hashed-'+value} export function verifyPassword(){return false}",
 		"@/lib/auth/webauthn/grants": "export async function consumeStepUpGrant(){return globalThis.passwordTest.consume()} export async function bumpSecurityVersion(){globalThis.passwordTest.sqlite.exec('UPDATE users SET security_version=security_version+1')}",

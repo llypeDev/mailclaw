@@ -139,6 +139,7 @@ export function LoadingTransition({ children, ready }: LoadingTransitionProps) {
 				>
 					<span className="sr-only">{loaderVisible ? t("nav.loading") : ""}</span>
 					<div aria-hidden="true" className="flex w-64 flex-col items-center gap-6">
+						{/* eslint-disable-next-line @next/next/no-img-element -- small static splash icon at a fixed size */}
 						<img
 							src={SPLASH_ICON}
 							alt=""

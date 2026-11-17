@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { getDb } from "@/db";
 import { domains, mailboxes, users } from "@/db/schema";
 import { assertAdmin } from "@/lib/auth/admin";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
 
 type Db = ReturnType<typeof getDb>;
@@ -109,8 +109,10 @@ export function accountListItemFromUser(user: {
 /** An admin session allowed to manage accounts and mailbox sharing. */
 export async function requireAccountsAdmin(request: Request) {
 	const env = getEnv();
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return { env, user: null, error: auth.error };
 	try {
-		const user = await requireUser(env, request);
+		const user = auth.user;
 		assertAdmin(user);
 		return { env, user, error: null };
 	} catch {

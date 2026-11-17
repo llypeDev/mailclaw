@@ -82,7 +82,7 @@ export function PasskeyFirstChoice({
 	return (
 		<Dialog open={open} onOpenChange={(next) => { if (next) onOpenChange(true); }}>
 			<DialogContent
-				className="sm:max-w-[480px]"
+				className="max-h-[calc(100vh-4rem)] overflow-y-auto sm:max-w-[480px]"
 				showCloseButton={false}
 				onEscapeKeyDown={(event) => event.preventDefault()}
 				onInteractOutside={(event) => event.preventDefault()}

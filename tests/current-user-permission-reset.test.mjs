@@ -9,10 +9,12 @@ import { JSDOM } from "jsdom";
 const project = join(dirname(fileURLToPath(import.meta.url)), "..");
 const directory = mkdtempSync(join(project, "node_modules", "permission-user-test-"));
 after(() => rmSync(directory, { recursive: true, force: true }));
-await build({ entryPoints: [join(project, "src/hooks/use-current-user.ts")], outfile: join(directory, "user.mjs"), bundle: true, platform: "node", format: "esm", packages: "external", plugins: [{ name: "test-auth", setup(builder) { builder.onResolve({ filter: /^@\/lib\/auth\/client$/ }, () => ({ path: "auth", namespace: "mock" })); builder.onLoad({ filter: /.*/, namespace: "mock" }, () => ({ contents: "export const AUTH_SESSION_CHANGED_EVENT='permission-session-changed';export function authFetch(){return globalThis.fetchUserResponse()}", loader: "js" })); } }], logLevel: "silent" });
+await build({ entryPoints: [join(project, "src/hooks/use-current-user.ts")], outfile: join(directory, "user.mjs"), bundle: true, platform: "node", format: "esm", packages: "external", plugins: [{ name: "test-auth", setup(builder) { builder.onResolve({ filter: /^@\/lib\/auth\/client$/ }, () => ({ path: "auth", namespace: "mock" })); builder.onLoad({ filter: /.*/, namespace: "mock" }, () => ({ contents: "export const AUTH_SESSION_CHANGED_EVENT='permission-session-changed';export function authFetch(){return globalThis.fetchUserResponse()}export function getClientSessionToken(){return null}", loader: "js" })); } }], logLevel: "silent" });
 const { fetchCurrentUser, clearCurrentUserCache, useCurrentUser } = await import(pathToFileURL(join(directory, "user.mjs")).href);
 globalThis.fetch = () => globalThis.fetchUserResponse();
-const response = role => ({ ok: true, json: async () => ({ user: { id: role, role, isPrimaryAdmin: role === "admin", canManageDomains: role === "admin" } }) });
+// The first read goes through /api/bootstrap (`session`); later ones through /api/auth/me (`user`).
+const accountUser = role => ({ id: role, role, isPrimaryAdmin: role === "admin", canManageDomains: role === "admin" });
+const response = role => ({ ok: true, json: async () => ({ session: { user: accountUser(role) }, user: accountUser(role) }) });
 
 test("an old account response cannot repopulate permissions or clear the new inflight request", async () => {
 	clearCurrentUserCache(); let oldResolve, newResolve;

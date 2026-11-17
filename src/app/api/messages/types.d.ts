@@ -15,5 +15,8 @@ export type ConversationPageInput = {
 
 export type ConversationPage = {
 	ids: string[];
-	total: number;
+	/** Whether another page of conversations follows this one. */
+	hasMore: boolean;
+	/** Conversations in the folder, when known without a count; see `pageTotalWithoutCount`. */
+	total: number | null;
 };

@@ -55,6 +55,7 @@ export default async function HomePage() {
           className="flex items-center gap-3"
           aria-label={t("home.homeLabel", { app: branding.appName })}
         >
+          {/* eslint-disable-next-line @next/next/no-img-element -- branding icon (API route or small static PNG) at a fixed size */}
           <img src={branding.hasCustomIcon ? "/api/branding/icon" : "/icon-96.png"} height={32} width={32} alt="" />
           <span className="hidden text-base font-semibold tracking-tight sm:inline">
             {branding.appName}

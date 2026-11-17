@@ -8,9 +8,12 @@ import { getEnv } from "@/lib/cloudflare";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
 import { createAuditLogs } from "@/lib/mailboxes/audit";
 import { permanentlyDeleteMessages } from "@/lib/email/permanent-delete";
-import { applySpamFeedback } from "@/lib/spam/feedback";
-import type { BulkMessagePayload } from "./types";
+import { applySpamFeedbackToMessages } from "@/lib/spam/feedback";
+import { readJsonBody } from "@/lib/http/request";
+import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import {
+	BULK_BODY_MAX_BYTES,
+	bulkMessagePayloadSchema,
 	getReadValueForBulkAction,
 	getStatusForBulkAction,
 	isAllowedBulkMessageAction,
@@ -52,7 +55,18 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const payload = (await request.json()) as BulkMessagePayload;
+	let body: unknown;
+	try {
+		body = await readJsonBody(request, BULK_BODY_MAX_BYTES);
+	} catch (error) {
+		if (error instanceof RequestBodyTooLargeError) return NextResponse.json({ error: "Request body is too large" }, { status: 413 });
+		return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+	}
+	const parsed = bulkMessagePayloadSchema.safeParse(body);
+	if (!parsed.success) {
+		return NextResponse.json({ error: "Invalid bulk message request" }, { status: 400 });
+	}
+	const payload = parsed.data;
 	const messageIds = [...new Set(payload.messageIds?.filter(Boolean) ?? [])];
 	if (messageIds.length === 0 || !isAllowedBulkMessageAction(payload.action)) {
 		return NextResponse.json({ error: "Invalid bulk message action" }, { status: 400 });
@@ -125,21 +139,18 @@ export async function POST(request: Request) {
 		const deleted = await permanentlyDeleteMessages(env, db, user.id, deletable, "bulk");
 		return NextResponse.json({ ok: true, deleted, skipped: allowedMessageIds.length - deleted });
 	}
+	// Spam verdicts train the mailbox classifier; each message keeps the semantics of a single
+	// verdict, while the reads and writes are batched (see applySpamFeedbackToMessages).
+	const accessFor = (mailboxId: string) => accessByMailbox.get(mailboxId);
 	if (payload.action === "spam") {
-		for (const message of selectedMessages) {
-			if (!allowedIds.has(message.id) || !message.mailboxId) continue;
-			await applySpamFeedback(env, user, message.id, "spam", accessByMailbox.get(message.mailboxId));
-		}
+		await applySpamFeedbackToMessages(env, user, allowedMessageIds, "spam", accessFor);
 		return NextResponse.json({ ok: true });
 	}
 	if (payload.action === "inbox") {
 		const spamMessages = selectedMessages.filter((message) => message.status === "spam" && allowedIds.has(message.id));
 		const spamMessageIds = new Set(spamMessages.map((message) => message.id));
 		const normalMessageIds = allowedMessageIds.filter((messageId) => !spamMessageIds.has(messageId));
-		for (const message of spamMessages) {
-			if (!message.mailboxId) continue;
-			await applySpamFeedback(env, user, message.id, "ham", accessByMailbox.get(message.mailboxId));
-		}
+		if (spamMessages.length) await applySpamFeedbackToMessages(env, user, spamMessages.map((message) => message.id), "ham", accessFor);
 		if (normalMessageIds.length) {
 			for (let index = 0; index < normalMessageIds.length; index += MESSAGE_ID_CHUNK) {
 				await db.update(messages).set(values).where(inArray(messages.id, normalMessageIds.slice(index, index + MESSAGE_ID_CHUNK)));

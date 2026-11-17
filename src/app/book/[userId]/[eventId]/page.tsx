@@ -32,7 +32,9 @@ export default function PublicBookingEventPage() {
 	const [slots, setSlots] = useState<BookingSlot[]>([]);
 	const [timeZone, setTimeZone] = useState("UTC");
 	const [month, setMonth] = useState("");
-	const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+	// "Today" is read once when the page opens, so re-renders cannot move it.
+	const [openedAt] = useState(() => new Date().toISOString());
+	const [selectedDate, setSelectedDate] = useState(() => openedAt.slice(0, 10));
 	const [selectedSlot, setSelectedSlot] = useState<BookingSlot | null>(null);
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
@@ -52,8 +54,8 @@ export default function PublicBookingEventPage() {
 		return grouped;
 	}, [slots, timeZone]);
 	const availableDates = [...slotsByDate.keys()].sort();
-	const todayDate = localDateForSlot({ startsAt: new Date().toISOString(), endsAt: "", localDate: "", time: "" }, timeZone);
-	const visibleMonth = month || localDateForSlot({ startsAt: new Date().toISOString(), endsAt: "", localDate: "", time: "" }, timeZone).slice(0, 7);
+	const todayDate = localDateForSlot({ startsAt: openedAt, endsAt: "", localDate: "", time: "" }, timeZone);
+	const visibleMonth = month || todayDate.slice(0, 7);
 	const firstMonth = availableDates[0]?.slice(0, 7);
 	const lastMonth = availableDates.at(-1)?.slice(0, 7);
 	const timeZones = useMemo(() => event ? bookingTimeZones(event.timeZone, timeZone) : [], [event, timeZone]);
@@ -129,6 +131,7 @@ export default function PublicBookingEventPage() {
 						<div className="mb-4 max-w-48"><LanguageSelector /></div>
 						<div className="flex min-w-0 items-center gap-3 max-sm:order-first max-sm:mb-5">
 
+							{/* eslint-disable-next-line @next/next/no-img-element -- branding icon (API route or small static PNG) at a fixed size */}
 							<img src={branding.iconUrl} width={24} height={24} alt={branding.appName || "Mailclaw"} />
 
 							<span className="truncate font-semibold">{branding.appName}</span>

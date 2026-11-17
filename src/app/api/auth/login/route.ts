@@ -4,6 +4,7 @@ import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
 import { verifyPassword } from "@/lib/auth/password";
+import { upgradePasswordHashIfNeeded } from "@/lib/auth/password-upgrade";
 import { loginSchema } from "@/lib/validators";
 import { allowLoginAttempt } from "@/lib/auth/rate-limit";
 import { verifyTurnstileToken } from "@/lib/auth/turnstile";
@@ -37,10 +38,11 @@ export async function POST(request: Request) {
 	const [user] = await db.select().from(users).where(eq(users.email, parsed.data.email)).limit(1);
 	// A passwordless account has no usable password; it still takes the same
 	// generic error so the response cannot be used to enumerate accounts.
-	if (!user || !verifyPassword(parsed.data.password, user.passwordHash)) {
+	if (!user || !(await verifyPassword(parsed.data.password, user.passwordHash))) {
 		return authError("invalid_credentials", 401);
 	}
 	if (user.disabled || user.deletedAt) return authError("account_disabled", 403);
+	await upgradePasswordHashIfNeeded(env, user.id, parsed.data.password, user.passwordHash);
 
 	// The password is right but this account requires a second factor: hand
 	// back a short-lived challenge instead of a session.

@@ -22,6 +22,7 @@ export function TrashRetentionSettings() {
 			})
 			.catch((nextError) => setError(nextError instanceof Error ? nextError.message : t("settings.trash.loadFailed")))
 			.finally(() => setLoading(false));
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount; `t` only words the error, and a language switch must not refetch over the selection
 	}, []);
 
 	async function updateDays(nextDays: number | null) {

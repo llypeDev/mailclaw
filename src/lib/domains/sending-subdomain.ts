@@ -20,6 +20,15 @@ function isSendingUnauthorized(error: unknown): boolean {
 }
 
 /**
+ * Cloudflare will not let this account send for the domain: 401/2036 (most often the
+ * account is not on Workers Paid) or 403 (the token lacks Email Sending). An
+ * MxConflictError is not one of these, since the user can resolve it by consenting.
+ */
+export function isSendingAuthorizationError(error: unknown): error is CloudflareApiError {
+	return error instanceof CloudflareApiError && (isSendingUnauthorized(error) || error.status === 403);
+}
+
+/**
  * Returns the zone's sending subdomain for `hostname`, creating it when missing.
  * When Cloudflare refuses because of another service's MX records, this throws
  * MxConflictError unless `replaceMx` is set, in which case it deletes them (pushing

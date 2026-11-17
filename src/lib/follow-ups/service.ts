@@ -1,23 +1,44 @@
-import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
-import { getDb } from "@/db";
+import { and, desc, eq, inArray, lte } from "drizzle-orm";
+import { getDb, type AppDatabase } from "@/db";
 import { followUps, messages } from "@/db/schema";
 import { isMissingTableError } from "@/lib/database-errors";
+import { chunk } from "@/lib/email/attachment-storage-utils";
 import { newId } from "@/lib/ids";
-import { followUpDueAt } from "./follow-up-utils";
+import { followUpDueAt, isReplyTo } from "./follow-up-utils";
 import type { DueFollowUp, MessageFollowUp } from "./types";
 
 /** Rows processed per cron run; the next run picks up the rest. */
 const REMINDER_BATCH = 200;
 const MAX_LISTED = 50;
 
-/** An inbound message joined the sent message's thread after it was sent. Mirrors `isReplyTo`. */
-const hasReply = sql<number>`exists (
-	select 1 from messages reply
-	where reply.thread_id = ${messages.threadId}
-		and reply.mailbox_id = ${messages.mailboxId}
-		and reply.direction = 'inbound'
-		and reply.created_at > ${messages.createdAt}
-)`;
+/** Sent messages per reply lookup: at most 2 × 40 + 1 bound parameters, under D1's 100. */
+const REPLY_LOOKUP_BATCH = 40;
+
+type SentMessage = { mailboxId: string | null; threadId: string | null; createdAt: Date };
+
+/** The sent messages from `sent` that an inbound message answered since (`isReplyTo`). */
+async function findReplied<T extends SentMessage>(db: AppDatabase, sent: T[]): Promise<Set<T>> {
+	const replied = new Set<T>();
+	const threaded = sent.filter((row) => row.mailboxId && row.threadId);
+	for (const batch of chunk(threaded, REPLY_LOOKUP_BATCH)) {
+		// Every inbound message of these threads: threads are short, so this is a handful of rows read off
+		// messages_thread_idx (mailbox_id, thread_id). `user_id` is selected only because no covering index
+		// holds it; a query the folder's covering index can answer makes SQLite without statistics walk
+		// the whole mailbox there instead.
+		const candidates = await db
+			.select({ mailboxId: messages.mailboxId, threadId: messages.threadId, direction: messages.direction, createdAt: messages.createdAt, userId: messages.userId })
+			.from(messages)
+			.where(and(
+				inArray(messages.mailboxId, Array.from(new Set(batch.map((row) => row.mailboxId!)))),
+				inArray(messages.threadId, Array.from(new Set(batch.map((row) => row.threadId!)))),
+				eq(messages.direction, "inbound"),
+			));
+		for (const row of batch) {
+			if (candidates.some((candidate) => isReplyTo(row, candidate))) replied.add(row);
+		}
+	}
+	return replied;
+}
 
 async function markReplied(env: CloudflareEnv, ids: string[]): Promise<void> {
 	if (ids.length === 0) return;
@@ -40,13 +61,14 @@ export async function runFollowUpReminders(env: CloudflareEnv, now: Date): Promi
 	try {
 		const db = getDb(env);
 		const rows = await db
-			.select({ id: followUps.id, replied: hasReply })
+			.select({ id: followUps.id, mailboxId: messages.mailboxId, threadId: messages.threadId, createdAt: messages.createdAt })
 			.from(followUps)
 			.innerJoin(messages, eq(messages.id, followUps.messageId))
 			.where(and(eq(followUps.status, "pending"), lte(followUps.dueAt, now)))
 			.limit(REMINDER_BATCH);
-		await markReplied(env, rows.filter((row) => row.replied).map((row) => row.id));
-		const due = rows.filter((row) => !row.replied).map((row) => row.id);
+		const replied = await findReplied(db, rows);
+		await markReplied(env, rows.filter((row) => replied.has(row)).map((row) => row.id));
+		const due = rows.filter((row) => !replied.has(row)).map((row) => row.id);
 		if (due.length) await db.update(followUps).set({ status: "due" }).where(inArray(followUps.id, due));
 	} catch (error) {
 		if (!isMissingTableError(error)) throw error;
@@ -56,16 +78,17 @@ export async function runFollowUpReminders(env: CloudflareEnv, now: Date): Promi
 /** The user's reminders that came due without a reply, newest first. A reply that arrived since closes them. */
 export async function listDueFollowUps(env: CloudflareEnv, userId: string, mailboxId?: string | null): Promise<DueFollowUp[]> {
 	try {
-		const rows = await getDb(env)
+		const db = getDb(env);
+		const rows = await db
 			.select({
 				id: followUps.id,
 				messageId: followUps.messageId,
 				dueAt: followUps.dueAt,
 				mailboxId: messages.mailboxId,
+				threadId: messages.threadId,
 				subject: messages.subject,
 				toAddr: messages.toAddr,
-				sentAt: messages.createdAt,
-				replied: hasReply,
+				createdAt: messages.createdAt,
 			})
 			.from(followUps)
 			.innerJoin(messages, eq(messages.id, followUps.messageId))
@@ -76,14 +99,15 @@ export async function listDueFollowUps(env: CloudflareEnv, userId: string, mailb
 			))
 			.orderBy(desc(followUps.dueAt))
 			.limit(MAX_LISTED);
-		await markReplied(env, rows.filter((row) => row.replied).map((row) => row.id));
-		return rows.filter((row) => !row.replied).map((row) => ({
+		const replied = await findReplied(db, rows);
+		await markReplied(env, rows.filter((row) => replied.has(row)).map((row) => row.id));
+		return rows.filter((row) => !replied.has(row)).map((row) => ({
 			id: row.id,
 			messageId: row.messageId,
 			mailboxId: row.mailboxId,
 			subject: row.subject,
 			toAddr: row.toAddr,
-			sentAt: row.sentAt.toISOString(),
+			sentAt: row.createdAt.toISOString(),
 			dueAt: row.dueAt.toISOString(),
 		}));
 	} catch (error) {
@@ -94,16 +118,18 @@ export async function listDueFollowUps(env: CloudflareEnv, userId: string, mailb
 
 export async function getMessageFollowUp(env: CloudflareEnv, userId: string, messageId: string): Promise<MessageFollowUp | null> {
 	try {
-		const [row] = await getDb(env)
-			.select({ id: followUps.id, status: followUps.status, dueAt: followUps.dueAt, replied: hasReply })
+		const db = getDb(env);
+		const [row] = await db
+			.select({ id: followUps.id, status: followUps.status, dueAt: followUps.dueAt, mailboxId: messages.mailboxId, threadId: messages.threadId, createdAt: messages.createdAt })
 			.from(followUps)
 			.innerJoin(messages, eq(messages.id, followUps.messageId))
 			.where(and(eq(followUps.messageId, messageId), eq(followUps.userId, userId)))
 			.limit(1);
 		if (!row) return null;
 		const open = row.status === "pending" || row.status === "due";
-		if (open && row.replied) await markReplied(env, [row.id]);
-		return { id: row.id, status: open && row.replied ? "replied" : row.status, dueAt: row.dueAt.toISOString() };
+		const replied = open && (await findReplied(db, [row])).has(row);
+		if (replied) await markReplied(env, [row.id]);
+		return { id: row.id, status: replied ? "replied" : row.status, dueAt: row.dueAt.toISOString() };
 	} catch (error) {
 		if (isMissingTableError(error)) return null;
 		throw error;

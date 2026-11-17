@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
+import { requireSessionUser } from "@/lib/api/auth";
 import { assertPrimaryAdmin } from "@/lib/auth/admin";
-import { requireUser } from "@/lib/auth/cookies";
 import { getBackupConfigurationStatus } from "@/lib/backups/export";
 import { runDatabaseBackup } from "@/lib/backups/runner";
 import {
@@ -12,16 +12,12 @@ import {
 import { getEnv } from "@/lib/cloudflare";
 import { parseBackupSettingsInput } from "./utils";
 
-async function requireAdmin(request: Request) {
-	const env = getEnv();
-	const user = await requireUser(env, request);
-	assertPrimaryAdmin(user);
-	return { env, user };
-}
-
 export async function GET(request: Request) {
+	const env = getEnv();
+	const { user, error } = await requireSessionUser(env, request);
+	if (error) return error;
 	try {
-		const { env } = await requireAdmin(request);
+		assertPrimaryAdmin(user);
 		const [settings, backupList] = await Promise.all([
 			getBackupSettings(env),
 			listBackups(env),
@@ -37,8 +33,11 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
+	const env = getEnv();
+	const { user, error } = await requireSessionUser(env, request);
+	if (error) return error;
 	try {
-		const { env } = await requireAdmin(request);
+		assertPrimaryAdmin(user);
 		const input = parseBackupSettingsInput(await request.json());
 		if (!input) return NextResponse.json({ error: "Invalid backup settings" }, { status: 400 });
 		await updateBackupSettings(env, input);
@@ -49,8 +48,11 @@ export async function PUT(request: Request) {
 }
 
 export async function POST(request: Request) {
+	const env = getEnv();
+	const { user, error: authError } = await requireSessionUser(env, request);
+	if (authError) return authError;
 	try {
-		const { env, user } = await requireAdmin(request);
+		assertPrimaryAdmin(user);
 		const backupId = await createBackupRecord(env, "manual", user.id);
 		await runDatabaseBackup(env, backupId);
 		return NextResponse.json({ backupId });

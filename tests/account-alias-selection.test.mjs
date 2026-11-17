@@ -233,7 +233,10 @@ for (const enabled of [true, false]) {
 test("account creation still enforces admin authorization", async (t) => {
 	const f = await fixture(t);
 	assert.equal((await f.post("api", {}, "invalid-test-key")).status, 401);
-	assert.equal((await f.post("dashboard", {}, "invalid-test-session")).status, 403);
+	// No session is a 401; a signed-in user who is not an admin is still a 403.
+	assert.equal((await f.post("dashboard", {}, "invalid-test-session")).status, 401);
+	f.database.db.exec("INSERT INTO users (id, email, password_hash, name, role, is_primary_admin, created_at) VALUES ('member', 'member@one.test', 'hash', 'Member', 'user', 0, 1)");
+	assert.equal((await f.post("dashboard", {}, await createSession(f.env, "member"))).status, 403);
 	assert.equal(f.calls.length, 0);
 });
 

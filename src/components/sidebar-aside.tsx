@@ -58,6 +58,7 @@ export function MobileMenuButton({ className }: { className?: string }) {
 				<Menu size={20} />
 			</button>
 			<Link href="/inbox" aria-label={t("navigation.inbox")} className="-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-neutral-200 md:hidden">
+				{/* eslint-disable-next-line @next/next/no-img-element -- branding icon (API route or small static PNG) at a fixed size */}
 				<img src={branding.iconUrl} height={28} width={28} alt="" />
 			</Link>
 		</>

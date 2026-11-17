@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { assertPrimaryAdmin } from "@/lib/auth/admin";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
 import { isNodeRuntime } from "@/lib/runtime";
 import type {
@@ -36,18 +36,11 @@ function getSourceRepository(env: CloudflareEnv): string {
 
 export async function authorizeAdminRequest(request: Request) {
   const env = getEnv();
-  let user: Awaited<ReturnType<typeof requireUser>>;
+  const auth = await requireSessionUser(env, request);
+  if (auth.error) return { error: auth.error };
 
   try {
-    user = await requireUser(env, request);
-  } catch {
-    return {
-      error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
-    };
-  }
-
-  try {
-    assertPrimaryAdmin(user);
+    assertPrimaryAdmin(auth.user);
   } catch {
     return {
       error: NextResponse.json({ error: "Forbidden" }, { status: 403 }),

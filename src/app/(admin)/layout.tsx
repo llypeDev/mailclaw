@@ -1,12 +1,10 @@
 "use client";
 
 import { SkipToContent } from "@/components/skip-to-content";
-import Link from "next/link";
-import { HelpCircle, Search } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { ComposeProvider } from "@/components/compose/compose-context";
-import { FloatingComposer } from "@/components/compose/floating-composer";
+import { LazyFloatingComposer } from "@/components/compose/lazy-floating-composer";
 import { MailSearchProvider } from "@/components/mail-search/mail-search-context";
 import { MailboxProvider } from "@/components/mailbox-provider";
 import { MailboxSelector } from "@/components/mailbox-selector";
@@ -72,7 +70,7 @@ export default function DashboardLayout({
                 <div className="w-full max-w-3xl">{children}</div>
               </main>
             </div>
-            <FloatingComposer />
+            <LazyFloatingComposer />
           </div>
           </ShortcutsProvider>
           </MailSearchProvider>

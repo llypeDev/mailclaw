@@ -19,7 +19,21 @@ import {
   submitPrimaryDomain,
   submitRegistration,
 } from "./utils";
-import type { DomainPreflight, DomainSetupResult, SetupRequirementCheck } from "./types";
+import type { DomainPreflight, DomainSetupResult, RegisterResult, SetupRequirementCheck } from "./types";
+
+/**
+ * Whether registration finished with sending turned off although it was asked for.
+ * Uses the response's `sendingUnavailable` when the route reports it, otherwise the
+ * primary domain's recorded `sendingRequested`, which is cleared on that fallback.
+ */
+async function sendingFellBack(data: RegisterResult & { sendingUnavailable?: unknown }): Promise<boolean> {
+  if ("sendingUnavailable" in data) return !!data.sendingUnavailable;
+  try {
+    return (await getSetupStatus()).primaryDomain?.sendingRequested === false;
+  } catch {
+    return false;
+  }
+}
 
 export function RegisterClient() {
   const { t } = useLanguage();
@@ -49,9 +63,11 @@ export function RegisterClient() {
   const [loading, setLoading] = useState(false);
   const [turnstileReset, setTurnstileReset] = useState(0);
   const [usePasskey, setUsePasskey] = useState(false);
+  const [receiveOnlyRedirect, setReceiveOnlyRedirect] = useState<string | null>(null);
 
   useEffect(() => {
     void runPreparation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setup preparation runs once on mount; `runPreparation` is recreated every render and is re-run only by the retry button
   }, []);
 
   const accountDomain = setupDomain ?? primaryDomain;
@@ -205,8 +221,8 @@ export function RegisterClient() {
       replaceMxRecords,
       skipDns: setupDomain ? setupSkipDns : undefined,
     });
-    setLoading(false);
     if (!ok) {
+      setLoading(false);
       if (data.code === "MX_RECORDS_CONFLICT") {
         setMxRecordsExist(true);
         setReplaceMxRecords(false);
@@ -222,7 +238,16 @@ export function RegisterClient() {
       setTurnstileReset((value) => value + 1);
       return;
     }
-    window.location.assign(data.redirect ?? "/login");
+    const redirect = data.redirect ?? "/login";
+    // Without Workers Paid, Cloudflare refuses Email Sending and the domain is set up
+    // receive-only; say so before leaving, since nothing else on the way in would.
+    const requestedSending = setupDomain ? setupEnableSending && !setupSkipDns : primaryDomainSendingRequested === true;
+    if (requestedSending && (await sendingFellBack(data))) {
+      setLoading(false);
+      setReceiveOnlyRedirect(redirect);
+      return;
+    }
+    window.location.assign(redirect);
   }
 
   const showDomainStep = hasPrimaryDomain === false && step === 2;
@@ -411,6 +436,20 @@ export function RegisterClient() {
             {loading ? t("setup.addingDomain") : t("common.continue")}
           </Button>
         </form>
+      ) : receiveOnlyRedirect !== null ? (
+        <div className="space-y-5">
+          <div role="status" className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
+            <AlertTriangle className="mt-1 h-4 w-4 shrink-0" />
+            <span>{t("setup.sendingUnavailable", { domain: accountDomain ?? t("setup.thisWorkspace") })}</span>
+          </div>
+          <Button
+            type="button"
+            className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+            onClick={() => window.location.assign(receiveOnlyRedirect)}
+          >
+            {t("common.continue")}
+          </Button>
+        </div>
       ) : (
         <form method="post" onSubmit={onSubmit} className="space-y-5">
 					{mxChecking && (

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { deleteUserSessions, getSessionTokenFromRequestHeaders } from "@/lib/auth/session";
 import { hasPasswordHash, hashPassword, PASSWORDLESS_PASSWORD_HASH, verifyPassword } from "@/lib/auth/password";
 import { getEnv } from "@/lib/cloudflare";
@@ -18,7 +18,9 @@ import { parseChangePasswordRequest } from "./utils";
 
 export async function PATCH(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	let parsed: ChangePasswordInput;
 
 	try {
@@ -31,17 +33,20 @@ export async function PATCH(request: Request) {
 	if (!hasPasswordHash(user.passwordHash)) {
 		return authError("verification_required", 400);
 	}
-	if (!verifyPassword(parsed.currentPassword, user.passwordHash)) {
+	if (!(await verifyPassword(parsed.currentPassword, user.passwordHash))) {
 		return authError("password_incorrect", 400);
 	}
-	if (verifyPassword(parsed.newPassword, user.passwordHash)) {
+	// The current password just verified, so "new equals old" is a string
+	// comparison; a second key derivation would only cost CPU.
+	if (parsed.newPassword.normalize("NFKC") === parsed.currentPassword.normalize("NFKC")) {
 		return authError("invalid_request", 400);
 	}
 
 	const db = getDb(env);
+	const passwordHash = await hashPassword(parsed.newPassword);
 	const [updated] = await db
 		.update(users)
-		.set({ passwordHash: hashPassword(parsed.newPassword) })
+		.set({ passwordHash })
 		.where(and(
 			eq(users.id, user.id),
 			eq(users.passwordHash, user.passwordHash),
@@ -61,7 +66,9 @@ export async function PATCH(request: Request) {
 /** Gives a passkey-only account a password, after re-authenticating. */
 export async function POST(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	if (hasPasswordHash(user.passwordHash)) {
 		return authError("invalid_request", 409);
 	}
@@ -77,9 +84,10 @@ export async function POST(request: Request) {
 		return authError("verification_required", 401);
 	}
 	const db = getDb(env);
+	const passwordHash = await hashPassword(parsed.data.newPassword);
 	try {
 		const updated = await db.update(users).set({
-			passwordHash: hashPassword(parsed.data.newPassword),
+			passwordHash,
 			...(parsed.data.requireSecondFactor === undefined ? {} : { requireSecondFactor: parsed.data.requireSecondFactor }),
 		}).where(and(
 			eq(users.id, user.id),
@@ -103,7 +111,9 @@ export async function POST(request: Request) {
 /** Removing the password is only allowed while another sign-in method remains. */
 export async function DELETE(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const auth = await requireSessionUser(env, request);
+	if (auth.error) return auth.error;
+	const user = auth.user;
 	const parsed = stepUpTokenSchema.safeParse(await readJsonBody(request, 16 * 1024).catch(() => null));
 	const sessionToken = getSessionTokenFromRequestHeaders(request);
 	if (!parsed.success || !sessionToken) return authError("verification_required", 400);

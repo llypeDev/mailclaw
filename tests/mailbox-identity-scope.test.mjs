@@ -116,7 +116,9 @@ test("the mailbox routes gate the account name on the identity check", () => {
 		"PATCH must not treat every personal mailbox as the account identity",
 	);
 
-	const list = read("src/app/api/mailboxes/route.ts");
+	// `GET /api/mailboxes` (and `/api/bootstrap`) build the list with `listMailboxOptions`.
+	assert.match(read("src/app/api/mailboxes/route.ts"), /listMailboxOptions\(/);
+	const list = read("src/lib/mailboxes/mailbox-options.ts");
 	assert.match(list, /tracksAccountIdentity\(mailbox, user\.email\)/);
 	assert.ok(
 		!/mailbox\.type === "personal"\n?\s*\? \{ displayName: user\.name/.test(list),

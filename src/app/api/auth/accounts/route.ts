@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 		Array.from(new Set(parseAccountTokens(jar.get(ACCOUNTS_COOKIE)?.value).concat(active ?? []))),
 	);
 	const response = NextResponse.json({
-		accounts: accounts.map(({ token, avatarKey, ...account }) => ({ ...account, active: token === active })),
+		accounts: accounts.map(({ token, avatarKey: _avatarKey, ...account }) => ({ ...account, active: token === active })),
 	});
 	response.headers.set("Cache-Control", "no-store");
 	return response;
@@ -47,7 +47,7 @@ export async function DELETE(request: Request) {
 	response.cookies.set(
 		ACCOUNTS_COOKIE,
 		serializeAccountTokens(accounts.filter((account) => account.userId !== userId).map((account) => account.token)),
-		cookieOptions(),
+		cookieOptions(request),
 	);
 	return response;
 }

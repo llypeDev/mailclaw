@@ -18,6 +18,14 @@ import {
   removeManagedMailbox,
 } from "../utils";
 
+function fetchAll(id: string) {
+  return Promise.all([
+    fetchManagedAccount(id),
+    fetchManagedMailboxes(id),
+    fetchManagedDomains(),
+  ]);
+}
+
 export default function AccountMailboxesPage() {
   const { t } = useLanguage();
   const { id } = useParams<{ id: string }>();
@@ -29,14 +37,6 @@ export default function AccountMailboxesPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  function fetchAll() {
-    return Promise.all([
-      fetchManagedAccount(id),
-      fetchManagedMailboxes(id),
-      fetchManagedDomains(),
-    ]);
-  }
-
   function applyLoaded([nextAccount, nextMailboxes, nextDomains]: Awaited<ReturnType<typeof fetchAll>>) {
     setAccount(nextAccount);
     setMailboxes(nextMailboxes);
@@ -45,11 +45,11 @@ export default function AccountMailboxesPage() {
   }
 
   async function load() {
-    applyLoaded(await fetchAll());
+    applyLoaded(await fetchAll(id));
   }
 
   useEffect(() => {
-    void fetchAll().then(applyLoaded).catch((error) =>
+    void fetchAll(id).then(applyLoaded).catch((error) =>
       setMessage(
         error instanceof Error ? error.message : t("account.mailboxes.loadFailed"),
       ),

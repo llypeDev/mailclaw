@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, TextAlignJustify } from "@/components/icons";
+import { Menu } from "@/components/icons";
 import { useBranding } from "./branding-provider";
 import { useSidebar } from "./sidebar-state";
 import type { SidebarHeaderProps } from "./sidebar-state-types";
@@ -12,6 +12,8 @@ export function SidebarHeader({ href, label }: SidebarHeaderProps) {
 	const { t } = useLanguage();
 	const branding = useBranding();
 	const { minimal, toggle } = useSidebar();
+	// The branding icon is an API route or a small static PNG at a fixed size, so next/image has nothing to optimise.
+	/* eslint-disable @next/next/no-img-element */
 	const toggleButton = <button type="button" onClick={toggle} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-600 hover:bg-neutral-200" aria-label={minimal ? t("navigation.expandMenu") : t("navigation.collapseMenu")}>
 		{minimal ? <img src={branding.iconUrl} height={32} width={32} alt="" /> : <Menu size={20} />}
 	</button>;
@@ -21,4 +23,5 @@ export function SidebarHeader({ href, label }: SidebarHeaderProps) {
 			{!minimal && <Link href={href} className="flex min-w-0 items-center gap-3"><img src={branding.iconUrl} height={32} width={32} alt="" /><span className="truncate text-lg font-semibold text-neutral-800">{label ?? branding.appName}</span></Link>}
 		</div>
 	);
+	/* eslint-enable @next/next/no-img-element */
 }

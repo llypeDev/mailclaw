@@ -21,9 +21,16 @@ export function isMissingTableError(error: unknown): boolean {
 	return errorChainMatches(error, /no such table|relation "[^"]+" does not exist|table '[^']+' doesn't exist/i);
 }
 
-/** A column added by a migration that may not be applied yet. */
+/**
+ * A column added by a migration that may not be applied yet. PostgreSQL quotes a
+ * bare name (`column "x" does not exist`) but not a qualified one
+ * (`column login_challenges.attempts does not exist`).
+ */
 export function isMissingColumnError(error: unknown): boolean {
-	return errorChainMatches(error, /no such column|has no column named|column "[^"]+" (of relation "[^"]+" )?does not exist|unknown column/i);
+	return errorChainMatches(
+		error,
+		/no such column|has no column named|column (?:"[^"]+"|[\w$"]+\.[\w$".]+) (of relation "[^"]+" )?does not exist|unknown column/i,
+	);
 }
 
 export function isUniqueConstraintError(error: unknown): boolean {

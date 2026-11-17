@@ -1,4 +1,4 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull, lt } from "drizzle-orm";
 import { getDb } from "@/db";
 import { conversationNotes, messages, outboundJobs } from "@/db/schema";
 import { newId } from "@/lib/ids";
@@ -205,6 +205,7 @@ async function deliverEmail(env: CloudflareEnv, delivery: PreparedDelivery): Pro
 	const { input, messageId, jobId, from, mailboxId, to, cc, bcc, headers, attachments } = delivery;
 	const db = getDb(env);
 	const toAddr = joinEmailAddressList(to);
+	let response: Awaited<ReturnType<typeof sendThroughProvider>>;
 	try {
 		const provider = await getOutboundProviderConfig(env, from);
 		// Cloudflare's 5 MiB cap forces big files into download links; Resend takes
@@ -222,7 +223,7 @@ async function deliverEmail(env: CloudflareEnv, delivery: PreparedDelivery): Pro
 			await db.update(messages).set({ textBody: prepared.text ?? null, htmlBody: prepared.html ?? null }).where(eq(messages.id, messageId));
 		}
 		const html = input.trackOpens && prepared.html ? await withTrackingPixel(env, messageId, from, prepared.html, input.publicOrigin) : prepared.html;
-		const response = await sendThroughProvider(
+		response = await sendThroughProvider(
 			env,
 			provider,
 			{
@@ -244,45 +245,6 @@ async function deliverEmail(env: CloudflareEnv, delivery: PreparedDelivery): Pro
 			},
 			jobId,
 		);
-
-		// A fresh message starts its own conversation; Cloudflare's Message-ID is what
-		// any reply will name in In-Reply-To, so key the thread by it.
-		const threadId = input.threadId ?? normalizeMessageId(response.messageId) ?? messageId;
-		await db
-			.update(messages)
-			.set({
-				status: "sent",
-				providerMessageId: response.messageId,
-				threadId,
-			})
-			.where(eq(messages.id, messageId));
-		// Notes taken while the message waited in the queue keyed its conversation by
-		// the message id; move them onto the thread key the send just established.
-		if (threadId !== messageId) {
-			await db
-				.update(conversationNotes)
-				.set({ threadKey: threadId })
-				.where(and(eq(conversationNotes.mailboxId, mailboxId), eq(conversationNotes.threadKey, messageId)));
-		}
-		await db.update(outboundJobs).set({ status: "sent", updatedAt: new Date() }).where(eq(outboundJobs.id, jobId));
-		if (input.followUpDays) {
-			// The message is already out; a reminder that cannot be stored must not fail the send.
-			await setFollowUp(env, { messageId, userId: input.userId, days: input.followUpDays }).catch((error) => console.error("Follow-up reminder skipped", error));
-		}
-
-		await dispatchWebhooks(env, input.userId, "message.outbound", {
-			messageId,
-			providerMessageId: response.messageId,
-			to: toAddr,
-			cc: cc.length ? joinEmailAddressList(cc) : undefined,
-		});
-		await createAuditLog(env, {
-			actorUserId: input.userId,
-			mailboxId,
-			messageId,
-			action: "email.send",
-			metadata: { to: toAddr, cc: cc.length ? joinEmailAddressList(cc) : undefined, subject: input.subject },
-		});
 	} catch (err) {
 		const error = err instanceof Error ? err.message : "Send failed";
 		await db.update(messages).set({ status: "failed" }).where(eq(messages.id, messageId));
@@ -293,6 +255,113 @@ async function deliverEmail(env: CloudflareEnv, delivery: PreparedDelivery): Pro
 		await dispatchWebhooks(env, input.userId, "message.failed", { messageId, error });
 		throw err;
 	}
+
+	// The provider has accepted the message. Nothing below may report the send as failed:
+	// the user would resend and the recipient would get it twice. A step that cannot be
+	// recorded is logged, and `sweepStuckOutboundJobs` settles a job left in "sending".
+	const afterSend = async (step: string, run: () => Promise<unknown>) => {
+		try {
+			await run();
+		} catch (error) {
+			console.error(`Post-send step failed (${step}) for ${messageId}`, error);
+		}
+	};
+	// A fresh message starts its own conversation; Cloudflare's Message-ID is what
+	// any reply will name in In-Reply-To, so key the thread by it.
+	const threadId = input.threadId ?? normalizeMessageId(response.messageId) ?? messageId;
+	await afterSend("message status", () => db
+		.update(messages)
+		.set({
+			status: "sent",
+			providerMessageId: response.messageId,
+			threadId,
+		})
+		.where(eq(messages.id, messageId)));
+	// Notes taken while the message waited in the queue keyed its conversation by
+	// the message id; move them onto the thread key the send just established.
+	if (threadId !== messageId) {
+		await afterSend("conversation notes", () => db
+			.update(conversationNotes)
+			.set({ threadKey: threadId })
+			.where(and(eq(conversationNotes.mailboxId, mailboxId), eq(conversationNotes.threadKey, messageId))));
+	}
+	await afterSend("job status", () => db.update(outboundJobs).set({ status: "sent", updatedAt: new Date() }).where(eq(outboundJobs.id, jobId)));
+	if (input.followUpDays) {
+		const days = input.followUpDays;
+		await afterSend("follow-up reminder", () => setFollowUp(env, { messageId, userId: input.userId, days }));
+	}
+	await afterSend("webhooks", () => dispatchWebhooks(env, input.userId, "message.outbound", {
+		messageId,
+		providerMessageId: response.messageId,
+		to: toAddr,
+		cc: cc.length ? joinEmailAddressList(cc) : undefined,
+	}));
+	await afterSend("audit log", () => createAuditLog(env, {
+		actorUserId: input.userId,
+		mailboxId,
+		messageId,
+		action: "email.send",
+		metadata: { to: toAddr, cc: cc.length ? joinEmailAddressList(cc) : undefined, subject: input.subject },
+	}));
+}
+
+const STUCK_SENDING_MS = 15 * 60 * 1000;
+
+/**
+ * Settles jobs left in "sending" by a delivery that never finished (the isolate or process
+ * died mid-send). Nothing else moves a job out of that state, so without this the message
+ * would sit in the scheduled list forever. A job whose message is already "sent" only missed
+ * its own status write; any other is reported as failed, since it cannot be known whether
+ * the provider accepted it and re-sending could deliver twice.
+ */
+export async function sweepStuckOutboundJobs(env: CloudflareEnv, now = new Date()): Promise<number> {
+	const db = getDb(env);
+	const stuck = await db
+		.select({ id: outboundJobs.id, messageId: outboundJobs.messageId })
+		.from(outboundJobs)
+		.where(and(eq(outboundJobs.status, "sending"), lt(outboundJobs.updatedAt, new Date(now.getTime() - STUCK_SENDING_MS))))
+		.limit(50);
+	let settled = 0;
+	for (const job of stuck) {
+		const [message] = job.messageId
+			? await db.select({ status: messages.status }).from(messages).where(eq(messages.id, job.messageId)).limit(1)
+			: [];
+		const sent = message?.status === "sent";
+		const claimed = await db
+			.update(outboundJobs)
+			.set(sent
+				? { status: "sent", updatedAt: new Date() }
+				: { status: "failed", error: "Delivery was interrupted. The message may not have been sent.", updatedAt: new Date() })
+			.where(and(eq(outboundJobs.id, job.id), eq(outboundJobs.status, "sending")))
+			.returning({ id: outboundJobs.id });
+		if (!claimed.length) continue;
+		settled += 1;
+		if (!sent && job.messageId) {
+			await db.update(messages).set({ status: "failed" }).where(and(eq(messages.id, job.messageId), eq(messages.status, "queued")));
+		}
+	}
+	return settled;
+}
+
+/**
+ * Re-arms the wake-up for every scheduled send still queued. The self-hosted queue lives in
+ * memory, so a restart drops the timers of undo-window and scheduled messages; without this
+ * they would stay "queued" and never go out. Safe to repeat: the consumer claims each job once.
+ */
+export async function requeueScheduledOutboundJobs(env: CloudflareEnv): Promise<number> {
+	const db = getDb(env);
+	const jobs = await db
+		.select({ id: outboundJobs.id, messageId: outboundJobs.messageId, scheduledAt: outboundJobs.scheduledAt })
+		.from(outboundJobs)
+		.where(and(eq(outboundJobs.status, "queued"), isNotNull(outboundJobs.scheduledAt)))
+		.limit(1000);
+	let requeued = 0;
+	for (const job of jobs) {
+		if (!job.messageId || !job.scheduledAt) continue;
+		await enqueueOutboundJob(env, job.id, job.messageId, job.scheduledAt);
+		requeued += 1;
+	}
+	return requeued;
 }
 
 /**
@@ -430,6 +499,9 @@ export async function processOutboundQueue(
 		await enqueueScheduledDelivery(env, delivery, scheduledAt);
 		return;
 	}
+	// Load first: a failure here must leave the job queued so the queue retry can send it.
+	// Once claimed, nothing but delivery moves the job out of "sending".
+	const attachments = await loadMessageAttachmentContents(env, payload.messageId);
 	// Claim the job before delivering. Cancelling deletes only a job that is still
 	// "queued", so exactly one of cancel and delivery wins.
 	const claimed = await claimJob(db, payload.jobId, job.scheduledAt);
@@ -440,6 +512,6 @@ export async function processOutboundQueue(
 		if (current?.status === "queued") await processOutboundQueue(env, payload);
 		return;
 	}
-	delivery.attachments = await loadMessageAttachmentContents(env, payload.messageId);
+	delivery.attachments = attachments;
 	await deliverEmail(env, delivery);
 }

@@ -395,7 +395,7 @@ export function MessageFolderPage({
 	const setSelectedMessages = listState?.setSelectedMessages ?? setInternalSelectedMessages;
 	const unreadOnly = listState?.unreadOnly ?? internalUnreadOnly;
 	const setUnreadOnly = listState?.setUnreadOnly ?? setInternalUnreadOnly;
-	const { messages, isLoading, total, limit, updateMessages } = useMessages(config.folder, selectedMailbox?.id, {
+	const { messages, isLoading, total, hasMore, limit, updateMessages } = useMessages(config.folder, selectedMailbox?.id, {
 		query,
 		limit: pageSize,
 		offset,
@@ -409,11 +409,14 @@ export function MessageFolderPage({
 	const folderCount = config.folderId
 		? counts.customFolders[config.folderId]
 		: counts.folders[config.folder];
-	const titleTotal = folderCount?.total ?? total;
+	const titleTotal = folderCount?.total ?? total ?? 0;
 	const titleUnread = folderCount?.unread ?? 0;
 	const mailboxAddress = getMailboxAddress(selectedMailbox);
 	const currentAccountName = selectedMailbox?.displayName ?? selectedMailbox?.localPart;
-	const pageRange = getPageRange(offset, messages.length, total);
+	// Until the view's count arrives the range has no total yet; the page itself still knows its rows.
+	const pageRange = total === null
+		? { ...getPageRange(offset, messages.length, offset + messages.length), total: messages.length ? "…" : 0 }
+		: getPageRange(offset, messages.length, total);
 	const selectedIds = useMemo(
 		() => selectedMessages.map((message) => message.id),
 		[selectedMessages],
@@ -473,7 +476,7 @@ export function MessageFolderPage({
 
 	useEffect(() => {
 		if (isLoading || offset === 0 || messages.length > 0) return;
-		setOffset(total > 0 ? Math.floor((total - 1) / limit) * limit : 0);
+		setOffset(total ? Math.floor((total - 1) / limit) * limit : 0);
 	}, [isLoading, offset, messages.length, total, limit, setOffset]);
 
 	const updateSelectedMessage = useCallback((messageId: string, selected: boolean) => {
@@ -628,7 +631,7 @@ export function MessageFolderPage({
 							<Button
 								variant="ghost"
 								size="sm"
-								disabled={offset + messages.length >= total || isLoading}
+								disabled={!hasMore || isLoading}
 								onClick={() => setOffset(offset + limit)}
 								aria-label={t("list.nextPage")}
 							>

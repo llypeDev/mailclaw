@@ -9,3 +9,6 @@ export type MessageCountRow = Pick<
 export type FolderAccumulator = MessageCounts["folders"];
 
 export type CountableFolder = MessageFolder | null;
+
+/** Currently snoozed messages of one mailbox sharing the other counted columns. */
+export type SnoozedCountRow = Omit<MessageCountRow, "snoozedUntil" | "total" | "scheduledTotal"> & { total: number };

@@ -6,7 +6,7 @@ import { buildSnippet, parseRawMime } from "@/lib/email/parse";
 import { boundParsedEmail } from "@/lib/email/inbound-limits";
 import { resolveInboundAddress, resolveInboxRuleDestination } from "@/lib/email/routing";
 import { dispatchWebhooks } from "@/lib/email/webhooks";
-import { getMessageContactNames, upsertContactFromAddress } from "@/lib/contacts/service";
+import { getMessageContactNames, importContactAvatar, recordContactFromAddress } from "@/lib/contacts/service";
 import { getEmailAddress } from "@/lib/email/address";
 import { sendMailboxAutoReply } from "@/lib/email/auto-reply";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
@@ -14,7 +14,7 @@ import { listMessageAttachments, storeMessageAttachments } from "@/lib/email/att
 import { registerInboundInvite } from "@/lib/calendar/invite-store";
 import { inboundAttachmentLimitReason } from "@/lib/email/inbound-attachments";
 import { inboundMessageId } from "@/lib/email/inbound-id";
-import { extractUnsubscribeLinkFromBody, extractUnsubscribeUrlFromRaw, getUnsubscribeUrlFromRawR2Key } from "@/lib/email/unsubscribe";
+import { extractUnsubscribeLinkFromBody, extractUnsubscribeUrlFromRaw, getUnsubscribeUrlForMessage } from "@/lib/email/unsubscribe";
 import { resolveThreadId } from "@/lib/email/threading";
 import { normalizeMessageId } from "@/lib/email/thread-lookup";
 import type { SessionUser } from "@/lib/auth/types";
@@ -77,14 +77,28 @@ export async function processInboundMessage(
 		await dropRaw();
 		return;
 	}
-	const [stored] = await db.select({ id: messages.id }).from(messages).where(and(
-		eq(messages.mailboxId, decision.mailbox.mailboxId),
-		eq(messages.rawR2Key, payload.rawR2Key),
-	)).limit(1);
-	if (stored) {
+	// Filter on raw_r2_key alone so the lookup uses its own index: with mailbox_id in the WHERE,
+	// SQLite without statistics picks the wide (mailbox_id, ...) index and walks the whole mailbox.
+	// Worker keys are random per delivery and intake keys hash the mailbox in, so a key is shared
+	// across mailboxes only when intake could not resolve one; the mailbox is compared here.
+	// The owner's spam switch rides in the same batch (one D1 query) since it is needed right after.
+	const [storedRows, [owner]] = await db.batch([
+		db.select({
+			id: messages.id,
+			mailboxId: messages.mailboxId,
+			createdAt: messages.createdAt,
+			fromAddr: messages.fromAddr,
+			status: messages.status,
+			folderId: messages.folderId,
+			spamVerdict: messages.spamVerdict,
+			spamAnalysisError: messages.spamAnalysisError,
+		}).from(messages).where(eq(messages.rawR2Key, payload.rawR2Key)),
+		db.select({ enabled: users.spamProtectionEnabled }).from(users).where(eq(users.id, decision.mailbox.userId)).limit(1),
+	]);
+	const existing = storedRows.find((row) => row.mailboxId === decision.mailbox?.mailboxId);
+	if (existing) {
 		try {
-			const [existing] = await db.select().from(messages).where(eq(messages.id, stored.id)).limit(1);
-			if (existing && Date.now() - existing.createdAt.getTime() < 30 * 60_000) await scheduleAutoDraft(env, { mailboxId: decision.mailbox.mailboxId, sourceMessageId: existing.id, ownerUserId: decision.mailbox.userId, sender: existing.fromAddr, headers: payload.headers, status: existing.status, folderId: existing.folderId, spamVerdict: existing.spamVerdict, spamAnalysisError: existing.spamAnalysisError });
+			if (Date.now() - existing.createdAt.getTime() < 30 * 60_000) await scheduleAutoDraft(env, { mailboxId: decision.mailbox.mailboxId, sourceMessageId: existing.id, ownerUserId: decision.mailbox.userId, sender: existing.fromAddr, headers: payload.headers, status: existing.status, folderId: existing.folderId, spamVerdict: existing.spamVerdict, spamAnalysisError: existing.spamAnalysisError });
 		} catch (error) { console.error("Auto-draft recovery failed", error); }
 		return;
 	}
@@ -127,7 +141,6 @@ export async function processInboundMessage(
 	});
 	let spamAnalysis: Awaited<ReturnType<typeof analyzeSpam>> | null = null;
 	let spamAnalysisError: string | null = null;
-	const [owner] = await db.select({ enabled: users.spamProtectionEnabled }).from(users).where(eq(users.id, decision.mailbox.userId)).limit(1);
 	if (owner?.enabled !== false) {
 		try {
 			const intelligence = await getSpamIntelligenceConfig(env);
@@ -160,16 +173,15 @@ export async function processInboundMessage(
 		: destination.status;
 	const folderId = status === "spam" ? null : destination.folderId;
 	// A contact the database cannot hold (e.g. an over-long address) must not lose the mail.
-	const contact = await upsertContactFromAddress(env, {
+	const recordedContact = await recordContactFromAddress(env, {
 		userId: decision.mailbox.userId,
 		address: fromAddr,
 		source: "inbound",
-		// Spam senders are strangers at best; do not announce them to Gravatar.
-		lookupAvatar: status !== "spam" && status !== "trash",
 	}).catch((error) => {
 		console.error(`Contact upsert failed for ${messageId}`, error);
 		return null;
 	});
+	const contact = recordedContact?.contact ?? null;
 	let threadId: string;
 	try {
 		threadId = await resolveThreadId(db, {
@@ -290,6 +302,12 @@ export async function processInboundMessage(
 	try {
 		await scheduleAutoDraft(env, { mailboxId: decision.mailbox.mailboxId, sourceMessageId: messageId, ownerUserId: decision.mailbox.userId, sender: fromAddr, headers: payload.headers, status, folderId, spamVerdict: spamAnalysis?.verdict, spamAnalysisError });
 	} catch (error) { console.error("Auto-draft scheduling failed", error); }
+	// Last, once the message is stored and announced: a slow or failing Gravatar only delays the
+	// avatar. Spam senders are strangers at best; do not announce them to Gravatar.
+	if (recordedContact?.created && status !== "spam" && status !== "trash") {
+		await importContactAvatar(env, decision.mailbox.userId, recordedContact.contact.email)
+			.catch((error) => console.error(`Contact avatar import failed for ${messageId}`, error));
+	}
 }
 
 export async function storeRawToR2(
@@ -316,7 +334,7 @@ export async function getMessageWithBody(env: CloudflareEnv, userId: string, mes
 	if (!message || message.userId !== userId) return null;
 	const contactNames = await getMessageContactNames(env, userId, message.fromAddr, message.toAddr);
 	const attachments = await listMessageAttachments(env, messageId);
-	const unsubscribe = await getUnsubscribeUrlFromRawR2Key(env, message.rawR2Key);
+	const unsubscribe = await getUnsubscribeUrlForMessage(env, message);
 	const [scheduledJob] = message.direction === "outbound" && message.status === "queued"
 		? await db
 			.select({ scheduledAt: outboundJobs.scheduledAt })
@@ -350,7 +368,7 @@ export async function getMessageWithBodyForUser(env: CloudflareEnv, user: Sessio
 			: Promise.resolve([]),
 		getMessageContactNames(env, message.userId, message.fromAddr, message.toAddr),
 		listMessageAttachments(env, messageId),
-		getUnsubscribeUrlFromRawR2Key(env, message.rawR2Key),
+		getUnsubscribeUrlForMessage(env, message),
 	]);
 	const { rawR2Key, textBody, htmlBody, ...header } = message;
 	void rawR2Key;
@@ -367,7 +385,7 @@ export async function getMessageWithBodyForUser(env: CloudflareEnv, user: Sessio
 export async function getMessageMetadataForUser(env: CloudflareEnv, user: SessionUser, messageId: string) {
 	const db = getDb(env);
 	const [message] = await db
-		.select({ mailboxId: messages.mailboxId, rawR2Key: messages.rawR2Key, htmlBody: messages.htmlBody, textBody: messages.textBody })
+		.select({ mailboxId: messages.mailboxId, rawR2Key: messages.rawR2Key, hasUnsubscribe: messages.hasUnsubscribe, htmlBody: messages.htmlBody, textBody: messages.textBody })
 		.from(messages)
 		.where(eq(messages.id, messageId))
 		.limit(1);
@@ -376,7 +394,7 @@ export async function getMessageMetadataForUser(env: CloudflareEnv, user: Sessio
 	if (!access?.canRead) return null;
 	const [attachments, unsubscribe] = await Promise.all([
 		listMessageAttachments(env, messageId),
-		getUnsubscribeUrlFromRawR2Key(env, message.rawR2Key),
+		getUnsubscribeUrlForMessage(env, message),
 	]);
 	return {
 		attachments,

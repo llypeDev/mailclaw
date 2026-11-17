@@ -17,10 +17,15 @@ export function getDirection(locale: Locale): "ltr" | "rtl" {
 /** Reads a static asset by path. The browser uses `fetch`; server code passes the `ASSETS` binding. */
 export type AssetReader = (path: string) => Promise<Response>;
 
+/** Where a non-English catalog is served from (a static asset in `public/locales`). */
+export function catalogPath(locale: Locale): string {
+	return `/locales/${locale}.json`;
+}
+
 /** Fetches the catalog for a locale; English is already bundled, others load on demand from `public/locales`. */
 export async function loadMessages(locale: Locale, read: AssetReader = (path) => fetch(path)): Promise<Partial<Messages>> {
 	if (locale === DEFAULT_LOCALE) return en;
-	const response = await read(`/locales/${locale}.json`);
+	const response = await read(catalogPath(locale));
 	if (!response.ok) throw new Error(`Catalog for ${locale} is unavailable (${response.status})`);
 	return response.json();
 }

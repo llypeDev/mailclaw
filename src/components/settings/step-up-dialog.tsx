@@ -95,7 +95,7 @@ export function StepUpDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={close}>
-			<DialogContent className="sm:max-w-[440px]">
+			<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto sm:max-w-[440px]">
 				<DialogHeader>
 					{step && step.total > 1 && (
 						<p aria-live="polite" className="text-xs font-medium uppercase tracking-wide text-neutral-400">

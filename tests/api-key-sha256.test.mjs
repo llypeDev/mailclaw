@@ -89,13 +89,13 @@ test("new API keys and app passwords are SHA-256, not bcrypt", async () => {
 	assert.equal(timingSafeEqualText("abc", "abcd"), false);
 });
 
-test("account passwords stay on bcrypt", () => {
+test("account passwords use scrypt, and legacy bcrypt hashes still verify as API keys", async () => {
 	const password = "correct horse battery";
-	const hash = hashPassword(password);
-	assert.match(hash, /^\$2[aby]\$12\$/);
-	assert.equal(verifyPassword(password, hash), true);
-	assert.equal(verifyPassword("wrong password", hash), false);
-	assert.equal(verifyApiKey(password, hash), true);
+	const hash = await hashPassword(password);
+	assert.match(hash, /^\$scrypt\$/);
+	assert.equal(await verifyPassword(password, hash), true);
+	assert.equal(await verifyPassword("wrong password", hash), false);
+	assert.equal(verifyApiKey(password, bcrypt.hashSync(password, 4)), true);
 });
 
 test("SHA-256 keys authenticate without a bcrypt hash, including JMAP Basic auth", async (t) => {

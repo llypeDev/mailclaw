@@ -24,6 +24,7 @@ import { SectionRowSkeleton } from "@/components/page-skeletons";
 import { clearMailboxesCache } from "@/components/mailbox-provider-utils";
 import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
 import { authFetch } from "@/lib/auth/client";
+import { fetchSessionInfo } from "@/hooks/use-current-user";
 import type { CurrentAccountResponse, Domain, MailboxOwner, MailboxesResponse } from "./types";
 import { formatAccountDateTime } from "../accounts/utils";
 import { getMailboxAddress, getMailboxesBase, getMailboxName } from "./utils";
@@ -49,10 +50,8 @@ export default function MailboxesPage() {
 
 	const account = useQuery({
 		queryKey: ["auth", "me"],
-		queryFn: async () => {
-			const res = await authFetch("/api/auth/me", { redirectOnUnauthorized: false });
-			return (await res.json()) as CurrentAccountResponse;
-		},
+		// The session already cached by the auth guard, so opening the page does not refetch it.
+		queryFn: async (): Promise<CurrentAccountResponse> => ({ user: (await fetchSessionInfo())?.user ?? undefined }),
 	});
 
 	// Prefill empty create fields with the signed-in account when the dialog opens or the account loads.
@@ -147,7 +146,7 @@ export default function MailboxesPage() {
 							{t("mailboxes.new")}
 						</Button>
 					</DialogTrigger>
-					<DialogContent>
+					<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto">
 						<DialogHeader>
 							<DialogTitle>{t("mailboxes.createTitle")}</DialogTitle>
 							<DialogDescription>{t("mailboxes.createDescription")}</DialogDescription>

@@ -79,12 +79,13 @@ export function EmailHtmlRenderer({ html, className, dense = false, preserveLead
 	}, [html, allowRemote, preserveLeadingQuote, quoteToggleLabel]);
 	return <div className={`min-w-0 max-w-full ${className ?? ""}`}>
 		{hasRemote && <div className="mb-2 flex justify-end">
-			<button type="button" aria-pressed={allowRemote} className="rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+			{/* The label names the action, so it is not also an aria-pressed toggle. */}
+			<button type="button" className="rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
 				onClick={() => {
 					if (!allowRemote) onAllowRemote?.();
 					setChoice({ source: html, allow: !allowRemote });
 				}}>
-				{allowRemote ? null : t("message.allowRemote")}
+				{allowRemote ? t("message.blockRemote") : t("message.allowRemote")}
 			</button>
 		</div>}
 		<div className={`max-w-full overflow-x-auto${dense ? " mf-dense" : ""}`} ref={host} />

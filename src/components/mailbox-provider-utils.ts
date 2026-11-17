@@ -31,6 +31,33 @@ export function clearMailboxClientState() {
 	}
 }
 
+/** Reduces `/api/mailboxes` items (also carried by `/api/bootstrap`) to what the client keeps. */
+export function toMailboxOptions(items: readonly MailboxOption[] | null | undefined): MailboxOption[] {
+	return (items ?? []).map((m) => ({
+		id: m.id,
+		domainId: m.domainId,
+		localPart: m.localPart,
+		hostname: m.hostname,
+		displayName: m.displayName,
+		signature: m.signature,
+		autoReplyEnabled: m.autoReplyEnabled,
+		autoReplySubject: m.autoReplySubject,
+		autoReplyBody: m.autoReplyBody,
+		hasAvatar: m.hasAvatar,
+		type: m.type,
+		permission: m.permission,
+		isPrimary: m.isPrimary,
+		senderAddresses: m.senderAddresses,
+	}));
+}
+
+/** Fills the cache from a list read elsewhere (the bootstrap), unless a newer request is already running. */
+export function seedMailboxesCache(items: MailboxOption[]) {
+	if (mailboxesRequest) return;
+	mailboxesCache = items;
+	mailboxesCacheSessionToken = getClientSessionToken();
+}
+
 export async function fetchMailboxOptions(force = false): Promise<MailboxOption[]> {
 	const sessionToken = getClientSessionToken();
 	if (!force && mailboxesCache && mailboxesCacheSessionToken === sessionToken) return mailboxesCache;
@@ -41,22 +68,7 @@ export async function fetchMailboxOptions(force = false): Promise<MailboxOption[
 	mailboxesRequest = authFetch("/api/mailboxes")
 		.then((res) => res.json())
 		.then((data) => {
-			const items = ((data as { mailboxes?: MailboxOption[] }).mailboxes ?? []).map((m) => ({
-				id: m.id,
-				domainId: m.domainId,
-				localPart: m.localPart,
-				hostname: m.hostname,
-				displayName: m.displayName,
-				signature: m.signature,
-				autoReplyEnabled: m.autoReplyEnabled,
-				autoReplySubject: m.autoReplySubject,
-				autoReplyBody: m.autoReplyBody,
-				hasAvatar: m.hasAvatar,
-				type: m.type,
-				permission: m.permission,
-				isPrimary: m.isPrimary,
-				senderAddresses: m.senderAddresses,
-			}));
+			const items = toMailboxOptions((data as { mailboxes?: MailboxOption[] }).mailboxes);
 			if (requestGeneration === cacheGeneration) {
 				mailboxesCache = items;
 				mailboxesCacheSessionToken = sessionToken;

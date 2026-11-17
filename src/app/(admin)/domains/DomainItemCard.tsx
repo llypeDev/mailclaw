@@ -53,6 +53,7 @@ export default function DomainItemCard({
       <div className="flex flex-col items-start gap-3 md:flex-row md:gap-4">
         <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neutral-100 text-neutral-600">
           <Globe2 className="h-5 w-5" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- third-party favicon removed on error; next/image would need the host allow-listed */}
           <img
             src={`https://${item.hostname}/favicon.ico`}
             alt=""

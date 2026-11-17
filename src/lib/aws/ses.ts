@@ -1,4 +1,5 @@
 import { awsJson, awsQuery, AwsError } from "@/lib/aws/client";
+import { SEND_TIMEOUT_MS } from "@/lib/http/fetch-timeout";
 import { xmlBlocks, xmlTag, xmlTags } from "@/lib/aws/xml";
 import type { AwsConfig, SesIdentityStatus } from "@/lib/aws/aws-types";
 
@@ -82,6 +83,7 @@ export async function sendSesEmail(config: AwsConfig, input: SesSendInput): Prom
 	const result = await awsJson<{ MessageId: string }>({
 		...sesV2(config, "/v2/email/outbound-emails"),
 		method: "POST",
+		timeoutMs: SEND_TIMEOUT_MS,
 		json: {
 			FromEmailAddress: input.from,
 			Destination: { ToAddresses: input.to, ...(input.cc?.length ? { CcAddresses: input.cc } : {}), ...(input.bcc?.length ? { BccAddresses: input.bcc } : {}) },

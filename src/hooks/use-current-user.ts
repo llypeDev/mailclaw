@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AUTH_SESSION_CHANGED_EVENT, authFetch } from "@/lib/auth/client";
+import { applyBootstrap, clearBootstrapParts, requestBootstrap } from "@/lib/bootstrap/client";
 
 export type CurrentUser = {
 	id: string;
@@ -15,6 +16,7 @@ export type CurrentUser = {
 	calendarEnabled: boolean;
 	driveEnabled: boolean;
 	hasAvatar: boolean;
+	keyboardShortcutsEnabled?: boolean;
 };
 
 export type SessionInfo = {
@@ -31,6 +33,9 @@ let cachedUser: CurrentUser | null = null;
 let inflight: Promise<SessionInfo | null> | null = null;
 let userRequest: { session: Promise<SessionInfo | null>; user: Promise<CurrentUser | null> } | null = null;
 let generation = 0;
+// The first session read of a page (and of each new sign-in) goes through `/api/bootstrap`, which also
+// answers the mailbox list and the small flags; later refreshes only need `/api/auth/me`.
+let bootstrapPending = true;
 
 export function clearCurrentUserCache(): void {
 	generation += 1;
@@ -38,6 +43,8 @@ export function clearCurrentUserCache(): void {
 	cachedUser = null;
 	inflight = null;
 	userRequest = null;
+	bootstrapPending = true;
+	clearBootstrapParts();
 }
 
 if (typeof window !== "undefined") window.addEventListener(AUTH_SESSION_CHANGED_EVENT, clearCurrentUserCache);
@@ -47,7 +54,7 @@ export function peekSessionInfo(): SessionInfo | null {
 	return cachedSession && Date.now() - cachedSession.at < SESSION_INFO_MAX_AGE_MS ? cachedSession.info : null;
 }
 
-async function requestSessionInfo(): Promise<SessionInfo> {
+async function requestAuthMe(): Promise<SessionInfo> {
 	const cookieResponse = await fetch("/api/auth/me", { cache: "no-store", signal: AbortSignal.timeout(5_000) });
 	const response = cookieResponse.ok || cookieResponse.status !== 401
 		? cookieResponse
@@ -57,8 +64,34 @@ async function requestSessionInfo(): Promise<SessionInfo> {
 	return { status: response.status, ...data };
 }
 
+type SessionRead = { info: SessionInfo; seed?: () => void };
+
+async function requestSessionInfo(): Promise<SessionRead> {
+	if (!bootstrapPending) return { info: await requestAuthMe() };
+	const { status, data } = await requestBootstrap().catch(() => ({ status: 0, data: undefined }));
+	// Only a signed-in answer or a definite 401 is final; anything else (an older deployment
+	// without the route, a network error) falls back to the session endpoint.
+	if (status === 401) return { info: { status } };
+	if (!data) return { info: await requestAuthMe() };
+	return {
+		info: { status, ...(data.session as Omit<SessionInfo, "status">) },
+		seed: () => {
+			bootstrapPending = false;
+			applyBootstrap(data);
+		},
+	};
+}
+
+/** Mirrors a setting saved elsewhere into the cached session, so the next reader sees it. */
+export function updateCachedSessionUser(patch: Partial<NonNullable<SessionInfo["user"]>>): void {
+	if (cachedSession?.info.user) {
+		cachedSession = { ...cachedSession, info: { ...cachedSession.info, user: { ...cachedSession.info.user, ...patch } } };
+	}
+	if (cachedUser) cachedUser = { ...cachedUser, ...patch };
+}
+
 /**
- * The `/api/auth/me` answer shared by the auth guard, sidebar and account menus,
+ * The `/api/auth/me` answer (first read through `/api/bootstrap`) shared by the auth guard, sidebar and account menus,
  * so navigating does not refetch it. `fresh` bypasses the cache; network
  * failures resolve to null and are never cached.
  */
@@ -68,8 +101,9 @@ export function fetchSessionInfo({ fresh = false }: { fresh?: boolean } = {}): P
 	if (!inflight) {
 		const requestGeneration = generation;
 		const request = requestSessionInfo()
-			.then((info) => {
+			.then(({ info, seed }) => {
 				if (requestGeneration !== generation) return null;
+				seed?.();
 				cachedSession = info.status === 200 ? { info, at: Date.now() } : null;
 				cachedUser = info.user ?? null;
 				return info;

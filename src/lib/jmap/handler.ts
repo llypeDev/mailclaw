@@ -1,5 +1,6 @@
 import { getDb } from "@/db";
 import { authenticateApiRequest, hasScope } from "@/lib/api/key-auth";
+import { readBodyWithLimit } from "@/lib/http/limited-body";
 import { LIMITS } from "./constants";
 import { corsHeaders, JmapError, problemResponse } from "./errors";
 import { readBlob, storeUpload } from "./blobs";
@@ -85,7 +86,9 @@ export async function handleJmapRequest(request: Request, env: CloudflareEnv): P
 		const type = request.headers.get("content-type") || "application/octet-stream";
 		const disposition = request.headers.get("content-disposition") ?? "";
 		const name = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i)?.[1] ?? null;
-		const stored = await storeUpload(ctx, await request.arrayBuffer(), type, name ? decodeURIComponent(name) : null);
+		// Refuse from Content-Length, or as soon as the stream passes the limit, instead of buffering it all first.
+		const body = await readBodyWithLimit(request, LIMITS.maxSizeUpload);
+		const stored = body && await storeUpload(ctx, body, type, name ? decodeURIComponent(name) : null);
 		if (!stored) return problemResponse("limit", 413, "Upload too large", { limit: "maxSizeUpload" });
 		return new Response(JSON.stringify(stored), { status: 201, headers: JSON_HEADERS });
 	}
@@ -103,7 +106,9 @@ export async function handleJmapRequest(request: Request, env: CloudflareEnv): P
  * every `ping` seconds (default 30, minimum 10) until the client leaves.
  */
 function eventSource(ctx: JmapContext, url: URL): Response {
-	const ping = Math.max(Number(url.searchParams.get("ping") || 30), 10);
+	// A non-numeric value must not become NaN: setTimeout(NaN) fires at once and would poll in a tight loop.
+	const requestedPing = Number(url.searchParams.get("ping") || 30);
+	const ping = Number.isFinite(requestedPing) ? Math.max(requestedPing, 10) : 30;
 	const closeAfter = url.searchParams.get("closeafter") === "state";
 	const encoder = new TextEncoder();
 	let last = "";

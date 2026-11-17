@@ -13,6 +13,7 @@ import {
 	getEmailWorkerName,
 } from "@/lib/cloudflare-api-utils";
 import { CloudflareApiError } from "@/lib/cloudflare-api-error";
+import { API_TIMEOUT_MS, isTimeoutError, timeoutMessage, withTimeout } from "@/lib/http/fetch-timeout";
 import { getZoneLookupCandidates } from "@/lib/domains/utils";
 export type { CfDnsRecord } from "@/lib/cloudflare-api.types";
 
@@ -22,15 +23,25 @@ export async function cfRequest<T>(
 	init?: RequestInit,
 ): Promise<T> {
 	const auth = getCloudflareAuth(env);
-	const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
-		...init,
-		headers: {
-			...getCloudflareAuthHeaders(auth),
-			"Content-Type": "application/json",
-			...(init?.headers ?? {}),
-		},
-	});
-	const json = (await res.json()) as CfResponse<T>;
+	let res: Response;
+	let json: CfResponse<T>;
+	try {
+		res = await fetch(`https://api.cloudflare.com/client/v4${path}`, withTimeout({
+			...init,
+			headers: {
+				...getCloudflareAuthHeaders(auth),
+				"Content-Type": "application/json",
+				...(init?.headers ?? {}),
+			},
+		}, API_TIMEOUT_MS));
+		json = (await res.json()) as CfResponse<T>;
+	} catch (error) {
+		// Callers already handle CloudflareApiError (status, path, codes), so a timeout is one too.
+		if (isTimeoutError(error)) {
+			throw new CloudflareApiError(`Cloudflare API on ${path}: ${timeoutMessage("Cloudflare", API_TIMEOUT_MS)}`, 504, path, []);
+		}
+		throw error;
+	}
 
 	if (!json.success) {
 		throw new CloudflareApiError(

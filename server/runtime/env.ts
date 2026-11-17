@@ -15,6 +15,58 @@ function optional(name: string): string | undefined {
 	return value || undefined;
 }
 
+/**
+ * Plain string settings the app reads from `env` (see env.d.ts), copied verbatim
+ * from the process environment when set. On Workers these are vars and secrets;
+ * here anything missing from this list is silently ignored, so a new setting read
+ * through `env` must be added. Deliberately an allowlist: the process environment
+ * also holds PATH, credentials of other tools and DATABASE_*, which the database
+ * layer reads from process.env itself and which must not change shape here.
+ */
+export const PASSTHROUGH_VARIABLES = [
+	"AI_MODEL",
+	"AI_BASE_URL",
+	"AI_API_KEY",
+	"B2_KEY_ID",
+	"B2_APPLICATION_KEY",
+	"B2_BUCKET",
+	"B2_ENDPOINT",
+	"S3_BUCKET",
+	// AWS credentials for SES/SNS/S3 (src/lib/aws/config.ts) and the S3 storage fallback.
+	"AWS_ACCESS_KEY_ID",
+	"AWS_SECRET_ACCESS_KEY",
+	"AWS_REGION",
+	"AWS_DEFAULT_REGION",
+	"RESEND_API_KEY",
+	"CF_TOKEN",
+	"CF_API_KEY",
+	"CF_EMAIL",
+	"CF_ACCOUNT_ID",
+	"TURNSTILE_SECRET_KEY",
+	"GITHUB_UPDATE_TOKEN",
+	"GITHUB_UPDATE_REF",
+	"GITHUB_UPDATE_REPO",
+	"GITHUB_UPDATE_SOURCE_REPO",
+	"INBOUND_WEBHOOK_SECRET",
+	"INBOUND_REQUIRE_SIGNED_HEADERS",
+	"VAPID_PUBLIC_KEY",
+	"VAPID_PRIVATE_KEY",
+	"VAPID_SUBJECT",
+	"APNS_KEY_ID",
+	"APNS_TEAM_ID",
+	"APNS_PRIVATE_KEY",
+	"APNS_RELAY_URL",
+	"SPAMHAUS_DQS_KEY",
+	"ABUSECH_AUTH_KEY",
+	"SPAM_DOMAIN_AGE_CHECK",
+] as const;
+
+export function passthroughVariables(source: Record<string, string | undefined> = process.env): Record<string, string | undefined> {
+	const values: Record<string, string | undefined> = {};
+	for (const name of PASSTHROUGH_VARIABLES) values[name] = source[name]?.trim() || undefined;
+	return values;
+}
+
 function mailerConfig(): MailerConfig {
 	const smtp = optional("SMTP_URL");
 	if (smtp) return { kind: "smtp", url: smtp };
@@ -37,9 +89,11 @@ export function createNodeRuntime(): NodeRuntime {
 	const database = getDatabaseConfig({}).driver === "d1" ? openSqliteDatabase(join(dataDir, "mailclaw.sqlite")) : undefined;
 	const bucket = openFileBucket(join(dataDir, "blobs"));
 	const mailer = openMailer(mailerConfig());
-	const inboundQueue = openQueue("mailclaw-inbound");
-	const outboundQueue = openQueue("mailclaw-outbound");
-	const agentQueue = openQueue("mailclaw-agent");
+	// Each inbound job holds a whole raw message (up to SMTP_MAX_SIZE) while it is parsed,
+	// so only a couple run at once; outbound sends and import chunks are lighter.
+	const inboundQueue = openQueue("mailclaw-inbound", { kind: "inbound", concurrency: 2 });
+	const outboundQueue = openQueue("mailclaw-outbound", { kind: "outbound", concurrency: 4 });
+	const agentQueue = openQueue("mailclaw-agent", { kind: "agent", concurrency: 2 });
 	const realtime = new RealtimeHubRegistry();
 	const publicDir = resolve(optional("PUBLIC_DIR") ?? "./public");
 
@@ -50,9 +104,7 @@ export function createNodeRuntime(): NodeRuntime {
 		INBOUND_QUEUE: inboundQueue,
 		OUTBOUND_QUEUE: outboundQueue,
 		AGENT_QUEUE: agentQueue,
-		AI_MODEL: optional("AI_MODEL"),
-		AI_BASE_URL: optional("AI_BASE_URL"),
-		AI_API_KEY: optional("AI_API_KEY"),
+		...passthroughVariables(),
 		REALTIME: realtime.namespace(),
 		ASSETS: openAssets(publicDir),
 		IMAGES: undefined as unknown as CloudflareEnv["IMAGES"],
@@ -60,28 +112,12 @@ export function createNodeRuntime(): NodeRuntime {
 		LOGIN_RATE_LIMIT: openRateLimiter(20, 60),
 		DEVICE_LOGIN_RATE_LIMIT: openRateLimiter(10, 60),
 		AGENT_RATE_LIMIT: openRateLimiter(120, 60),
-		B2_KEY_ID: optional("B2_KEY_ID"),
-		B2_APPLICATION_KEY: optional("B2_APPLICATION_KEY"),
-		B2_BUCKET: optional("B2_BUCKET"),
-		B2_ENDPOINT: optional("B2_ENDPOINT"),
-		S3_BUCKET: optional("S3_BUCKET"),
 		S3_REGION: optional("S3_REGION") ?? optional("AWS_REGION"),
 		S3_ACCESS_KEY_ID: optional("S3_ACCESS_KEY_ID") ?? optional("AWS_ACCESS_KEY_ID"),
 		S3_SECRET_ACCESS_KEY: optional("S3_SECRET_ACCESS_KEY") ?? optional("AWS_SECRET_ACCESS_KEY"),
-		CF_TOKEN: optional("CF_TOKEN"),
-		CF_API_KEY: optional("CF_API_KEY"),
-		CF_EMAIL: optional("CF_EMAIL"),
-		TURNSTILE_SECRET_KEY: optional("TURNSTILE_SECRET_KEY"),
-		GITHUB_UPDATE_TOKEN: optional("GITHUB_UPDATE_TOKEN"),
-		GITHUB_UPDATE_REF: optional("GITHUB_UPDATE_REF"),
-		GITHUB_UPDATE_REPO: optional("GITHUB_UPDATE_REPO"),
 		// Marks the runtime for the few places that must behave differently.
 		MAILCLAW_RUNTIME: "node",
 		APP_URL: optional("APP_URL")?.replace(/\/$/, ""),
-		INBOUND_WEBHOOK_SECRET: optional("INBOUND_WEBHOOK_SECRET"),
-		VAPID_PUBLIC_KEY: optional("VAPID_PUBLIC_KEY"),
-		VAPID_PRIVATE_KEY: optional("VAPID_PRIVATE_KEY"),
-		VAPID_SUBJECT: optional("VAPID_SUBJECT"),
 	} as unknown as CloudflareEnv;
 	const storageEnv = withDatabase(withStorage(env));
 	realtime.bindEnv(storageEnv);

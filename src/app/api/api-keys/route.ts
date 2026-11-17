@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
 import { agentSendApprovals, apiKeys, mcpKeyMailboxes } from "@/db/schema";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { generateApiKey, generateAppPassword, parseScopes, scopesToJson } from "@/lib/api-keys";
 import { API_KEY_SCOPES } from "@/lib/api/scopes";
 import { newId } from "@/lib/ids";
@@ -20,7 +20,8 @@ const createKeySchema = z.object({
 
 export async function GET(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const { user, error } = await requireSessionUser(env, request);
+	if (error) return error;
 	const db = getDb(env);
 	const rows = await db
 		.select({
@@ -42,7 +43,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const { user, error } = await requireSessionUser(env, request);
+	if (error) return error;
 	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	const parsed = createKeySchema.safeParse(await request.json().catch(() => null));
 	if (!parsed.success) {
@@ -73,7 +75,8 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
 	const env = getEnv();
-	const user = await requireUser(env, request);
+	const { user, error } = await requireSessionUser(env, request);
+	if (error) return error;
 	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	const id = new URL(request.url).searchParams.get("id");
 	if (!id) return NextResponse.json({ error: "Key required" }, { status: 400 });

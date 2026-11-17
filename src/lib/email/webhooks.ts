@@ -13,7 +13,11 @@ export const WEBHOOK_EVENT_TYPES: WebhookEventType[] = [
 	"message.failed",
 ];
 
-/** Retry work is carried on the existing outbound queue so no new binding is required. */
+/**
+ * Delivery work is carried on the existing outbound queue so no new binding is required. The first
+ * attempt rides it too (with no delay), so a slow endpoint never holds up the inbound or send path
+ * that raised the event; the kind keeps its historical name.
+ */
 export type WebhookRetryMessage = {
 	kind: "webhook.retry";
 	deliveryId: string;
@@ -49,18 +53,43 @@ export async function dispatchWebhooks(
 ): Promise<void> {
 	const db = getDb(env);
 	const hooks = await db.select().from(webhooks).where(eq(webhooks.userId, userId));
+	const subscribed = hooks.filter((hook) => hook.enabled && parseWebhookEvents(hook.events).includes(eventType));
+	if (subscribed.length === 0) return;
 
-	for (const hook of hooks) {
-		if (!hook.enabled) continue;
-		if (!parseWebhookEvents(hook.events).includes(eventType)) continue;
-
+	const body = JSON.stringify({ type: eventType, data: payload });
+	// Record every delivery before anything is sent, so each attempt (and the deliveries page) has a row to update.
+	const queued: Array<{ hook: WebhookRow; delivery: PendingDelivery }> = [];
+	for (const hook of subscribed) {
 		try {
-			const body = JSON.stringify({ type: eventType, data: payload });
-			const delivery = await createDelivery(db, hook.id, eventType, body);
+			queued.push({ hook, delivery: await createDelivery(db, hook.id, eventType, body) });
+		} catch (error) {
+			console.error(`Webhook dispatch failed for ${hook.id}`, error);
+		}
+	}
+	if (queued.length === 0) return;
+
+	if (await enqueueDeliveries(env, queued.map(({ delivery }) => delivery.id))) return;
+
+	// The queue refused the work: deliver inline as before rather than leave the rows pending forever.
+	for (const { hook, delivery } of queued) {
+		try {
 			await attemptDelivery(env, db, hook, delivery);
 		} catch (error) {
 			console.error(`Webhook dispatch failed for ${hook.id}`, error);
 		}
+	}
+}
+
+/** Queues the first attempt of each delivery. False when the queue could not take them. */
+async function enqueueDeliveries(env: CloudflareEnv, deliveryIds: string[]): Promise<boolean> {
+	const messages: WebhookRetryMessage[] = deliveryIds.map((deliveryId) => ({ kind: "webhook.retry", deliveryId }));
+	try {
+		if (messages.length === 1) await env.OUTBOUND_QUEUE.send(messages[0]);
+		else await env.OUTBOUND_QUEUE.sendBatch(messages.map((body) => ({ body })));
+		return true;
+	} catch (error) {
+		console.error("Failed to queue webhook deliveries; delivering inline", error);
+		return false;
 	}
 }
 
@@ -159,12 +188,18 @@ async function scheduleRetry(env: CloudflareEnv, deliveryId: string, delaySecond
 	}
 }
 
-/** Queue consumer entry point for scheduled retries. */
+/** Queue consumer entry point for first attempts and scheduled retries. */
 export async function processWebhookRetry(
 	env: CloudflareEnv,
 	message: WebhookRetryMessage,
 ): Promise<void> {
-	await runDelivery(env, message.deliveryId);
+	// Queues deliver at least once: a redelivered message must not post a settled delivery again.
+	await runDelivery(env, message.deliveryId, { skipSettled: true });
+}
+
+/** Delivered, or out of attempts: only the manual retry button may run these again. */
+export function isSettledDeliveryStatus(status: string): boolean {
+	return status === "delivered" || status === "exhausted";
 }
 
 /**
@@ -174,7 +209,7 @@ export async function processWebhookRetry(
 export async function runDelivery(
 	env: CloudflareEnv,
 	deliveryId: string,
-	options?: { userId?: string },
+	options?: { userId?: string; skipSettled?: boolean },
 ): Promise<{ status: WebhookDeliveryStatus } | null> {
 	const db = getDb(env);
 	const [delivery] = await db
@@ -183,6 +218,7 @@ export async function runDelivery(
 		.where(eq(webhookDeliveries.id, deliveryId))
 		.limit(1);
 	if (!delivery) return null;
+	if (options?.skipSettled && isSettledDeliveryStatus(delivery.status)) return { status: delivery.status as WebhookDeliveryStatus };
 
 	const [hook] = await db.select().from(webhooks).where(eq(webhooks.id, delivery.webhookId)).limit(1);
 	if (!hook) return null;

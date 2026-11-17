@@ -18,6 +18,19 @@ export const SCHEDULED_NOTICE_MS = 8000;
 export const SENT_NOTICE_MS = 8000;
 /** How long the toast waits for the queue to report a delivered or failed message. */
 export const DELIVERY_WAIT_MS = 30_000;
+/** The first delivery check waits this long; the queue rarely finishes sooner. */
+export const SEND_STATUS_POLL_INITIAL_MS = 1000;
+/** Later checks double up to this spacing. */
+export const SEND_STATUS_POLL_MAX_MS = 4000;
+
+/**
+ * Delay before delivery check number `attempt` (0-based): 1 s, 2 s, then every
+ * 4 s. Over the 30 s wait that is at most 8 requests instead of 30.
+ */
+export function getSendStatusPollDelay(attempt: number): number {
+	const step = Math.max(0, Math.floor(attempt));
+	return Math.min(SEND_STATUS_POLL_INITIAL_MS * 2 ** step, SEND_STATUS_POLL_MAX_MS);
+}
 
 const SUBJECT_TOKEN = "{subject}";
 const SECONDS_TOKEN = "{seconds}";

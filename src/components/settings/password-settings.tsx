@@ -167,7 +167,7 @@ export function PasswordSettings() {
 			{error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 
 			<Dialog open={confirmRemove} onOpenChange={setConfirmRemove}>
-				<DialogContent className="sm:max-w-[440px]">
+				<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto sm:max-w-[440px]">
 					<DialogHeader>
 						<DialogTitle>{t("passkey.removePasswordTitle")}</DialogTitle>
 						<DialogDescription>{t("passkey.removePasswordDescription")}</DialogDescription>

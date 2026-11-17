@@ -12,6 +12,7 @@ import type {
 	StoredAttachment,
 } from "./attachment-types";
 import { deleteUnreferencedObjects } from "@/lib/drive/shared-objects";
+import { ATTACHMENT_ROWS_PER_INSERT, ATTACHMENT_STORAGE_CONCURRENCY, chunk, mapWithConcurrency } from "./attachment-storage-utils";
 
 export const MAX_ATTACHMENT_SIZE = 25_000_000;
 export const MAX_TOTAL_ATTACHMENT_SIZE = 25_000_000;
@@ -77,42 +78,44 @@ export async function storeMessageAttachments(
 	options?: { validate?: boolean },
 ): Promise<StoredAttachment[]> {
 	if (options?.validate !== false) validateAttachments(attachments);
+	if (attachments.length === 0) return [];
 	const db = getDb(env);
-	const stored: StoredAttachment[] = [];
+	const stored: StoredAttachment[] = attachments.map((attachment) => {
+		const id = newId("att");
+		const filename = sanitizeFilename(attachment.filename);
+		return {
+			id,
+			messageId,
+			filename,
+			type: attachment.type,
+			size: attachment.content.byteLength,
+			disposition: attachment.disposition ?? "attachment",
+			contentId: attachment.contentId ?? null,
+			r2Key: `attachments/${messageId}/${id}/${filename}`,
+		};
+	});
 
 	try {
-		for (const attachment of attachments) {
-			const id = newId("att");
-			const filename = sanitizeFilename(attachment.filename);
-			const r2Key = `attachments/${messageId}/${id}/${filename}`;
-			const disposition = attachment.disposition ?? "attachment";
-
-			await env.BUCKET.put(r2Key, attachment.content, {
-				httpMetadata: { contentType: attachment.type },
-				customMetadata: { filename, messageId },
-			});
-			stored.push({
-				id,
-				messageId,
-				filename,
-				type: attachment.type,
-				size: attachment.content.byteLength,
-				disposition,
-				contentId: attachment.contentId ?? null,
-				r2Key,
-			});
-			await db.insert(messageAttachments).values({
-				id,
-				messageId,
-				filename,
-				contentType: attachment.type,
-				size: attachment.content.byteLength,
-				disposition,
-				contentId: attachment.contentId ?? null,
-				r2Key,
-			});
-		}
+		// Objects first, a few at a time, then the rows: one INSERT per ten (D1's parameter limit),
+		// and several of those in one atomic batch, which D1 counts as a single query.
+		await mapWithConcurrency(stored, ATTACHMENT_STORAGE_CONCURRENCY, (attachment, index) => env.BUCKET.put(attachment.r2Key, attachments[index].content, {
+			httpMetadata: { contentType: attachment.type },
+			customMetadata: { filename: attachment.filename, messageId },
+		}));
+		const inserts = chunk(stored, ATTACHMENT_ROWS_PER_INSERT).map((rows) => db.insert(messageAttachments).values(rows.map((attachment) => ({
+			id: attachment.id,
+			messageId,
+			filename: attachment.filename,
+			contentType: attachment.type,
+			size: attachment.size,
+			disposition: attachment.disposition,
+			contentId: attachment.contentId,
+			r2Key: attachment.r2Key,
+		}))));
+		if (inserts.length === 1) await inserts[0];
+		else await db.batch(inserts as [typeof inserts[number], ...typeof inserts]);
 	} catch (error) {
+		// Every put has settled by now; deleting a key that was never written is a no-op.
 		await Promise.all(stored.map((attachment) => env.BUCKET.delete(attachment.r2Key)));
 		throw error;
 	}
@@ -172,20 +175,19 @@ export async function loadMessageAttachmentContents(
 ): Promise<AttachmentContent[]> {
 	const db = getDb(env);
 	const rows = await db.select().from(messageAttachments).where(and(eq(messageAttachments.messageId, messageId), isNull(messageAttachments.trashedAt)));
-	const result: AttachmentContent[] = [];
-	for (const row of rows) {
+	const loaded = await mapWithConcurrency(rows, ATTACHMENT_STORAGE_CONCURRENCY, async (row): Promise<AttachmentContent | null> => {
 		const object = await env.BUCKET.get(row.r2Key);
-		if (!object) continue;
-		result.push({
+		if (!object) return null;
+		return {
 			storageId: row.id,
 			filename: row.filename,
 			type: row.contentType,
 			content: await object.arrayBuffer(),
 			disposition: row.disposition as "attachment" | "inline",
 			contentId: row.contentId,
-		});
-	}
-	return result;
+		};
+	});
+	return loaded.filter((attachment): attachment is AttachmentContent => attachment !== null);
 }
 
 /** Remove one attachment (row and object). Returns false when it is not on that message. */

@@ -5,8 +5,10 @@ import { calendarEvents } from "@/db/schema";
 import { getEnv } from "@/lib/cloudflare";
 import { createCalendarInvitation } from "@/lib/calendar/utils";
 import { sendEmail } from "@/lib/email/send";
-import type { CalendarEventInput } from "../types";
 import type { CalendarEventRouteParams } from "./types";
+import { CALENDAR_EVENT_BODY_MAX_BYTES, calendarEventDeleteSchema, calendarEventPatchSchema } from "./utils";
+import { readJsonBody } from "@/lib/http/request";
+import { RequestBodyTooLargeError } from "@/lib/http/errors";
 import { normalizeCalendarColor } from "@/lib/calendar/colors";
 import { normalizeReminderMinutes } from "@/lib/calendar/reminder-utils";
 import { DEFAULT_REPEAT_DAYS, normalizeCalendarRepeat, normalizeCalendarRepeatDays, parseCalendarOccurrenceId, parseCalendarRepeatDays, parseExcludedOccurrences } from "@/lib/calendar/recurrence";
@@ -14,17 +16,31 @@ import { newId } from "@/lib/ids";
 import { getRequestTimeZone, normalizeTimeZone } from "@/lib/time/utils";
 import { authorizeCalendarRequest, calendarKeyCanSendInvitations } from "@/lib/calendar/api-auth";
 
+/** The request's JSON body, or the 400/413 response to send instead. */
+async function readBody(request: Request): Promise<{ body: unknown } | { response: NextResponse }> {
+	try {
+		return { body: await readJsonBody(request, CALENDAR_EVENT_BODY_MAX_BYTES) };
+	} catch (error) {
+		if (error instanceof RequestBodyTooLargeError) return { response: NextResponse.json({ error: "Request body is too large" }, { status: 413 }) };
+		return { response: NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }) };
+	}
+}
+
 export async function PATCH(request: Request, { params }: CalendarEventRouteParams) {
 	const env = getEnv();
 	const { user, key, error } = await authorizeCalendarRequest(env, request, "calendar:write");
 	if (error) return error;
 	const { eventId } = await params;
 	const occurrence = parseCalendarOccurrenceId(eventId);
-	const input = await request.json() as CalendarEventInput;
-	const startsAt = new Date(input.startsAt);
-	const endsAt = new Date(input.endsAt);
+	const read = await readBody(request);
+	if ("response" in read) return read.response;
+	const parsed = calendarEventPatchSchema.safeParse(read.body);
+	if (!parsed.success) return NextResponse.json({ error: "Invalid event" }, { status: 400 });
+	const input = { ...parsed.data, title: parsed.data.title ?? "" };
+	const startsAt = new Date(input.startsAt ?? Number.NaN);
+	const endsAt = new Date(input.endsAt ?? Number.NaN);
 	const effectiveFrom = input.effectiveFrom ? new Date(input.effectiveFrom) : occurrence?.startsAt;
-	if (!input.title?.trim() || Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || endsAt <= startsAt) return NextResponse.json({ error: "Enter a title and valid event times" }, { status: 400 });
+	if (!input.title.trim() || Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || endsAt <= startsAt) return NextResponse.json({ error: "Enter a title and valid event times" }, { status: 400 });
 	if (effectiveFrom && Number.isNaN(effectiveFrom.getTime())) return NextResponse.json({ error: "Invalid repeat start" }, { status: 400 });
 	const db = getDb(env);
 	const [existing] = await db.select().from(calendarEvents).where(and(eq(calendarEvents.id, occurrence?.seriesId ?? eventId), eq(calendarEvents.userId, user.id))).limit(1);
@@ -68,7 +84,12 @@ export async function DELETE(request: Request, { params }: CalendarEventRoutePar
 	if (error) return error;
 	const { eventId } = await params;
 	const occurrence = parseCalendarOccurrenceId(eventId);
-	const input = await request.json().catch(() => ({})) as CalendarEventInput;
+	// The body is optional: without one (or with one that is not JSON) the whole event or series goes.
+	const read = await readBody(request);
+	if ("response" in read && read.response.status === 413) return read.response;
+	const parsed = calendarEventDeleteSchema.safeParse("body" in read ? read.body ?? {} : {});
+	if (!parsed.success) return NextResponse.json({ error: "Invalid repeat start" }, { status: 400 });
+	const input = parsed.data;
 	const effectiveFrom = input.effectiveFrom ? new Date(input.effectiveFrom) : occurrence?.startsAt;
 	if (effectiveFrom && Number.isNaN(effectiveFrom.getTime())) return NextResponse.json({ error: "Invalid repeat start" }, { status: 400 });
 	const db = getDb(env);

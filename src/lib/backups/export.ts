@@ -41,6 +41,9 @@ export const INTERNAL_TABLES = [
 	// after a restore clients resync because their states no longer apply.
 	"jmap_changes",
 	"jmap_change_floor",
+	// Message tallies, derived the same way (message_counters_* triggers). The
+	// restore empties the table after its teardown, so restored messages count once.
+	"message_counters",
 	// Push registrations are re-sent by each app on launch.
 	"push_devices",
 	// Web-push subscriptions are saved again by each client whenever it resolves
@@ -140,6 +143,10 @@ export async function restoreDatabaseRecords(db: D1Database, content: ArrayBuffe
 		if (table === "users") continue;
 		await db.prepare(`DELETE FROM ${table}`).run();
 	}
+	// SQLite and PostgreSQL triggers have already taken the deleted messages out
+	// of the tallies, but MySQL fires none for the cascade from users. Starting
+	// empty lets the inserts below count every restored message exactly once.
+	if (existing.has("message_counters")) await db.prepare("DELETE FROM message_counters").run();
 	for (const table of restoreTables) {
 		const rows = document.tables[table] ?? [];
 		for (let index = 0; index < rows.length; index += INSERT_BATCH_SIZE) {

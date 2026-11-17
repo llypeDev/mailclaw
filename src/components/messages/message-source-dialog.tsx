@@ -44,6 +44,7 @@ export function MessageSourceDialog({ messageId, open, onOpenChange }: MessageSo
 				if (!controller.signal.aborted) setLoading(false);
 			});
 		return () => controller.abort();
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- `t` only words the error; a language switch does not need to refetch the raw message
 	}, [messageId, open]);
 
 	return (

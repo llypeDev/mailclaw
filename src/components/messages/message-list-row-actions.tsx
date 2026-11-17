@@ -76,7 +76,7 @@ function MessageListRowActionsComponent({ message, onAction }: MessageListRowAct
 			</div>
 
 			<Dialog open={snoozeOpen} onOpenChange={setSnoozeOpen}>
-				<DialogContent>
+				<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto">
 					<DialogHeader>
 						<DialogTitle>{t("snooze.title")}</DialogTitle>
 						<DialogDescription>{t("snooze.description")}</DialogDescription>

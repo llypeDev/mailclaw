@@ -20,6 +20,7 @@ export function SpamFilterSettings() {
 			})
 			.catch((nextError) => setError(nextError instanceof Error ? nextError.message : t("settings.spam.loadFailed")))
 			.finally(() => setLoading(false));
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount; `t` only words the error, and a language switch must not refetch over the toggle
 	}, []);
 
 	async function updateEnabled(nextEnabled: boolean) {

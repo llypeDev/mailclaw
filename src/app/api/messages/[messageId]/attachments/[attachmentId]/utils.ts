@@ -1,5 +1,11 @@
 import { truncateUtf8 } from "@/lib/email/inbound-limits";
 
+/**
+ * A stored attachment never changes under its id, so the viewer's own browser
+ * may keep it for a week without asking; `private` keeps it out of shared caches.
+ */
+export const ATTACHMENT_CACHE_CONTROL = "private, max-age=604800, immutable";
+
 // eslint-disable-next-line no-control-regex
 const CONTROL_AND_BIDI = /[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
 

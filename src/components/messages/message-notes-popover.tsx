@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { Note } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
 import { ConversationNotesProvider, useConversationNotes } from "./conversation-notes-context";
-import { NotesBody } from "./conversation-notes";
+import { LazyNotesBody, preloadNotesBody } from "./lazy-notes-body";
 
 const WIDTH = 380;
 const GAP = 4;
@@ -39,6 +39,8 @@ export function MessageNotesPopover({ messageId, count, preview }: { messageId: 
 	}, []);
 	const show = useCallback(() => {
 		clearTimer();
+		// Fetch the notes editor chunk while the open delay runs; errors are retried on render.
+		preloadNotesBody().catch(() => undefined);
 		timer.current = window.setTimeout(() => {
 			setArmed(true);
 			setOpen(true);
@@ -187,10 +189,9 @@ function PopoverBody({ fallback, onEmpty }: { fallback?: string; onEmpty: () => 
 	useEffect(() => {
 		if (empty) onEmpty();
 	}, [empty, onEmpty]);
-	if (!notes || notes.loading) {
-		return <p className="whitespace-pre-line px-3 py-2 text-xs text-amber-900/80">{fallback}</p>;
-	}
-	return <NotesBody bare />;
+	const preview = <p className="whitespace-pre-line px-3 py-2 text-xs text-amber-900/80">{fallback}</p>;
+	if (!notes || notes.loading) return preview;
+	return <LazyNotesBody bare fallback={preview} />;
 }
 
 /** Static note icon and count for rows that cannot hover, such as the stacked mobile row. */

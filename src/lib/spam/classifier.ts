@@ -4,13 +4,21 @@ import { spamFeedback, spamTokenStats } from "@/db/schema";
 import type { BayesianResult } from "./types";
 import { MAX_BAYESIAN_TOKENS, SPAM_WEIGHTS } from "./weights";
 
-export async function classifyTokens(db: AppDatabase, mailboxId: string, tokens: string[]): Promise<BayesianResult> {
-	const [spamTotalRow, hamTotalRow] = await Promise.all([
-		db.select({ value: count() }).from(spamFeedback).where(and(eq(spamFeedback.mailboxId, mailboxId), eq(spamFeedback.classification, "spam"))),
-		db.select({ value: count() }).from(spamFeedback).where(and(eq(spamFeedback.mailboxId, mailboxId), eq(spamFeedback.classification, "ham"))),
-	]);
-	const spamTotal = spamTotalRow[0]?.value ?? 0;
-	const hamTotal = hamTotalRow[0]?.value ?? 0;
+/** Trained spam and ham totals of a mailbox, one row per classification. Exported so callers can batch it. */
+export function selectFeedbackTotals(db: AppDatabase, mailboxId: string) {
+	return db
+		.select({ classification: spamFeedback.classification, value: count() })
+		.from(spamFeedback)
+		.where(eq(spamFeedback.mailboxId, mailboxId))
+		.groupBy(spamFeedback.classification);
+}
+
+export type FeedbackTotals = Awaited<ReturnType<typeof selectFeedbackTotals>>;
+
+export async function classifyTokens(db: AppDatabase, mailboxId: string, tokens: string[], preloadedTotals?: FeedbackTotals): Promise<BayesianResult> {
+	const totals = preloadedTotals ?? await selectFeedbackTotals(db, mailboxId);
+	const spamTotal = totals.find((row) => row.classification === "spam")?.value ?? 0;
+	const hamTotal = totals.find((row) => row.classification === "ham")?.value ?? 0;
 	const trainedMessages = spamTotal + hamTotal;
 	if (spamTotal === 0 || hamTotal === 0 || tokens.length === 0) {
 		return { probability: 0.5, contribution: 0, trainedMessages, strongestTokens: [] };

@@ -1,3 +1,5 @@
+import { etagMatches } from "@/lib/http/object-cache";
+
 const MAX_STORED_AVATAR_SIZE = 1024 * 1024;
 const MAX_PREVIEW_AVATAR_SIZE = 32 * 1024;
 
@@ -40,10 +42,20 @@ export async function getAvatarImageResponse(
 ): Promise<Response> {
 	const url = new URL(request.url);
 	const imageKey = url.searchParams.get("variant") === "preview" ? avatarPreviewKeyFor(key) : key;
+	const ifNoneMatch = request.headers.get("If-None-Match");
+	// A revalidation only needs the ETag, so read the metadata and skip the body.
+	const head = ifNoneMatch ? await bucket.head(imageKey) : null;
+	if (ifNoneMatch && !head) return new Response("Not found", { status: 404 });
+	if (head && etagMatches(ifNoneMatch, head.httpEtag)) {
+		return new Response(null, { status: 304, headers: avatarHeaders(url, head) });
+	}
 	const object = await bucket.get(imageKey);
 	if (!object) return new Response("Not found", { status: 404 });
+	return new Response(object.body, { headers: avatarHeaders(url, object) });
+}
 
-	const headers = new Headers({
+function avatarHeaders(url: URL, object: Pick<R2Object, "httpEtag" | "httpMetadata">): Headers {
+	return new Headers({
 		"Content-Type": object.httpMetadata?.contentType ?? "application/octet-stream",
 		"X-Content-Type-Options": "nosniff",
 		"Content-Security-Policy": "default-src 'none'; img-src 'self'; sandbox",
@@ -56,8 +68,4 @@ export async function getAvatarImageResponse(
 		Vary: "Cookie, Authorization",
 		ETag: object.httpEtag,
 	});
-	if (request.headers.get("If-None-Match") === object.httpEtag) {
-		return new Response(null, { status: 304, headers });
-	}
-	return new Response(object.body, { headers });
 }

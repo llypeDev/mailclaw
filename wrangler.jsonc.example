@@ -7,6 +7,14 @@
 		"nodejs_compat",
 		"global_fetch_strictly_public"
 	],
+	// Set explicitly rather than left to defaults. workers.dev stays on: without a custom domain it is
+	// the only public URL, and turning it off takes the app offline. Preview URLs stay off: they are
+	// public and would expose every uploaded version.
+	"workers_dev": true,
+	"preview_urls": false,
+	// Run fetch handlers near D1 rather than near the visitor: a request makes several sequential
+	// database calls. Only fetch is placed; email, queue and scheduled handlers are unaffected.
+	"placement": { "mode": "smart" },
 	"assets": {
 		"binding": "ASSETS",
 		"not_found_handling": "none",
@@ -20,6 +28,22 @@
 			"service": "mailclaw",
 		},
 	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "REALTIME",
+				"class_name": "RealtimeHub",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"RealtimeHub",
+			],
+		},
+	],
 	"triggers": {
 		"crons": ["0 2 * * *", "*/5 * * * *"],
 	},
@@ -31,6 +55,11 @@
 				"limit": 20,
 				"period": 60,
 			},
+		},
+		{
+			"name": "DEVICE_LOGIN_RATE_LIMIT",
+			"namespace_id": "1003",
+			"simple": { "limit": 10, "period": 60 },
 		},
 		{
 			"name": "AGENT_RATE_LIMIT",
@@ -79,18 +108,29 @@
 				"queue": "mailclaw-agent",
 			},
 		],
+		// Retry delays are set per message in worker.ts (10 s growing to 15 min, see
+		// src/lib/queues/retry-utils.ts); retry_delay only covers an invocation that crashed before
+		// it could ask. Messages that exhaust max_retries go to the dead-letter queue, which
+		// Cloudflare creates on deploy if it does not exist and keeps for 4 days.
 		"consumers": [
 			{
 				"queue": "mailclaw-inbound",
-				"max_batch_size": 5,
-				// New mail should reach the inbox at once; do not wait up to 5 s for a batch to fill.
-				"max_batch_timeout": 1,
-				"max_retries": 3,
+				// One message per invocation: each parse gets the whole CPU and memory budget, and a
+				// message that crashes the invocation does not cost its neighbours an attempt.
+				"max_batch_size": 1,
+				"max_retries": 5,
+				"retry_delay": 30,
+				"dead_letter_queue": "mailclaw-inbound-dlq",
 			},
 			{
 				"queue": "mailclaw-outbound",
-				"max_batch_size": 5,
-				"max_retries": 3,
+				// Also one at a time: sends carry attachments, webhook deliveries wait on remote
+				// endpoints and import chunks parse whole mailboxes. Queue operations are counted per
+				// message, so smaller batches cost no extra operations.
+				"max_batch_size": 1,
+				"max_retries": 5,
+				"retry_delay": 30,
+				"dead_letter_queue": "mailclaw-outbound-dlq",
 			},
 			{
 				"queue": "mailclaw-agent",

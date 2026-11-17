@@ -6,6 +6,11 @@ import { intakeProviderMail } from "@/lib/email/provider-intake";
 import { getReceivedEmail } from "@/lib/email/resend-api";
 import { verifySvixSignature } from "@/lib/email/svix";
 import { getResendWebhookSecret } from "@/lib/domains/resend-receiving";
+import { isTimeoutError, TRANSFER_TIMEOUT_MS } from "@/lib/http/fetch-timeout";
+import { readBodyWithLimit } from "@/lib/http/limited-body";
+
+/** The event only names the message; the raw MIME is fetched separately. */
+const MAX_EVENT_BYTES = 1024 * 1024;
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +25,9 @@ export async function POST(request: Request) {
 	const env = getEnv();
 	const secret = await getResendWebhookSecret(env);
 	if (!secret) return NextResponse.json({ error: "Resend receiving is not set up" }, { status: 503 });
-	const body = await request.text();
+	const bytes = await readBodyWithLimit(request, MAX_EVENT_BYTES);
+	if (!bytes) return NextResponse.json({ error: "Body too large" }, { status: 413 });
+	const body = new TextDecoder().decode(bytes);
 	const valid = await verifySvixSignature(secret, {
 		id: request.headers.get("svix-id"),
 		timestamp: request.headers.get("svix-timestamp"),
@@ -38,10 +45,18 @@ export async function POST(request: Request) {
 	const email = await getReceivedEmail(apiKey, emailId);
 	const download = email.raw?.download_url;
 	if (!download) return NextResponse.json({ error: "Resend did not provide the raw message" }, { status: 502 });
-	const rawResponse = await fetch(download);
-	if (!rawResponse.ok) return NextResponse.json({ error: "Could not download the raw message" }, { status: 502 });
+	// A missed deadline answers 502 like any failed download, so Resend retries the webhook.
+	let raw: ArrayBuffer;
+	try {
+		const rawResponse = await fetch(download, { signal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS) });
+		if (!rawResponse.ok) return NextResponse.json({ error: "Could not download the raw message" }, { status: 502 });
+		raw = await rawResponse.arrayBuffer();
+	} catch (error) {
+		if (!isTimeoutError(error)) throw error;
+		return NextResponse.json({ error: "Could not download the raw message in time" }, { status: 502 });
+	}
 
 	const recipients = [...(email.to ?? []), ...(email.cc ?? []), ...(email.bcc ?? [])].flatMap((value) => getEmailAddressList(value));
-	const result = await intakeProviderMail(env, { from: getEmailAddress(email.from), recipients, raw: await rawResponse.arrayBuffer() });
+	const result = await intakeProviderMail(env, { from: getEmailAddress(email.from), recipients, raw });
 	return NextResponse.json(result);
 }

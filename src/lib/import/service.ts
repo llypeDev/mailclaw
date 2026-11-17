@@ -5,6 +5,7 @@ import { storeMessageAttachments } from "@/lib/email/attachments";
 import { deleteMessageWithObjects } from "@/lib/email/message-cleanup";
 import { buildSnippet, parseRawMime } from "@/lib/email/parse";
 import { resolveThreadId } from "@/lib/email/threading";
+import { IMPORT_RAW_PREFIX, offersUnsubscribe } from "@/lib/email/unsubscribe";
 import { upsertContactFromAddress } from "@/lib/contacts/service";
 import { newId } from "@/lib/ids";
 import { getImportMessagePlacement } from "./destination";
@@ -78,7 +79,7 @@ async function importMessageToMailbox(
 	}
 
 	const messageId = newId("msg");
-	const rawR2Key = `imports/${messageId}.eml`;
+	const rawR2Key = `${IMPORT_RAW_PREFIX}${messageId}.eml`;
 	const fromAddr = parsed.fromAddr ?? "unknown";
 	const toAddr = parsed.toAddr ?? "";
 	const createdAt = parsed.date ?? new Date();
@@ -103,6 +104,8 @@ async function importMessageToMailbox(
 		textBody: parsed.text,
 		htmlBody: parsed.html,
 		rawR2Key,
+		// Decided now, as inbound mail does, so opening the message can skip the raw header read.
+		hasUnsubscribe: offersUnsubscribe(placement.direction, input.raw, parsed.html, parsed.text),
 		status: placement.status,
 		read,
 		starred,

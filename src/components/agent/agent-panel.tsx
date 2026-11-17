@@ -4,7 +4,7 @@ import "./style.scss"
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, FileText, ListChecks, LoaderCircle, Maximize2, Minimize2, Pause, PauseCircle, PenLine, Plus, Send, Settings2, Sparkles, Square, Trash2, X } from "@/components/icons";
+import { ArrowLeft, FileText, ListChecks, LoaderCircle, Maximize2, Minimize2, Pause, PenLine, Plus, Send, Settings2, Sparkles, Trash2, X } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
 import { authFetch } from "@/lib/auth/client";
 import { fetchCachedMessageDetail } from "@/lib/messages/detail-cache";
@@ -19,6 +19,7 @@ import { QueuedAgentMessages } from "./queued-messages";
 import { SendReview } from "./send-review";
 import type { ReviewSnapshot } from "./send-review-types";
 import { approveAgentAction, requestDraftReview } from "./client-actions";
+import { AGENT_JOB_POLL_INTERVAL_MS, hasUnfinishedAgentJob } from "./job-polling-utils";
 import type { AgentConversation, AgentConversationsResponse, AgentErrorResponse, AgentEvent, AgentHistoryResponse, AgentJob, AgentJobsResponse, AgentMessage, AgentPanelProps, AgentPanelView, AgentSettings, AgentSettingsResponse, QueuedAgentMessage } from "./types";
 import { activeAgentTool, activeAgentToolLabel, appendAgentReasoning, consumeAgentStream, editQueuedAgentMessage, enqueueAgentMessage, groupAgentMessages, isAgentScrollAtBottom, markAgentDraftSent, normalizeAgentHistory, readAgentConversationId, removeQueuedAgentMessage, resizeAgentInput, saveAgentConversationId, shouldSubmitAgentInput, steerQueuedAgentMessage, uniqueAgentDraftActions } from "./utils";
 import { Select } from "@/components/ui/select";
@@ -142,6 +143,7 @@ export function AgentPanel({ open, fullSize, onClose, onToggleFullSize }: AgentP
 			if (!cancelled && selectedConversationRef.current === savedId) setLoadingConversation(false);
 		});
 		return () => { cancelled = true; abort.current?.abort(); };
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- `t` only words the error; re-running on a language switch would abort the running reply and clear the chat
 	}, [mailboxId, open, refresh]);
 
 	useEffect(() => {
@@ -174,11 +176,27 @@ export function AgentPanel({ open, fullSize, onClose, onToggleFullSize }: AgentP
 		return () => window.removeEventListener("mailclaw:agent-draft", onDraft);
 	}, [mailboxId, open, refresh]);
 
+	const hasUnfinishedJob = hasUnfinishedAgentJob(jobs);
 	useEffect(() => {
-		if (!open) return;
-		const timer = window.setInterval(() => void refresh(), 30_000);
-		return () => window.clearInterval(timer);
-	}, [open, refresh]);
+		if (!open || !hasUnfinishedJob) return;
+		let timer: number | null = null;
+		const sync = () => {
+			const visible = document.visibilityState === "visible";
+			if (visible && timer === null) timer = window.setInterval(() => void refresh().catch(() => undefined), AGENT_JOB_POLL_INTERVAL_MS);
+			if (!visible && timer !== null) { window.clearInterval(timer); timer = null; }
+		};
+		const onVisibilityChange = () => {
+			// Catch up on what finished while hidden, then resume the interval.
+			if (document.visibilityState === "visible") void refresh().catch(() => undefined);
+			sync();
+		};
+		sync();
+		document.addEventListener("visibilitychange", onVisibilityChange);
+		return () => {
+			document.removeEventListener("visibilitychange", onVisibilityChange);
+			if (timer !== null) window.clearInterval(timer);
+		};
+	}, [open, hasUnfinishedJob, refresh]);
 
 	async function selectConversation(id: string) {
 		if (!mailboxId) return;

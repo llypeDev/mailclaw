@@ -81,9 +81,10 @@ export async function completePasswordReset(
 	// The token read above is only a snapshot. Re-check the account's complete
 	// security state in the write itself so a concurrent passkey-only recovery,
 	// password change or MFA change cannot be overwritten by this request.
+	const passwordHash = await hashPassword(newPassword);
 	const [updated] = await db
 		.update(users)
-		.set({ passwordHash: hashPassword(newPassword) })
+		.set({ passwordHash })
 		.where(and(
 			eq(users.id, row.userId),
 			eq(users.passwordHash, row.passwordHash),

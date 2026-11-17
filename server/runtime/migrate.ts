@@ -3,8 +3,9 @@ import { join } from "node:path";
 import type { SqliteDatabase } from "./sqlite-database";
 
 /**
- * Apply the repository's D1 migrations to the local database in journal
- * order, recording them in `d1_migrations` exactly as Wrangler does. A fresh
+ * Apply the repository's D1 migrations to the local database in filename
+ * order, skipping those already in the ledger and recording each new one in
+ * `d1_migrations` exactly as Wrangler does. A fresh
  * database and an upgraded one therefore follow the same path, and the
  * hand-copied bootstrap schema in src/lib/setup/migration.ts is never used
  * here.
@@ -16,16 +17,10 @@ export async function applyMigrations(database: SqliteDatabase, migrationsDir: s
 	);
 	const applied = new Set(db.prepare("SELECT name FROM d1_migrations").all().map((row) => (row as { name: string }).name));
 
-	let order: string[];
-	try {
-		const journal = JSON.parse(await readFile(join(migrationsDir, "meta", "_journal.json"), "utf8")) as { entries: Array<{ tag: string }> };
-		order = journal.entries.map((entry) => `${entry.tag}.sql`);
-	} catch {
-		order = [];
-	}
-	const files = (await readdir(migrationsDir)).filter((name) => name.endsWith(".sql")).sort();
-	// Anything the journal does not list (hand-written migrations) runs after it, in name order.
-	const names = [...order.filter((name) => files.includes(name)), ...files.filter((name) => !order.includes(name))];
+	// Filename order, as the Worker's bundle runner (src/lib/migrations/service.ts) applies them.
+	// The drizzle journal does not list every file (0041-0051 were hand-written), so following
+	// it first would run a newer journaled migration before older unlisted ones on a fresh install.
+	const names = (await readdir(migrationsDir)).filter((name) => name.endsWith(".sql")).sort();
 
 	const ran: string[] = [];
 	for (const name of names) {

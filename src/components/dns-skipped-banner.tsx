@@ -4,22 +4,38 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle } from "@/components/icons";
 import { authFetch } from "@/lib/auth/client";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { fetchCurrentUser, useCurrentUser } from "@/hooks/use-current-user";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
+import { peekBootstrapPart, rememberBootstrapPart } from "@/lib/bootstrap/client";
+import { canSeeDnsSkippedBanner } from "@/lib/bootstrap/utils";
+import type { DnsSkippedDomain } from "@/lib/bootstrap/types";
 
-type SkippedDomain = { id: string; hostname: string; dnsSkipped?: boolean };
+type SkippedDomain = DnsSkippedDomain & { dnsSkipped?: boolean };
+
+/** A bootstrap answer this recent stands in for `/api/domains` when the banner mounts. */
+const SEEDED_MAX_AGE_MS = 5 * 60 * 1000;
 
 async function fetchSkippedDomains(): Promise<SkippedDomain[] | null> {
 	try {
 		const res = await authFetch("/api/domains", { redirectOnUnauthorized: false });
 		if (!res.ok) return null;
 		const data = (await res.json()) as { domains?: SkippedDomain[] };
-		return (data.domains ?? []).filter((domain) => domain.dnsSkipped);
+		const skipped = (data.domains ?? []).filter((domain) => domain.dnsSkipped).map(({ id, hostname }) => ({ id, hostname }));
+		rememberBootstrapPart("dnsSkippedDomains", skipped);
+		return skipped;
 	} catch {
 		// The banner is advisory; a failed read just hides it.
 		return null;
 	}
+}
+
+/** The bootstrap's list when it has one; otherwise `/api/domains`, but only for accounts that own or manage domains. */
+async function loadSkippedDomains(): Promise<SkippedDomain[] | null> {
+	const seeded = peekBootstrapPart("dnsSkippedDomains", SEEDED_MAX_AGE_MS);
+	if (seeded) return seeded;
+	if (!canSeeDnsSkippedBanner(await fetchCurrentUser())) return null;
+	return fetchSkippedDomains();
 }
 
 export function DnsSkippedBanner() {
@@ -37,7 +53,7 @@ export function DnsSkippedBanner() {
 	}, [applyDomains]);
 
 	useEffect(() => {
-		void fetchSkippedDomains().then(applyDomains);
+		void loadSkippedDomains().then(applyDomains);
 	}, [applyDomains]);
 
 	if (domains.length === 0) return null;

@@ -34,6 +34,7 @@ export function AuthShell({
               {iconFailed ? (
                 <Icon className="h-8 w-8 text-blue-600" />
               ) : (
+                // eslint-disable-next-line @next/next/no-img-element -- branding icon with an error fallback, at a fixed size
                 <img
                   src={iconUrl}
                   onError={() => {

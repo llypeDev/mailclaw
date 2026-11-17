@@ -5,6 +5,7 @@ import { parseScopes } from "@/lib/api-keys";
 import { findApiKeyForSecret } from "@/lib/api/find-api-key";
 import type { ApiAuthResult } from "@/lib/api/key-auth-types";
 import { ADMIN_API_KEY_SCOPES } from "@/lib/api/scopes";
+import { isLastUsedStale } from "@/lib/api/key-auth-utils";
 
 const LAST_USED_WRITE_INTERVAL_MS = 60_000;
 const ADMIN_SCOPES = new Set<string>(ADMIN_API_KEY_SCOPES);
@@ -20,19 +21,26 @@ export async function authenticateApiKeyValue(env: CloudflareEnv, key: string): 
 	const db = getDb(env);
 	const candidate = await findApiKeyForSecret(db, trimmed);
 	if (!candidate) return null;
-	const [user] = await db.select().from(users).where(eq(users.id, candidate.userId)).limit(1);
+	// The user and the key's mailbox list are independent reads of the same request.
+	const [[user], allowed] = await Promise.all([
+		db.select().from(users).where(eq(users.id, candidate.userId)).limit(1),
+		candidate.mailboxScopeEnabled
+			? db.select({ mailboxId: mcpKeyMailboxes.mailboxId }).from(mcpKeyMailboxes).where(eq(mcpKeyMailboxes.keyId, candidate.id))
+			: null,
+	]);
 	if (!user || user.disabled) return null;
 
+	// The row just read says whether the write is due, so most requests skip it; the SQL condition
+	// still keeps concurrent requests from writing twice.
 	const stale = new Date(Date.now() - LAST_USED_WRITE_INTERVAL_MS);
-	await db
-		.update(apiKeys)
-		.set({ lastUsedAt: new Date() })
-		.where(and(eq(apiKeys.id, candidate.id), or(isNull(apiKeys.lastUsedAt), lt(apiKeys.lastUsedAt, stale))));
+	if (isLastUsedStale(candidate.lastUsedAt, stale)) {
+		await db
+			.update(apiKeys)
+			.set({ lastUsedAt: new Date() })
+			.where(and(eq(apiKeys.id, candidate.id), or(isNull(apiKeys.lastUsedAt), lt(apiKeys.lastUsedAt, stale))));
+	}
 
 	const scopes = parseScopes(candidate.scopes);
-	const allowed = candidate.mailboxScopeEnabled
-		? await db.select({ mailboxId: mcpKeyMailboxes.mailboxId }).from(mcpKeyMailboxes).where(eq(mcpKeyMailboxes.keyId, candidate.id))
-		: null;
 	return { keyId: candidate.id, keyKind: candidate.kind, userId: user.id, email: user.email, scopes: scopes.some((scope) => ADMIN_SCOPES.has(scope)) ? scopes.filter((scope) => ADMIN_SCOPES.has(scope)) : scopes, mailboxIds: allowed?.map((row) => row.mailboxId) ?? null, user };
 }
 

@@ -27,7 +27,7 @@ await build({
 });
 
 const load = (name) => import(pathToFileURL(join(outDir, `${name}.mjs`)).href);
-const { isMissingTableError, isUniqueConstraintError } = await load("errors");
+const { isMissingColumnError, isMissingTableError, isUniqueConstraintError } = await load("errors");
 const { getOpenCounts } = await load("tracking");
 const { SqliteDatabase } = await load("database");
 
@@ -38,6 +38,23 @@ test("driver errors are found through drizzle's wrapper", () => {
 	assert.equal(isMissingTableError(new Error("Failed query", { cause: new Error("database is locked") })), false);
 	assert.equal(isUniqueConstraintError(new Error("Failed query", { cause: new Error("UNIQUE constraint failed: domain_tracking_hosts.hostname") })), true);
 	assert.equal(isUniqueConstraintError(new Error("no such table")), false);
+});
+
+test("missing columns are recognised in every dialect's wording", () => {
+	const missing = [
+		"no such column: attempts",
+		"table login_challenges has no column named attempts",
+		'column "attempts" does not exist',
+		'column "attempts" of relation "login_challenges" does not exist',
+		"column login_challenges.attempts does not exist",
+		'column "login_challenges"."attempts" does not exist',
+		"Unknown column 'attempts' in 'field list'",
+	];
+	for (const message of missing) {
+		assert.equal(isMissingColumnError(new Error("Failed query", { cause: new Error(message) })), true, message);
+	}
+	assert.equal(isMissingColumnError(new Error('relation "login_challenges" does not exist')), false);
+	assert.equal(isMissingColumnError(new Error("database is locked")), false);
 });
 
 test("message lists with sent mail keep working before migration 0068", async (t) => {

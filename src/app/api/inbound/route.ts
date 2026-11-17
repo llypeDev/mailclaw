@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { getEnv } from "@/lib/cloudflare";
 import { intakeIncomingMail } from "@/lib/email/intake";
 import { verifyInboundSignature, verifyInboundSignatureV2 } from "@/lib/email/intake-signature";
-import { inboundAttachmentLimitReasonFromRaw } from "@/lib/email/inbound-attachments";
+import { inboundAttachmentLimitReasonFromScan } from "@/lib/email/inbound-attachments";
+import { hasReplayMarker, rememberReplayMarker, RELAY_REPLAY_WINDOW } from "@/lib/email/replay-markers";
+import { readBodyWithLimit } from "@/lib/http/limited-body";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +19,8 @@ export async function POST(request: Request) {
 	const secret = env.INBOUND_WEBHOOK_SECRET?.trim();
 	if (!secret) return NextResponse.json({ error: "INBOUND_WEBHOOK_SECRET is not configured" }, { status: 503 });
 
-	const raw = await request.arrayBuffer();
-	if (raw.byteLength > 25 * 1024 * 1024) return NextResponse.json({ error: "Message exceeds the 25 MiB receiving limit" }, { status: 413 });
+	const raw = await readBodyWithLimit(request, 25 * 1024 * 1024);
+	if (!raw) return NextResponse.json({ error: "Message exceeds the 25 MiB receiving limit" }, { status: 413 });
 	const from = request.headers.get("x-mailclaw-from") ?? "";
 	const to = request.headers.get("x-mailclaw-to") ?? "";
 	const signature = request.headers.get("x-mailclaw-signature") ?? "";
@@ -33,11 +35,12 @@ export async function POST(request: Request) {
 			: env.INBOUND_REQUIRE_SIGNED_HEADERS !== "1" && await verifyInboundSignature(secret, signature, raw, from, to);
 	if (!valid) return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
 	if (timestamp) {
-		const seenKey = `relay-seen/${signature}`;
-		if (await env.BUCKET.head(seenKey)) return NextResponse.json({ error: "Replayed request" }, { status: 409 });
-		await env.BUCKET.put(seenKey, new Uint8Array(0));
+		// The signature is hex, so it is a safe key; markers expire with the signature window.
+		if (await hasReplayMarker(env.BUCKET, RELAY_REPLAY_WINDOW, signature)) return NextResponse.json({ error: "Replayed request" }, { status: 409 });
+		await rememberReplayMarker(env.BUCKET, RELAY_REPLAY_WINDOW, signature);
 	}
-	const attachmentLimitReason = await inboundAttachmentLimitReasonFromRaw(raw);
+	// A linear scan, as in the Worker email handler: the queue consumer parses once and re-checks every limit.
+	const attachmentLimitReason = inboundAttachmentLimitReasonFromScan(raw);
 	if (attachmentLimitReason) return NextResponse.json({ action: "reject", reason: attachmentLimitReason });
 
 	let headers: Record<string, string> = {};

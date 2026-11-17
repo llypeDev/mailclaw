@@ -9,7 +9,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { authFetch } from "@/lib/auth/client";
 import { fetchCachedMessageDetail, getCachedMessageDetail } from "@/lib/messages/detail-cache";
-import { FULL_ROUTE_PREFETCH } from "@/lib/navigation/prefetch";
+import { prefetchRouteTemplate } from "@/lib/navigation/prefetch";
 import type { MessageNavigationResponse } from "@/app/api/messages/navigation/types";
 import type { MessageDetailNavigationContextValue, MessageDetailNavigationProps, MessageDetailNavigationProviderProps, MessageDetailNavigationSnapshot, OpenedUnreadMessages } from "./message-detail-navigation-types";
 import { getAutoAdvanceId, getMessageDetailNavigationState, takeOpenedUnreadMessage } from "./message-detail-navigation-utils";
@@ -148,7 +148,8 @@ export function MessageDetailNavigation({ messageId, unread }: MessageDetailNavi
 
 	function prefetchMessage(id: string | null) {
 		if (!id) return;
-		router.prefetch(`${hrefPrefix}/${id}`, FULL_ROUTE_PREFETCH);
+		// One route payload serves every message of the folder; the message itself is fetched next.
+		prefetchRouteTemplate(router, `${hrefPrefix}/${id}`);
 		if (!getCachedMessageDetail(id)?.body) void fetchCachedMessageDetail(id, true).catch(() => {});
 	}
 

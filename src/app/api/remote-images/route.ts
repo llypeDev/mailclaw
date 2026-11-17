@@ -4,7 +4,9 @@ import { fetchRemoteImage, RemoteImageError } from "@/lib/remote-images/fetch";
 import { allowRemoteImageRequest } from "@/lib/remote-images/rate-limit";
 
 const IMAGE_HEADERS = {
-	"Cache-Control": "private, no-store",
+	// The URL names the image, so the viewer's own browser may keep it for a
+	// day; `private` keeps it out of every shared cache. Errors stay no-store.
+	"Cache-Control": "private, max-age=86400",
 	"Content-Security-Policy": "default-src 'none'; sandbox",
 	"Cross-Origin-Resource-Policy": "same-origin",
 	"X-Content-Type-Options": "nosniff",
@@ -22,9 +24,8 @@ export async function GET(request: Request) {
 	const remoteUrl = requestUrl.searchParams.get("url") ?? "";
 	try {
 		const image = await fetchRemoteImage(remoteUrl, { blockedOrigins: [requestUrl.origin] });
-		const body = new ArrayBuffer(image.body.byteLength);
-		new Uint8Array(body).set(image.body);
-		return new Response(body, {
+		// The bytes are already a fresh buffer of their own; no second copy.
+		return new Response(image.body, {
 			headers: { ...IMAGE_HEADERS, "Content-Type": image.contentType },
 		});
 	} catch (error) {

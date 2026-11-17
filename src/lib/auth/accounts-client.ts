@@ -1,6 +1,6 @@
 "use client";
 
-import { authFetch, setClientSessionToken } from "@/lib/auth/client";
+import { authFetch, markClientSessionActive } from "@/lib/auth/client";
 
 export type BrowserAccount = {
 	userId: string;
@@ -28,9 +28,10 @@ export async function switchBrowserAccount(userId: string): Promise<string | nul
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ userId }),
 	});
-	const data = (await res.json().catch(() => ({}))) as { token?: string; error?: string };
-	if (!res.ok || !data.token) return data.error ?? "Could not switch account";
-	setClientSessionToken(data.token);
+	const data = (await res.json().catch(() => ({}))) as { error?: string };
+	if (!res.ok) return data.error ?? "Could not switch account";
+	// The new session is in the httpOnly cookie; only the marker changes here.
+	markClientSessionActive();
 	return null;
 }
 

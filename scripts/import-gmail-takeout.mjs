@@ -15,8 +15,8 @@
  * wins), and mail without either is archived. Unread and Starred carry over. Uploads skip duplicates, so an
  * interrupted run can simply be started again.
  *
- * Sign-in: set MAILCLAW_TOKEN to a session token (DevTools → Application → Local Storage →
- * mailclaw-session-token), or pass --email and enter the password (and a 2FA code) when asked.
+ * Sign-in: pass --email and enter the password (and a 2FA code) when asked, or set MAILCLAW_TOKEN to
+ * a session token, such as the value of the httpOnly ep_session cookie (DevTools → Application → Cookies).
  * MAILCLAW_PASSWORD skips the prompt.
  *
  * Options:

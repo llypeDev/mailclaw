@@ -1,6 +1,7 @@
 import { signAwsRequest } from "@/lib/aws/sigv4";
 import { xmlTag } from "@/lib/aws/xml";
 import type { AwsConfig } from "@/lib/aws/aws-types";
+import { API_TIMEOUT_MS, isTimeoutError, timeoutMessage, withTimeout } from "@/lib/http/fetch-timeout";
 
 export class AwsError extends Error {
 	constructor(message: string, readonly status: number, readonly code: string) {
@@ -39,7 +40,28 @@ export type AwsRequest = {
 	headers?: Record<string, string>;
 	/** Region used to sign; defaults to the config's. */
 	region?: string;
+	/**
+	 * Deadline for the response and, when the caller reads it before then, its body.
+	 * None by default: B2Bucket streams object bodies through this to clients for as
+	 * long as a download takes. Calls that buffer the body pass one.
+	 */
+	timeoutMs?: number;
 };
+
+/** A deadline that passed surfaces as an AwsError, which every caller already handles. */
+export function awsTimeoutError(timeoutMs: number): AwsError {
+	return new AwsError(timeoutMessage("AWS", timeoutMs), 504, "RequestTimeout");
+}
+
+/** Runs `read` and turns a timeout during it into an AwsError. */
+export async function withAwsTimeout<T>(timeoutMs: number, read: () => Promise<T>): Promise<T> {
+	try {
+		return await read();
+	} catch (error) {
+		if (isTimeoutError(error)) throw awsTimeoutError(timeoutMs);
+		throw error;
+	}
+}
 
 export async function awsRequest(request: AwsRequest): Promise<Response> {
 	const { config, service } = request;
@@ -49,19 +71,30 @@ export async function awsRequest(request: AwsRequest): Promise<Response> {
 	const body = request.body ?? "";
 	const method = request.method ?? "GET";
 	const headers = await signAwsRequest({ method, url, headers: request.headers ?? {}, body, region, service, credentials: config, });
-	const response = await fetch(url, { method, headers, body: method === "GET" || method === "HEAD" ? undefined : body });
-	if (!response.ok) throw await parseError(response);
-	return response;
+	const init: RequestInit = { method, headers, body: method === "GET" || method === "HEAD" ? undefined : body };
+	const timeoutMs = request.timeoutMs;
+	if (!timeoutMs) {
+		const response = await fetch(url, init);
+		if (!response.ok) throw await parseError(response);
+		return response;
+	}
+	return withAwsTimeout(timeoutMs, async () => {
+		const response = await fetch(url, withTimeout(init, timeoutMs));
+		if (!response.ok) throw await parseError(response);
+		return response;
+	});
 }
 
 /** AWS JSON REST (SES v2). */
 export async function awsJson<T>(request: AwsRequest & { json?: unknown }): Promise<T> {
+	const timeoutMs = request.timeoutMs ?? API_TIMEOUT_MS;
 	const response = await awsRequest({
 		...request,
+		timeoutMs,
 		body: request.json === undefined ? request.body : JSON.stringify(request.json),
 		headers: { "Content-Type": "application/json", ...request.headers },
 	});
-	const text = await response.text();
+	const text = await withAwsTimeout(timeoutMs, () => response.text());
 	return (text ? JSON.parse(text) : {}) as T;
 }
 
@@ -82,6 +115,7 @@ export async function awsQuery(
 		method: "POST",
 		body,
 		headers: { "Content-Type": "application/x-www-form-urlencoded; charset=utf-8" },
+		timeoutMs: API_TIMEOUT_MS,
 	});
-	return response.text();
+	return withAwsTimeout(API_TIMEOUT_MS, () => response.text());
 }

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { backups } from "@/db/schema";
 import { assertPrimaryAdmin } from "@/lib/auth/admin";
-import { requireUser } from "@/lib/auth/cookies";
+import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
 
 export async function GET(
@@ -11,8 +11,9 @@ export async function GET(
 	{ params }: { params: Promise<{ id: string }> },
 ) {
 	const env = getEnv();
+	const { user, error } = await requireSessionUser(env, request);
+	if (error) return error;
 	try {
-		const user = await requireUser(env, request);
 		assertPrimaryAdmin(user);
 		const { id } = await params;
 		const [backup] = await getDb(env).select().from(backups).where(eq(backups.id, id)).limit(1);

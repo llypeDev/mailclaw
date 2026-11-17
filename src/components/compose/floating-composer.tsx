@@ -11,8 +11,7 @@ import { useSidebar } from "@/components/sidebar-state";
 import { useLanguage } from "@/components/language-provider";
 import { authFetch } from "@/lib/auth/client";
 import { cn } from "@/lib/utils";
-
-const STATUS_POLL_MS = 1000;
+import { getSendStatusPollDelay } from "./send-notice-utils";
 
 function ComposeNoticeToast({ notice }: { notice: ComposeNotice }) {
 	const [now, setNow] = useState(() => Date.now());
@@ -38,6 +37,14 @@ function ComposeNoticeToast({ notice }: { notice: ComposeNotice }) {
 		if (!poll) return;
 		let cancelled = false;
 		let timer: number | undefined;
+		let attempt = 0;
+		// The countdown has ended (or there was none) and the queue has just started,
+		// so wait before the first check and space the later ones out.
+		const schedule = () => {
+			if (cancelled) return;
+			timer = window.setTimeout(() => void check(), getSendStatusPollDelay(attempt));
+			attempt += 1;
+		};
 		const check = async () => {
 			if (cancelled) return;
 			try {
@@ -52,9 +59,9 @@ function ComposeNoticeToast({ notice }: { notice: ComposeNotice }) {
 			} catch {
 				// A transient poll failure keeps the toast waiting until the next attempt.
 			}
-			if (!cancelled) timer = window.setTimeout(() => void check(), STATUS_POLL_MS);
+			schedule();
 		};
-		void check();
+		schedule();
 		return () => {
 			cancelled = true;
 			if (timer) window.clearTimeout(timer);

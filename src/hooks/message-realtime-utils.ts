@@ -4,6 +4,10 @@ import { formatSenderLabel } from "@/lib/email/sender-label";
 
 export const REALTIME_FALLBACK_INTERVAL_MS = 60_000;
 export const REALTIME_HEARTBEAT_INTERVAL_MS = 25_000;
+/** How often a visible tab asks the hub whether a notification was missed. */
+export const REALTIME_REVISION_CHECK_INTERVAL_MS = 5 * 60_000;
+/** Answered by the Durable Object's auto-response without waking it. */
+export const REALTIME_KEEPALIVE_MESSAGE = "ping";
 export const REALTIME_RECONNECT_MAX_MS = 30_000;
 const BROWSER_NOTIFICATIONS_ENABLED_KEY = "mailclaw:browser-notifications-enabled";
 
@@ -26,6 +30,29 @@ export function getRealtimeWebSocketUrl(): string {
 
 export function getReconnectDelay(attempt: number): number {
 	return Math.min(1_000 * 2 ** attempt, REALTIME_RECONNECT_MAX_MS);
+}
+
+export function createRevisionCheckMessage(revision: string | null): string {
+	return JSON.stringify({ type: "ping", revision });
+}
+
+/**
+ * What one heartbeat tick sends. Most ticks are the bare keep-alive, which
+ * costs no Durable Object wake-up or database query; a visible tab adds a
+ * revision check every REALTIME_REVISION_CHECK_INTERVAL_MS to catch a
+ * notification lost in transit. Hidden tabs never check: becoming visible
+ * refreshes the views anyway.
+ */
+export function getHeartbeatMessage(input: {
+	now: number;
+	lastRevisionCheckAt: number;
+	visible: boolean;
+	revision: string | null;
+}): string {
+	if (input.visible && input.now - input.lastRevisionCheckAt >= REALTIME_REVISION_CHECK_INTERVAL_MS) {
+		return createRevisionCheckMessage(input.revision);
+	}
+	return REALTIME_KEEPALIVE_MESSAGE;
 }
 
 export function parseNewMessageEvent(value: string): NewMessageEvent | null {
@@ -73,6 +100,7 @@ export async function showBrowserNewMessageNotification(event: NewMessageEvent):
 		});
 		notification.onclick = () => {
 			window.focus();
+			// eslint-disable-next-line nextjs-js/no-location-assign-relative-destination -- runs from a Notification click outside React, where no router is available
 			window.location.assign(`/inbox/${event.messageId}`);
 			notification.close();
 		};

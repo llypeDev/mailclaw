@@ -1,4 +1,5 @@
 import { getInlineContentType } from "@/lib/http/content-type";
+import { etagMatches } from "@/lib/http/object-cache";
 import { driveContentDisposition, driveObjectKey } from "./utils";
 import type { DriveRow } from "./types";
 
@@ -36,7 +37,12 @@ export async function streamDriveFile(env: CloudflareEnv, request: Request, item
 	// PDF served with nosniff cannot run script, so it only gets the framing rule.
 	headers.set("Content-Security-Policy", inlineType === "application/pdf" ? "frame-ancestors 'self'" : "default-src 'none'; style-src 'unsafe-inline'; sandbox");
 	headers.set("Referrer-Policy", "no-referrer");
-	headers.set("Cache-Control", "private, no-store");
+	// Files change in place, so the browser may keep a copy but must ask first; the ETag
+	// comes from the database row, so a 304 never touches the bucket.
+	headers.set("Cache-Control", "private, no-cache");
+	if (etagMatches(request.headers.get("If-None-Match"), etag)) {
+		return new Response(null, { status: 304, headers });
+	}
 
 	// A client resuming against a file that changed since must start over, which If-Range expresses.
 	const ifRange = request.headers.get("If-Range");
@@ -47,13 +53,20 @@ export async function streamDriveFile(env: CloudflareEnv, request: Request, item
 	}
 
 	const key = item.r2Key ?? driveObjectKey(item.ownerId, item.id);
-	const object = range ? await env.BUCKET.get(key, { range: { offset: range.start, length: range.end - range.start + 1 } }) : await env.BUCKET.get(key);
-	if (!object) return new Response("File not found", { status: 404 });
+	let body: ReadableStream | null = null;
+	if (request.method === "HEAD") {
+		// Only the headers go back, so check the object exists without opening its body.
+		if (!await env.BUCKET.head(key)) return new Response("File not found", { status: 404 });
+	} else {
+		const object = range ? await env.BUCKET.get(key, { range: { offset: range.start, length: range.end - range.start + 1 } }) : await env.BUCKET.get(key);
+		if (!object) return new Response("File not found", { status: 404 });
+		body = object.body;
+	}
 	if (!range) {
 		headers.set("Content-Length", String(item.size));
-		return new Response(request.method === "HEAD" ? null : object.body, { headers });
+		return new Response(body, { headers });
 	}
 	headers.set("Content-Range", `bytes ${range.start}-${range.end}/${item.size}`);
 	headers.set("Content-Length", String(range.end - range.start + 1));
-	return new Response(request.method === "HEAD" ? null : object.body, { status: 206, headers });
+	return new Response(body, { status: 206, headers });
 }

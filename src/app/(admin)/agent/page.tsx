@@ -75,6 +75,7 @@ export default function AdminAgentPage() {
 			}).finally(() => { if (!controller.signal.aborted) setModelsLoading(false); });
 		}, form.provider === "cloudflare" ? 0 : 500);
 		return () => { window.clearTimeout(timer); controller.abort(); };
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the endpoint fields only; the whole `form` would loop, since this effect merges published rates back into it
 	}, [loaded, missingEndpoint, modelsKey, form.provider, form.preset, form.baseUrl, form.apiKey, canUseSavedKey, t]);
 
 	async function submit(event: React.FormEvent<HTMLFormElement>) {

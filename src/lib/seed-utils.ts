@@ -367,7 +367,7 @@ export async function ensureDemoUser(env: CloudflareEnv) {
 		// Seeding prints the demo credentials, so restore the documented
 		// password instead of advertising a sign-in that no longer works.
 		if (!hasPasswordHash(existing.passwordHash)) {
-			const passwordHash = hashPassword(demoCredentials.password);
+			const passwordHash = await hashPassword(demoCredentials.password);
 			await db.update(users).set({ passwordHash }).where(eq(users.id, existing.id));
 			existing.passwordHash = passwordHash;
 		}
@@ -384,7 +384,7 @@ export async function ensureDemoUser(env: CloudflareEnv) {
 		id,
 		remoteContentMode: "ask",
 		email: demoCredentials.email,
-		passwordHash: hashPassword(demoCredentials.password),
+		passwordHash: await hashPassword(demoCredentials.password),
 		name: "Demo User",
 		role: admin ? "user" : "admin",
 		isPrimaryAdmin: !admin,

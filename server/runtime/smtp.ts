@@ -3,26 +3,67 @@ import { SMTPServer } from "smtp-server";
 import type { SMTPServerSession } from "smtp-server";
 import { intakeIncomingMail } from "@/lib/email/intake";
 import { inboundAttachmentLimitReasonFromRaw } from "@/lib/email/inbound-attachments";
+import { recordRuleMatch, resolveInboundAddress } from "@/lib/email/routing";
 import { isPublicIpv4 } from "@/lib/spam/domain-utils";
 import { getDb } from "@/db";
 import { domains } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { verifySmtpAuthentication } from "./smtp-auth";
+import {
+	CompletedWork,
+	deliverToRecipients,
+	forwardKey,
+	messageFingerprint,
+	parseHeaders,
+	smtpDataReply,
+	UNTRUSTED_HEADERS,
+	withPrependedHeaders,
+} from "./smtp-utils";
 import type { Mailer } from "./mailer";
+
+export { parseHeaders } from "./smtp-utils";
 
 const MAX_CLIENTS = 100;
 const MAX_CONNECTIONS_PER_IP = 10;
 const MAX_RECIPIENTS = 50;
 const SOCKET_TIMEOUT_MS = 60_000;
 
-/** Headers a sender can write but only the receiving side may vouch for. */
-const UNTRUSTED_HEADERS = ["authentication-results", "received-spf", "arc-authentication-results", "received"];
+type SmtpError = Error & { responseCode: number };
+
+function smtpError(message: string, responseCode: number): SmtpError {
+	return Object.assign(new Error(message), { responseCode });
+}
+
+/**
+ * The RCPT TO answer for one recipient. Domain block rules match only the
+ * envelope addresses, so they are decided here and the sender gets a 550 for
+ * that recipient alone; an address on one of our domains that resolves to
+ * nothing is refused the same way instead of being accepted and then dropped by
+ * the queue consumer. Null accepts the recipient.
+ */
+async function checkRecipient(env: CloudflareEnv, address: string, mailFrom: string): Promise<SmtpError | null> {
+	const db = getDb(env);
+	const hostname = address.slice(address.lastIndexOf("@") + 1).toLowerCase();
+	const [domain] = await db.select({ id: domains.id }).from(domains).where(eq(domains.hostname, hostname)).limit(1);
+	if (!domain) return smtpError("Relay access denied", 550);
+	const decision = await resolveInboundAddress(db, address, mailFrom);
+	if (!decision) return smtpError("No such user here", 550);
+	if (decision.action === "reject") {
+		if (decision.ruleId) await recordRuleMatch(db, decision.ruleId).catch(() => undefined);
+		return smtpError(decision.rejectReason ?? "Message rejected by routing rule", 550);
+	}
+	return null;
+}
 
 /**
  * Receive mail directly on port 25 (or wherever SMTP_INBOUND_PORT points).
  * One inbound connection per message; each envelope recipient is handed to
- * the same intake the Cloudflare handler uses. Rejected mail gets a 550
- * during DATA, so the sender sees the routing rule's reason.
+ * the same intake the Cloudflare handler uses.
+ *
+ * Refusals happen per recipient at RCPT TO (unknown domain or address, domain
+ * block rule). After DATA, SMTP has one answer for the whole message: see
+ * `smtpDataReply` for how per-recipient outcomes combine, and `CompletedWork`
+ * for why a 451 retry does not store or forward twice.
  */
 export function startSmtpListener(
 	env: CloudflareEnv,
@@ -34,6 +75,7 @@ export function startSmtpListener(
 	const connectionsByIp = new Map<string, number>();
 	// Only sessions that were admitted are counted, so rejected ones cannot decrement on close.
 	const admittedSessions = new Set<string>();
+	const completed = new CompletedWork();
 	const server = new SMTPServer({
 		maxClients: MAX_CLIENTS,
 		socketTimeout: SOCKET_TIMEOUT_MS,
@@ -42,7 +84,7 @@ export function startSmtpListener(
 			const count = (connectionsByIp.get(ip) ?? 0) + 1;
 			// maxClients in smtp-server admits one connection past the limit, so enforce it here too.
 			if (count > MAX_CONNECTIONS_PER_IP || admittedSessions.size >= MAX_CLIENTS) {
-				callback(Object.assign(new Error("Too many connections"), { responseCode: 421 }));
+				callback(smtpError("Too many connections", 421));
 				return;
 			}
 			admittedSessions.add(session.id);
@@ -58,16 +100,16 @@ export function startSmtpListener(
 		},
 		onRcptTo(address, session, callback) {
 			if (session.envelope.rcptTo.length >= MAX_RECIPIENTS) {
-				callback(Object.assign(new Error("Too many recipients"), { responseCode: 452 }));
+				callback(smtpError("Too many recipients", 452));
 				return;
 			}
-			// Refuse unknown domains before DATA so nothing is buffered for mail we would drop anyway.
-			const hostname = address.address.slice(address.address.lastIndexOf("@") + 1).toLowerCase();
-			getDb(env).select({ id: domains.id }).from(domains).where(eq(domains.hostname, hostname)).limit(1).then(
-				([domain]) => callback(domain ? undefined : Object.assign(new Error("Relay access denied"), { responseCode: 550 })),
+			// Decide before DATA so nothing is buffered for mail we would drop anyway.
+			const mailFrom = session.envelope.mailFrom ? session.envelope.mailFrom.address : "";
+			checkRecipient(env, address.address, mailFrom).then(
+				(refusal) => callback(refusal ?? undefined),
 				(error) => {
 					console.error("SMTP recipient lookup failed", error);
-					callback(Object.assign(new Error("Temporary failure, try again later"), { responseCode: 451 }));
+					callback(smtpError("Temporary failure, try again later", 451));
 				},
 			);
 		},
@@ -88,8 +130,7 @@ export function startSmtpListener(
 			});
 			stream.on("end", async () => {
 				if (stream.sizeExceeded) {
-					const error = Object.assign(new Error("Message exceeds size limit"), { responseCode: 552 });
-					callback(error);
+					callback(smtpError("Message exceeds size limit", 552));
 					return;
 				}
 				const raw = Buffer.concat(chunks);
@@ -98,11 +139,11 @@ export function startSmtpListener(
 					attachmentLimitReason = await inboundAttachmentLimitReasonFromRaw(toArrayBuffer(raw));
 				} catch (error) {
 					console.error("SMTP attachment inspection failed", error);
-					callback(Object.assign(new Error("Temporary failure, try again later"), { responseCode: 451 }));
+					callback(smtpError("Temporary failure, try again later", 451));
 					return;
 				}
 				if (attachmentLimitReason) {
-					callback(Object.assign(new Error(attachmentLimitReason), { responseCode: 552 }));
+					callback(smtpError(attachmentLimitReason, 552));
 					return;
 				}
 				const from = session.envelope.mailFrom ? session.envelope.mailFrom.address : "";
@@ -116,31 +157,35 @@ export function startSmtpListener(
 					sender: from,
 					mta: options.hostname,
 				});
-				let rejectReason: string | null = null;
-				for (const recipient of session.envelope.rcptTo) {
-					const result = await intakeIncomingMail(
-						env,
-						{ from, to: recipient.address, raw: toArrayBuffer(raw), headers, senderIp, verdicts },
-						{
-							reject: (reason) => {
-								rejectReason = reason;
+				const fingerprint = messageFingerprint(raw, from);
+				const outcomes = await deliverToRecipients(
+					session.envelope.rcptTo.map((recipient) => recipient.address),
+					fingerprint,
+					completed,
+					async (to) => {
+						const result = await intakeIncomingMail(
+							env,
+							{ from, to, raw: toArrayBuffer(raw), headers, senderIp, verdicts },
+							{
+								forward: async (destination, extraHeaders) => {
+									// A retried transaction must not send a forward that already went out.
+									const key = forwardKey(fingerprint, to, destination);
+									if (completed.has(key)) return true;
+									// The loop-guard marker rides on the forwarded copy, as message.forward() adds it on Workers.
+									const sent = await mailer.sendRaw(from, destination, withPrependedHeaders(raw, extraHeaders));
+									if (sent) completed.add(key);
+									return sent;
+								},
 							},
-							forward: async (destination) => mailer.sendRaw(from, destination, raw),
-						},
-					).catch((error) => {
-						console.error(`SMTP intake failed for ${recipient.address}`, error);
-						return null;
-					});
-					if (!result) {
-						callback(Object.assign(new Error("Temporary failure, try again later"), { responseCode: 451 }));
-						return;
-					}
+						);
+						return { rejected: result.action === "reject" ? result.reason : null };
+					},
+				);
+				for (const outcome of outcomes) {
+					if (outcome.outcome === "rejected") console.warn(`SMTP: refused ${outcome.recipient} after DATA: ${outcome.reason}`);
 				}
-				if (rejectReason) {
-					callback(Object.assign(new Error(rejectReason), { responseCode: 550 }));
-					return;
-				}
-				callback();
+				const reply = smtpDataReply(outcomes);
+				callback(reply.code === 250 ? undefined : smtpError(reply.message, reply.code));
 			});
 		},
 	});
@@ -149,21 +194,6 @@ export function startSmtpListener(
 		console.log(`SMTP inbound listening on ${options.host ?? "0.0.0.0"}:${options.port}`);
 	});
 	return server;
-}
-
-/** Header map in the shape the Worker handler provides: lower-cased names, folded lines joined. */
-export function parseHeaders(raw: Buffer): Record<string, string> {
-	const text = new TextDecoder("latin1").decode(raw.subarray(0, Math.min(raw.length, 256 * 1024)));
-	const end = text.search(/\r?\n\r?\n/);
-	const block = (end >= 0 ? text.slice(0, end) : text).replace(/\r?\n[ \t]+/g, " ");
-	const headers: Record<string, string> = {};
-	for (const line of block.split(/\r?\n/)) {
-		const index = line.indexOf(":");
-		if (index <= 0) continue;
-		const name = line.slice(0, index).trim().toLowerCase();
-		if (!(name in headers)) headers[name] = line.slice(index + 1).trim();
-	}
-	return headers;
 }
 
 function toArrayBuffer(buffer: Buffer): ArrayBuffer {

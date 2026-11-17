@@ -1,11 +1,9 @@
 "use client";
 
 import { SkipToContent } from "@/components/skip-to-content";
-import Link from "next/link";
-import { HelpCircle } from "@/components/icons";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { ComposeProvider } from "@/components/compose/compose-context";
-import { FloatingComposer } from "@/components/compose/floating-composer";
+import { LazyFloatingComposer } from "@/components/compose/lazy-floating-composer";
 import { MailSearchInput } from "@/components/mail-search/mail-search-input";
 import { MailSearchProvider } from "@/components/mail-search/mail-search-context";
 import { MailboxProvider } from "@/components/mailbox-provider";
@@ -50,7 +48,7 @@ export default function DashboardLayout({
                       {children}
                     </main>
                   </div>
-                  <FloatingComposer />
+                  <LazyFloatingComposer />
                 </div>
               </ShortcutsProvider>
             </MailSearchProvider>

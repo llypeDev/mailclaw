@@ -1,4 +1,5 @@
-import { awsRequest, AwsError } from "@/lib/aws/client";
+import { awsRequest, AwsError, withAwsTimeout } from "@/lib/aws/client";
+import { API_TIMEOUT_MS, TRANSFER_TIMEOUT_MS } from "@/lib/http/fetch-timeout";
 import { xmlBlocks, xmlTag } from "@/lib/aws/xml";
 import type { AwsConfig } from "@/lib/aws/aws-types";
 import type { B2Config, B2HttpMetadata } from "@/lib/storage/b2-types";
@@ -84,7 +85,11 @@ export class B2Bucket {
 		this.host = `${config.bucket}.${config.endpoint}`;
 	}
 
-	private request(key: string | null, init: { method?: string; query?: Record<string, string>; body?: string | ArrayBuffer; headers?: Record<string, string> } = {}) {
+	/**
+	 * `timeoutMs` bounds the response and any body read before it passes. Only the object GET goes
+	 * without one: its body streams to the client for as long as a download takes.
+	 */
+	private request(key: string | null, init: { method?: string; query?: Record<string, string>; body?: string | ArrayBuffer; headers?: Record<string, string>; timeoutMs?: number } = {}) {
 		return awsRequest({ config: this.credentials, service: "s3", host: this.host, path: key === null ? "/" : encodePath(key), ...init });
 	}
 
@@ -116,13 +121,13 @@ export class B2Bucket {
 	}
 
 	async head(key: string): Promise<B2Object | null> {
-		try { return new B2Object(key, await this.request(key, { method: "HEAD" })); }
+		try { return new B2Object(key, await this.request(key, { method: "HEAD", timeoutMs: API_TIMEOUT_MS })); }
 		catch (error) { if (error instanceof AwsError && error.status === 404) return null; throw error; }
 	}
 
 	async put(key: string, value: PutValue, options?: PutOptions): Promise<B2Object> {
 		const body = await toBuffer(value);
-		const response = await this.request(key, { method: "PUT", body, headers: this.metadataHeaders(options) });
+		const response = await this.request(key, { method: "PUT", body, headers: this.metadataHeaders(options), timeoutMs: TRANSFER_TIMEOUT_MS });
 		return new B2Object(key, new Response(null, { headers: response.headers }), body.byteLength);
 	}
 
@@ -130,7 +135,7 @@ export class B2Bucket {
 		const list = Array.isArray(keys) ? keys : [keys];
 		for (let index = 0; index < list.length; index += 10) {
 			await Promise.all(list.slice(index, index + 10).map(async (key) => {
-				try { await this.request(key, { method: "DELETE" }); }
+				try { await this.request(key, { method: "DELETE", timeoutMs: API_TIMEOUT_MS }); }
 				catch (error) { if (!(error instanceof AwsError && error.status === 404)) throw error; }
 			}));
 		}
@@ -141,7 +146,8 @@ export class B2Bucket {
 		const query: Record<string, string> = { "list-type": "2", "max-keys": String(Math.min(options.limit ?? 1000, 1000)) };
 		if (options.prefix) query.prefix = options.prefix;
 		if (options.cursor) query["continuation-token"] = options.cursor;
-		const xml = await (await this.request(null, { query })).text();
+		const response = await this.request(null, { query, timeoutMs: API_TIMEOUT_MS });
+		const xml = await withAwsTimeout(API_TIMEOUT_MS, () => response.text());
 		const objects = xmlBlocks(xml, "Contents").map((block) => ({
 			key: xmlTag(block, "Key") ?? "",
 			size: Number(xmlTag(block, "Size") ?? 0),
@@ -152,8 +158,8 @@ export class B2Bucket {
 	}
 
 	async createMultipartUpload(key: string, options?: { httpMetadata?: B2HttpMetadata; customMetadata?: Record<string, string> }) {
-		const response = await this.request(key, { method: "POST", query: { uploads: "" }, headers: this.metadataHeaders(options) });
-		const uploadId = xmlTag(await response.text(), "UploadId");
+		const response = await this.request(key, { method: "POST", query: { uploads: "" }, headers: this.metadataHeaders(options), timeoutMs: API_TIMEOUT_MS });
+		const uploadId = xmlTag(await withAwsTimeout(API_TIMEOUT_MS, () => response.text()), "UploadId");
 		if (!uploadId) throw new Error("Backblaze did not return an upload id");
 		return this.resumeMultipartUpload(key, uploadId);
 	}
@@ -164,16 +170,17 @@ export class B2Bucket {
 			uploadId,
 			uploadPart: async (partNumber: number, value: PutValue) => {
 				if (!Number.isInteger(partNumber) || partNumber < 1) throw new Error("Invalid part number");
-				const response = await this.request(key, { method: "PUT", query: { partNumber: String(partNumber), uploadId }, body: await toBuffer(value) });
+				const response = await this.request(key, { method: "PUT", query: { partNumber: String(partNumber), uploadId }, body: await toBuffer(value), timeoutMs: TRANSFER_TIMEOUT_MS });
 				return { partNumber, etag: (response.headers.get("etag") ?? "").replace(/"/g, "") };
 			},
-			abort: async () => { await this.request(key, { method: "DELETE", query: { uploadId } }); },
+			abort: async () => { await this.request(key, { method: "DELETE", query: { uploadId }, timeoutMs: API_TIMEOUT_MS }); },
 			complete: async (parts: { partNumber: number; etag: string }[]) => {
 				const body = `<CompleteMultipartUpload>${[...parts].sort((a, b) => a.partNumber - b.partNumber)
 					.map((part) => `<Part><PartNumber>${part.partNumber}</PartNumber><ETag>"${escapeXml(part.etag)}"</ETag></Part>`).join("")}</CompleteMultipartUpload>`;
-				const response = await this.request(key, { method: "POST", query: { uploadId }, body, headers: { "Content-Type": "application/xml" } });
+				// Assembling the parts can take a while on large objects, so this gets the transfer deadline.
+				const response = await this.request(key, { method: "POST", query: { uploadId }, body, headers: { "Content-Type": "application/xml" }, timeoutMs: TRANSFER_TIMEOUT_MS });
 				// A 200 can still carry an <Error> document.
-				const text = await response.text();
+				const text = await withAwsTimeout(TRANSFER_TIMEOUT_MS, () => response.text());
 				if (/<Error>/.test(text)) throw new Error(xmlTag(text, "Message") ?? "Multipart upload failed");
 				const head = await this.head(key);
 				if (!head) throw new Error("Uploaded object not found");

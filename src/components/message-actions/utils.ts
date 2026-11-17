@@ -7,8 +7,7 @@ import { markMessagesReadInCaches } from "@/hooks/utils";
 import { getEmailAddress, normalizeEmailAddress, splitEmailAddressList } from "@/lib/email/address";
 import { getLatestEmailContent } from "@/lib/email/reply-content-utils";
 import { formatUserDate } from "@/lib/time/utils";
-import { sanitizeEmailHtml } from "@/app/(dashboard)/inbox/[messageId]/email-html-sanitizer";
-import { escapeHtml, htmlToPlainText, textToHtml, wrapQuotedHtml } from "@/components/compose/rich-text-utils";
+import { escapeHtml, htmlToPlainText, textToHtml, wrapQuotedHtml } from "@/components/compose/rich-text-core-utils";
 import type {
   BlockMessageContactInput,
   ForwardDraftInput,
@@ -21,12 +20,9 @@ import type {
 } from "./types";
 import {
   ArchiveIcon,
-  Inbox,
   InboxIcon,
   ShieldAlertIcon,
-  ShieldIcon,
   Trash2Icon,
-  TrashIcon,
 } from "@/components/icons";
 
 export function getMessageBackHref(
@@ -155,16 +151,28 @@ export function buildReplyQuote(
 const QUOTE_STYLE = "margin:0 0 0 0;border-left:1px solid #ccc;padding-left:1ex;opacity:0.6";
 
 /**
+ * The original message as quotable HTML: sanitised HTML, or escaped text. The
+ * sanitizer (DOMPurify, css-tree, parse5) is imported here, only when a reply or
+ * forward draft is being built, so the message lists that import these actions
+ * do not ship it.
+ */
+async function getQuotableHtml(bodyText: string | null | undefined, bodyHtml: string | null | undefined) {
+  if (!bodyHtml) return textToHtml(bodyText);
+  const { sanitizeEmailHtml } = await import("@/app/(dashboard)/inbox/[messageId]/email-html-sanitizer");
+  return sanitizeEmailHtml(bodyHtml, { forOutgoing: true });
+}
+
+/**
  * The folded quote under a reply: the "On <date>, <sender> wrote:" line every
  * client recognises, then the original as HTML (sanitised) or as text.
  */
-export function buildReplyQuoteHtml(
+export async function buildReplyQuoteHtml(
   senderAddress: string,
   sentAt: string | null | undefined,
   bodyText: string | null | undefined,
   bodyHtml: string | null | undefined,
 ) {
-  const original = bodyHtml ? sanitizeEmailHtml(bodyHtml, { forOutgoing: true }) : textToHtml(bodyText);
+  const original = await getQuotableHtml(bodyText, bodyHtml);
   if (!original) return null;
   const when = sentAt ? formatUserDate(sentAt, { weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "an earlier date";
   return wrapQuotedHtml(
@@ -236,7 +244,7 @@ export function buildForwardSubject(subject: string | null | undefined) {
 }
 
 /** The header block mail clients put above a forwarded message, as folded HTML. */
-export function buildForwardHtml(
+export async function buildForwardHtml(
   message: ForwardDraftInput["message"],
   bodyText: string | null | undefined,
   bodyHtml: string | null | undefined,
@@ -249,7 +257,7 @@ export function buildForwardHtml(
   ];
   if (message.ccAddr) lines.push(`Cc: ${message.ccAddr}`);
   const header = `<div>---------- Forwarded message ---------<br>${lines.map(escapeHtml).join("<br>")}</div><br>`;
-  const original = bodyHtml ? sanitizeEmailHtml(bodyHtml, { forOutgoing: true }) : textToHtml(bodyText);
+  const original = await getQuotableHtml(bodyText, bodyHtml);
   return wrapQuotedHtml(`${header}${original ?? ""}`);
 }
 
@@ -258,7 +266,7 @@ export function buildForwardHtml(
  * and references its Message-ID so recipients who already have it see the link.
  */
 export async function createForwardDraft({ mailboxId, ownAddress, message, bodyText, bodyHtml }: ForwardDraftInput) {
-  const html = buildForwardHtml(message, bodyText, bodyHtml);
+  const html = await buildForwardHtml(message, bodyText, bodyHtml);
   const response = await authFetch("/api/drafts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -291,7 +299,7 @@ export async function createReplyDraft({
   threading,
 }: ReplyDraftInput) {
   if (recipients.to.length === 0) throw new Error("Sender address is required");
-  const html = buildReplyQuoteHtml(senderAddress, sentAt, bodyText, bodyHtml) ?? "";
+  const html = (await buildReplyQuoteHtml(senderAddress, sentAt, bodyText, bodyHtml)) ?? "";
 
   const response = await authFetch("/api/drafts", {
     method: "POST",

@@ -1,4 +1,4 @@
-import { and, eq, gt, ne } from "drizzle-orm";
+import { and, eq, getTableColumns, gt, ne } from "drizzle-orm";
 import { revokeAllDeviceKeys } from "@/lib/auth/device-keys";
 import { newId } from "@/lib/ids";
 import { getDb } from "@/db";
@@ -39,11 +39,17 @@ export async function getUserFromSession(
 	env: CloudflareEnv,
 	token: string | undefined,
 ): Promise<typeof users.$inferSelect | null> {
-	const session = await getSessionFromToken(env, token);
-	if (!session) return null;
-	// Same reason as below: `disabled` must be seen as soon as another admin writes it.
+	if (!token) return null;
+	// Same reason as below: `disabled` must be seen as soon as another admin writes it. One join
+	// instead of reading the session and then its user: two sequential round trips to the primary.
 	const db = getDb({ DB: env.DB_PRIMARY ?? env.DB });
-	const [user] = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
+	const tokenHash = await hashSessionToken(token);
+	const [user] = await db
+		.select(getTableColumns(users))
+		.from(sessions)
+		.innerJoin(users, eq(users.id, sessions.userId))
+		.where(and(eq(sessions.tokenHash, tokenHash), gt(sessions.expiresAt, new Date())))
+		.limit(1);
 	return user ?? null;
 }
 

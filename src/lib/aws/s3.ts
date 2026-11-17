@@ -1,6 +1,10 @@
-import { awsRequest, AwsError } from "@/lib/aws/client";
+import { awsRequest as signedRequest, AwsError, withAwsTimeout, type AwsRequest } from "@/lib/aws/client";
+import { API_TIMEOUT_MS, TRANSFER_TIMEOUT_MS } from "@/lib/http/fetch-timeout";
 import { sha256Hex } from "@/lib/aws/sigv4";
 import type { AwsConfig } from "@/lib/aws/aws-types";
+
+/** Every call here is control plane or a whole-object read, so each has a deadline. */
+const awsRequest = (request: AwsRequest) => signedRequest({ timeoutMs: API_TIMEOUT_MS, ...request });
 
 const bucketHost = (config: AwsConfig, bucket: string) => `${bucket}.s3.${config.region}.amazonaws.com`;
 
@@ -34,8 +38,8 @@ export async function putExpiryLifecycle(config: AwsConfig, bucket: string, pref
 }
 
 export async function getObject(config: AwsConfig, bucket: string, key: string): Promise<ArrayBuffer> {
-	const response = await awsRequest({ config, service: "s3", host: bucketHost(config, bucket), path: `/${key.split("/").map(encodeURIComponent).join("/")}` });
-	return response.arrayBuffer();
+	const response = await awsRequest({ config, service: "s3", host: bucketHost(config, bucket), path: `/${key.split("/").map(encodeURIComponent).join("/")}`, timeoutMs: TRANSFER_TIMEOUT_MS });
+	return withAwsTimeout(TRANSFER_TIMEOUT_MS, () => response.arrayBuffer());
 }
 
 export async function deleteObject(config: AwsConfig, bucket: string, key: string): Promise<void> {

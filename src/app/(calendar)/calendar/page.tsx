@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { DragEvent, PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import toast, { Toaster } from "react-hot-toast";
-import { AlignLeft, CalendarPlus2, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, MapPin, Palette, Bell, Plus, Repeat2, Trash2, UsersRound, X } from "@/components/icons";
+import { AlignLeft, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, MapPin, Palette, Bell, Plus, Repeat2, Trash2, UsersRound, X } from "@/components/icons";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -180,7 +180,7 @@ export default function CalendarPage() {
     editEvent(event);
     // Drop the param so picking the same event again re-opens it.
     router.replace("/calendar");
-  }, [events, eventFromUrl]);
+  }, [events, eventFromUrl, router]);
 
   function openNewEvent(day = visibleDate, startAt?: Date) {
     const start = startAt ? new Date(startAt) : defaultCalendarStart(day);

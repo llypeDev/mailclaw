@@ -9,11 +9,14 @@ import type {
 	RealtimeChannelMessage,
 } from "./message-realtime-types";
 import {
+	createRevisionCheckMessage,
+	getHeartbeatMessage,
 	getRealtimeWebSocketUrl,
 	getReconnectDelay,
 	parseNewMessageEvent,
 	REALTIME_FALLBACK_INTERVAL_MS,
 	REALTIME_HEARTBEAT_INTERVAL_MS,
+	REALTIME_KEEPALIVE_MESSAGE,
 	showBrowserNewMessageNotification,
 } from "./message-realtime-utils";
 
@@ -31,6 +34,7 @@ export function useMessagePolling(): MessageRealtimeState {
 		let fallbackTimer: number | null = null;
 		let reconnectAttempt = 0;
 		let revision: string | null = null;
+		let lastRevisionCheckAt = 0;
 		let connected = false;
 		let hadConnection = false;
 		let lastForegroundRefreshAt = 0;
@@ -95,8 +99,18 @@ export function useMessagePolling(): MessageRealtimeState {
 			}
 		}
 
+		function sendRevisionCheck(knownRevision: string | null) {
+			if (socket?.readyState !== WebSocket.OPEN) return;
+			lastRevisionCheckAt = Date.now();
+			socket.send(createRevisionCheckMessage(knownRevision));
+		}
+
 		function sendHeartbeat() {
-			if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "ping", revision }));
+			if (socket?.readyState !== WebSocket.OPEN) return;
+			const now = Date.now();
+			const message = getHeartbeatMessage({ now, lastRevisionCheckAt, visible: document.visibilityState === "visible", revision });
+			if (message !== REALTIME_KEEPALIVE_MESSAGE) lastRevisionCheckAt = now;
+			socket.send(message);
 		}
 
 		function scheduleReconnect() {
@@ -119,7 +133,8 @@ export function useMessagePolling(): MessageRealtimeState {
 				hadConnection = true;
 				setConnected(true);
 				if (reconnected) dispatchMessagesChanged();
-				sendHeartbeat();
+				// Baseline revision; later checks compare against it.
+				sendRevisionCheck(null);
 				heartbeatTimer = window.setInterval(sendHeartbeat, REALTIME_HEARTBEAT_INTERVAL_MS);
 			};
 			socket.onmessage = (message) => {
@@ -205,6 +220,9 @@ export function useMessagePolling(): MessageRealtimeState {
 		function onVisibilityChange() {
 			if (document.visibilityState !== "visible") return;
 			refreshOnForeground(true);
+			// The views were just refreshed, so only renew the baseline (a null
+			// revision never reports a change) instead of refreshing twice.
+			if (leader) sendRevisionCheck(null);
 		}
 
 		function onFocus() {

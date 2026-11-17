@@ -16,6 +16,7 @@ import { isRegistrationResponseJSON, savePasskeyRegistration, verifyPasskeyRegis
 import { PASSWORDLESS_PASSWORD_HASH } from "@/lib/auth/password";
 import { deleteUserSessions } from "@/lib/auth/session";
 import { completeLogin } from "@/lib/auth/login-response";
+import { sessionCookieOptions } from "@/lib/auth/session-cookie";
 import { recordAuthActivity } from "@/lib/auth/activity";
 import { authError } from "@/lib/http/auth-error";
 
@@ -145,13 +146,7 @@ export async function POST(request: Request) {
 			userId: user.id,
 			request,
 		});
-		response.cookies.set(SETUP_COOKIE, "", {
-			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
-			sameSite: "lax",
-			path: "/",
-			maxAge: 0,
-		});
+		response.cookies.set(SETUP_COOKIE, "", sessionCookieOptions(request, 0));
 		removeCeremonyCookie(response.headers, request, challenge.binding);
 		return response;
 	} catch (error) {

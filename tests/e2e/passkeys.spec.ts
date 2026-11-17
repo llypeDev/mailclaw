@@ -78,6 +78,17 @@ async function loginWithPassword(page: Page) {
 	await page.waitForURL("**/inbox", { timeout: 30_000 });
 }
 
+/**
+ * The page's session token, read from its httpOnly cookie (page script cannot
+ * see it). Used as a Bearer token by the separate `request` context, which
+ * calls the API directly the way a non-browser client would.
+ */
+async function sessionTokenOf(page: Page): Promise<string> {
+	const cookie = (await page.context().cookies()).find((entry) => entry.name === "ep_session");
+	if (!cookie?.value) throw new Error("The page has no ep_session cookie");
+	return cookie.value;
+}
+
 async function logout(page: Page) {
 	await page.context().clearCookies();
 	await page.evaluate(() => localStorage.clear());
@@ -235,7 +246,7 @@ test("passkey lifecycle: add, rename, sign in, second step, password removal", a
 	await expect(page.getByRole("switch", { name: "Require a second step after password sign-in" })).toHaveAttribute("aria-checked", "true");
 
 	// A password alone cannot mint a step-up grant once a second step is required.
-	const sessionToken = await page.evaluate(() => localStorage.getItem("mailclaw-session-token"));
+	const sessionToken = await sessionTokenOf(page);
 	const passwordOnlyStepUp = await request.post("/api/auth/step-up", {
 		headers: { Authorization: `Bearer ${sessionToken}` },
 		data: { password: PASSWORD, action: "passkey.add" },
@@ -369,7 +380,7 @@ test("adding a password chooses its second-factor policy with one passkey scan",
 	expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
 	expect(bounds.y + bounds.height).toBeLessThanOrEqual(844);
 	await page.screenshot({ path: test.info().outputPath("password-policy-mobile.png"), animations: "disabled" });
-	const sessionToken = await page.evaluate(() => localStorage.getItem("mailclaw-session-token"));
+	const sessionToken = await sessionTokenOf(page);
 	const unverified = await request.post("/api/settings/password", {
 		headers: { Authorization: `Bearer ${sessionToken}` },
 		data: { newPassword: PASSWORD, stepUpToken: "invalid-proof", requireSecondFactor: false },
@@ -431,7 +442,7 @@ test("removing the last passkey warns and disables its second-factor requirement
 	await expect(page.getByText("Playwright passkey", { exact: true })).toBeVisible();
 	await expect(toggle).toHaveAttribute("aria-checked", "true");
 	await page.getByRole("button", { name: "Remove Playwright passkey", exact: true }).click();
-	const sessionToken = await page.evaluate(() => localStorage.getItem("mailclaw-session-token"));
+	const sessionToken = await sessionTokenOf(page);
 	const passkeysResponse = await request.get("/api/settings/security", {
 		headers: { Authorization: `Bearer ${sessionToken}` },
 	});

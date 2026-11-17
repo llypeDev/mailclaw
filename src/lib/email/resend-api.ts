@@ -1,4 +1,5 @@
 import type { ResendDomain, ResendReceivedEmail, ResendWebhook } from "@/lib/email/resend-api-types";
+import { API_TIMEOUT_MS, isTimeoutError, timeoutMessage, withTimeout } from "@/lib/http/fetch-timeout";
 
 const RESEND_API = "https://api.resend.com";
 
@@ -8,12 +9,28 @@ export class ResendRestrictedKeyError extends Error {
 	}
 }
 
+/** Resend failures are plain `Error("Resend: ...")`; a missed deadline reads the same way. */
+function resendTimeout(error: unknown): unknown {
+	return isTimeoutError(error) ? new Error(`Resend: ${timeoutMessage("the API", API_TIMEOUT_MS)}`) : error;
+}
+
+async function resendFetch(url: string, init: RequestInit): Promise<Response> {
+	try {
+		return await fetch(url, withTimeout(init, API_TIMEOUT_MS));
+	} catch (error) {
+		throw resendTimeout(error);
+	}
+}
+
 async function resendRequest<T>(apiKey: string, path: string, init?: RequestInit): Promise<T> {
-	const response = await fetch(`${RESEND_API}${path}`, {
+	const response = await resendFetch(`${RESEND_API}${path}`, {
 		...init,
 		headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", ...init?.headers },
 	});
-	const body = (await response.json().catch(() => null)) as { message?: string; name?: string } | null;
+	const body = (await response.json().catch((error: unknown) => {
+		if (isTimeoutError(error)) throw resendTimeout(error);
+		return null;
+	})) as { message?: string; name?: string } | null;
 	if (!response.ok) {
 		// A send-only key cannot manage domains; say so instead of a bare 401.
 		if (body?.name === "restricted_api_key") {
@@ -78,7 +95,7 @@ export async function verifyResendDomain(apiKey: string, id: string): Promise<vo
  * domains endpoint with `restricted_api_key`, which still means the key works.
  */
 export async function checkResendKey(apiKey: string): Promise<{ valid: boolean; canManageDomains: boolean }> {
-	const response = await fetch(`${RESEND_API}/domains`, { headers: { Authorization: `Bearer ${apiKey}` } });
+	const response = await resendFetch(`${RESEND_API}/domains`, { headers: { Authorization: `Bearer ${apiKey}` } });
 	if (response.ok) return { valid: true, canManageDomains: true };
 	const body = (await response.json().catch(() => null)) as { name?: string } | null;
 	if (response.status === 401 && body?.name === "restricted_api_key") return { valid: true, canManageDomains: false };

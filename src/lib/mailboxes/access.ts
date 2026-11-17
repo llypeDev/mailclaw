@@ -39,7 +39,8 @@ export async function getMailboxAccessLevel(
 }
 
 export async function listAccessibleMailboxes(db: AppDatabase, user: Pick<SessionUser, "id" | "email" | "role">) {
-	const ownedRows = await db
+	// Owned and shared mailboxes are independent reads; run them together.
+	const ownedQuery = db
 		.select({
 			id: mailboxes.id,
 			userId: mailboxes.userId,
@@ -64,20 +65,7 @@ export async function listAccessibleMailboxes(db: AppDatabase, user: Pick<Sessio
 		.innerJoin(domains, eq(mailboxes.domainId, domains.id))
 		.leftJoin(users, eq(mailboxes.userId, users.id))
 		.where(and(eq(mailboxes.userId, user.id), eq(mailboxes.disabled, false)));
-	const owned = ownedRows
-		.map((row) => {
-			const { avatarKey, ownerLastSignInAt, ownerDisabled, ownerDeletedAt, ...mailbox } = row;
-			return {
-				...mailbox,
-				hasAvatar: !!avatarKey,
-				status: row.type === "shared" ? "active" as const : getAccountStatus({ disabled: !!ownerDisabled, deletedAt: ownerDeletedAt }),
-				lastSignInAt: row.type === "shared" ? null : ownerLastSignInAt ?? null,
-				permission: "full_access" as MailboxPermission,
-				isPrimary: `${row.localPart}@${row.hostname}` === user.email,
-			};
-		});
-
-	const sharedRows = await db
+	const sharedQuery = db
 		.select({
 			id: mailboxes.id,
 			userId: mailboxes.userId,
@@ -106,6 +94,20 @@ export async function listAccessibleMailboxes(db: AppDatabase, user: Pick<Sessio
 				eq(mailboxes.disabled, false),
 			),
 		);
+	const [ownedRows, sharedRows] = await Promise.all([ownedQuery, sharedQuery]);
+	const owned = ownedRows
+		.map((row) => {
+			const { avatarKey, ownerLastSignInAt, ownerDisabled, ownerDeletedAt, ...mailbox } = row;
+			return {
+				...mailbox,
+				hasAvatar: !!avatarKey,
+				status: row.type === "shared" ? "active" as const : getAccountStatus({ disabled: !!ownerDisabled, deletedAt: ownerDeletedAt }),
+				lastSignInAt: row.type === "shared" ? null : ownerLastSignInAt ?? null,
+				permission: "full_access" as MailboxPermission,
+				isPrimary: `${row.localPart}@${row.hostname}` === user.email,
+			};
+		});
+
 	const shared = sharedRows.map((row) => {
 		const { avatarKey, ...mailbox } = row;
 		return {

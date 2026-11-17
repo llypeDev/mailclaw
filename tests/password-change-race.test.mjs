@@ -9,7 +9,7 @@ const fixture = await loadFixture({
 		"next/server": "export const NextResponse={json:(data,init)=>Response.json(data,init)};",
 		"@/db": "export function getDb(){return globalThis.passwordChangeRace.db}",
 		"@/lib/cloudflare": "export function getEnv(){return {}}",
-		"@/lib/auth/cookies": "export async function requireUser(){return globalThis.passwordChangeRace.user}",
+		"@/lib/api/auth": "export async function requireSessionUser(){return {user:globalThis.passwordChangeRace.user,error:null}}",
 		"@/lib/auth/session": "export function getSessionTokenFromRequestHeaders(){return 'session'} export async function deleteUserSessions(){globalThis.passwordChangeRace.sessions++}",
 		"@/lib/auth/password": "export const PASSWORDLESS_PASSWORD_HASH='!passkey-only'; export function hasPasswordHash(value){return !!value && value!=='!passkey-only'} export function hashPassword(value){return 'hashed-'+value} export function verifyPassword(password){return password==='current-password'}",
 		"@/lib/validators": "export const passwordSetSchema={safeParse:()=>({success:false})}; export const stepUpTokenSchema={safeParse:()=>({success:false})};",

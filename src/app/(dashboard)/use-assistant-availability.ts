@@ -3,6 +3,8 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { AUTH_SESSION_CHANGED_EVENT, authFetch } from "@/lib/auth/client";
 import { readInitialAssistantAvailability, saveAssistantAvailability } from "@/lib/agent/availability-client";
+import { peekBootstrapPart } from "@/lib/bootstrap/client";
+import { fetchSessionInfo } from "@/hooks/use-current-user";
 import type { AssistantAvailabilityResponse } from "./assistant-availability-types";
 
 const AVAILABILITY_TTL_MS = 60_000;
@@ -19,6 +21,20 @@ export function useAssistantAvailability() {
 			if (!force && Date.now() - lastCheckedAt < AVAILABILITY_TTL_MS) return;
 			lastCheckedAt = Date.now();
 			try {
+				if (force) {
+					// The session read (shared with the auth guard) carries the flag when it went through
+					// /api/bootstrap; signed-out visitors need no answer at all.
+					const session = await fetchSessionInfo();
+					if (session?.status === 401) {
+						lastCheckedAt = 0;
+						return;
+					}
+					const seeded = peekBootstrapPart("assistantEnabled", AVAILABILITY_TTL_MS);
+					if (typeof seeded === "boolean") {
+						if (active) setEnabled(seeded);
+						return;
+					}
+				}
 				const response = await authFetch("/api/agent/availability", { redirectOnUnauthorized: false });
 				if (!response.ok) {
 					lastCheckedAt = 0;

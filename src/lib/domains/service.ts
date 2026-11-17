@@ -16,7 +16,7 @@ import { deleteEmailRoutingRulesForDomain } from "@/lib/domains/cloudflare-clean
 import { isManualZone, provisionDomainOnCloudflare } from "@/lib/domains/provision";
 import { getManualDomainDns } from "@/lib/domains/manual-dns";
 import { rollbackDomainProvisioning } from "@/lib/domains/rollback";
-import type { DomainProvisioningChanges } from "@/lib/domains/types";
+import type { DomainProvisioningChanges, DomainSendingUnavailable } from "@/lib/domains/types";
 import { findSendingSubdomain } from "@/lib/domains/sending-status";
 import { preflightDomain } from "@/lib/domains/preflight";
 import { hasCloudflareCredentials } from "@/lib/runtime";
@@ -46,6 +46,8 @@ export async function addDomainForUser(
 	domain: typeof domains.$inferSelect;
 	dns: DomainDnsView;
 	changes: DomainProvisioningChanges;
+	/** Cloudflare refused Email Sending, so the domain was added receive-only; see DomainProvisioningResult. */
+	sendingUnavailable?: DomainSendingUnavailable;
 }> {
 	const db = getDb(env);
 	const normalizedHostname = hostname.toLowerCase().trim();
@@ -96,7 +98,7 @@ export async function addDomainForUser(
 			routingStatus: provisioned.routingStatus ?? null,
 			sendingSubdomainTag: provisioned.sendingSubdomainTag,
 			sendingRequested: skipDns ? false : provisioned.sendingRequested,
-			...(skipDns ? { sendingProvider: "none" as const } : options?.sendingProvider ? { sendingProvider: options.sendingProvider } : existing && existing.sendingProvider !== "none" ? {} : { sendingProvider: provisioned.sendingRequested ? ("cloudflare" as const) : ("none" as const) }),
+			...(skipDns || provisioned.sendingUnavailable ? { sendingProvider: "none" as const } : options?.sendingProvider ? { sendingProvider: options.sendingProvider } : existing && existing.sendingProvider !== "none" ? {} : { sendingProvider: provisioned.sendingRequested ? ("cloudflare" as const) : ("none" as const) }),
 			sendingEnabled: skipDns ? false : provisioned.sendingEnabled,
 			routingEnabled: skipDns ? false : provisioned.routingEnabled,
 			dnsSkipped: options?.skipDns === true,
@@ -152,7 +154,7 @@ export async function addDomainForUser(
 			sendingEnabled: provisioned.sendingEnabled,
 		};
 	}
-	return { domain, dns, changes: provisioned.changes };
+	return { domain, dns, changes: provisioned.changes, ...(provisioned.sendingUnavailable ? { sendingUnavailable: provisioned.sendingUnavailable } : {}) };
 }
 
 export async function getDomainDns(

@@ -6,7 +6,7 @@ import { users } from "@/db/schema";
 import { allowLoginAttempt } from "@/lib/auth/rate-limit";
 import { readJsonBody } from "@/lib/http/request";
 import { passkeyMfaOptionsSchema } from "@/lib/validators";
-import { getLoginChallengeUserId } from "@/lib/auth/login-challenge";
+import { peekLoginChallengeUserId } from "@/lib/auth/login-challenge";
 import { listPasskeys } from "@/lib/auth/webauthn/credentials";
 import { createAuthenticationOptions } from "@/lib/auth/webauthn/service";
 import {
@@ -26,7 +26,8 @@ export async function POST(request: Request) {
 	const parsed = passkeyMfaOptionsSchema.safeParse(await readJsonBody(request, 16 * 1024).catch(() => null));
 	if (!parsed.success) return authError("invalid_request", 400);
 
-	const userId = await getLoginChallengeUserId(env, parsed.data.challengeToken);
+	// Starting the ceremony checks no factor, so it must not spend one of the challenge's attempts.
+	const userId = await peekLoginChallengeUserId(env, parsed.data.challengeToken);
 	if (!userId) return authError("passkey_expired", 401);
 	const [user] = await getDb(env).select().from(users).where(eq(users.id, userId)).limit(1);
 	if (!user || user.disabled || user.deletedAt) return authError("account_disabled", 403);

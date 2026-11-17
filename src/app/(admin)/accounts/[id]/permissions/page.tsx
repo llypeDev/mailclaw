@@ -75,6 +75,7 @@ export default function AccountPermissionsPage() {
 			clearCurrentUserCache();
 			setTransferOpen(false);
 			// A full reload drops the stale cached session so the navigation reflects the new role.
+			// eslint-disable-next-line nextjs-js/no-location-assign-relative-destination -- the full reload is the point (see above)
 			window.location.assign(`/accounts/${transferTarget.id}/permissions`);
 		} catch (error) {
 			setMessage(error instanceof Error ? error.message : t("account.permissions.transferFailed"));

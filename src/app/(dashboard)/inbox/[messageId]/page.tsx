@@ -35,7 +35,6 @@ import { MessageDetailsPanel } from "@/components/messages/message-details-panel
 import { SenderCheckNotice } from "@/components/messages/sender-check-notice";
 import { useMessageThread } from "@/components/messages/use-message-thread";
 import { useLatestMessagesFirst } from "@/components/messages/use-latest-messages-first";
-import { useMessageListVisibility } from "@/components/messages/message-list-visibility";
 import { splitEmailAddressList } from "@/lib/email/address";
 import { findInviteAttachment } from "@/lib/calendar/invite-attachment";
 import { formatRecipientAddressList, type RecipientAddressStyle } from "@/lib/email/recipient-display";
@@ -94,11 +93,9 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
     data?.message ? getEmailAddress(data.message.fromAddr) : undefined,
     data?.message?.status === "spam",
   );
-  const { visible: messageListVisible } = useMessageListVisibility();
   usePageLoading(loading, true);
   const thread = useMessageThread(messageId, data?.message?.threadId);
   const assistantVisible = useAssistantOpen();
-  const isAnyPanelVisible = messageListVisible || assistantVisible;
   const { scrollRef, scrolled, handleScroll } = useMessageContentScroll(messageId, loading);
   const [unsubBannerDismissed, dismissUnsubBanner] = useMailingListBanner(messageId);
 
@@ -153,6 +150,7 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load per message; `t` only words the not-found error, and a language switch must not refetch or re-mark the message read
   }, [messageId]);
 
   // A bulk read/unread action can include the message that is already open.
@@ -263,8 +261,10 @@ function MessageDetailContent({ messageId }: { messageId: string }) {
     try {
       const response = await authFetch(url, { method: "HEAD" });
       if (response.status === 409 && !await confirmDestructive(t("attachment.downloadAllFlagged"))) return;
+      // eslint-disable-next-line nextjs-js/no-location-assign-relative-destination -- a file download from an API route, not a page navigation
       window.location.assign(response.status === 409 ? `${url}?acknowledge=1` : url);
     } catch {
+      // eslint-disable-next-line nextjs-js/no-location-assign-relative-destination -- same download, without the pre-check
       window.location.assign(url);
     }
   };

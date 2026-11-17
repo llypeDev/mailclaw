@@ -16,3 +16,9 @@ export type ParsedSearchQuery = {
 };
 
 export type SearchToken = { term: string; negate: boolean; phrase: boolean };
+
+/**
+ * An FTS5 MATCH expression and how to apply it: `include` keeps the rows it matches, `exclude` drops them.
+ * A query made only of negations is `exclude`, because FTS5 has no expression that matches every row.
+ */
+export type FtsMatch = { mode: "include" | "exclude"; expression: string };

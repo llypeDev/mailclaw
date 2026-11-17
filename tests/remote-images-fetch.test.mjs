@@ -101,7 +101,7 @@ test("the authenticated route replaces upstream CORP with locally usable safe he
 	assert.equal(response.status, 200);
 	assert.deepEqual(new Uint8Array(await response.arrayBuffer()), png);
 	assert.equal(response.headers.get("Content-Type"), "image/png");
-	assert.equal(response.headers.get("Cache-Control"), "private, no-store");
+	assert.equal(response.headers.get("Cache-Control"), "private, max-age=86400");
 	assert.equal(response.headers.get("Cross-Origin-Resource-Policy"), "same-origin");
 	assert.equal(response.headers.get("Content-Security-Policy"), "default-src 'none'; sandbox");
 	assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");

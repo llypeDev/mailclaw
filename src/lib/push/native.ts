@@ -2,6 +2,7 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { getDb } from "@/db";
 import { pushDevices } from "@/db/schema";
 import { newId } from "@/lib/ids";
+import { PUSH_TIMEOUT_MS } from "@/lib/http/fetch-timeout";
 import type { NewMessageNotification } from "@/lib/realtime/types";
 import { encryptPreview, importApnsKey, signApnsJwt } from "./native-crypto";
 import { isRelayHandle, relayBaseUrl, sendViaRelay } from "./relay";
@@ -141,6 +142,8 @@ export async function sendNativePush(env: CloudflareEnv, userIds: string[], mess
 					"content-type": "application/json",
 				},
 				body: JSON.stringify(payload),
+				// A late push is worthless; a rejection here is logged by the allSettled below.
+				signal: AbortSignal.timeout(PUSH_TIMEOUT_MS),
 			});
 			if (response.ok) {
 				console.info(`APNs push sent (${device.environment}, topic ${device.topic})`);

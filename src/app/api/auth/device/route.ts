@@ -4,6 +4,7 @@ import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
 import { verifyPassword } from "@/lib/auth/password";
+import { upgradePasswordHashIfNeeded } from "@/lib/auth/password-upgrade";
 import { deviceLoginSchema } from "@/lib/validators";
 import { allowDeviceLoginAttempt } from "@/lib/auth/rate-limit";
 import { readJsonBody } from "@/lib/http/request";
@@ -43,8 +44,9 @@ export async function POST(request: Request) {
 	let userId: string;
 	if ("password" in parsed.data) {
 		const [user] = await db.select().from(users).where(eq(users.email, parsed.data.email)).limit(1);
-		if (!user || !verifyPassword(parsed.data.password, user.passwordHash)) return json({ error: "Invalid credentials" }, 401);
+		if (!user || !(await verifyPassword(parsed.data.password, user.passwordHash))) return json({ error: "Invalid credentials" }, 401);
 		if (user.disabled || user.deletedAt) return json({ error: "Account disabled" }, 403);
+		await upgradePasswordHashIfNeeded(env, user.id, parsed.data.password, user.passwordHash);
 		if (user.requireSecondFactor) {
 			// The app can only finish with TOTP or a recovery code. Without one of
 			// those, point the user at an app password rather than issuing a key

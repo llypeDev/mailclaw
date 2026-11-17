@@ -4,10 +4,11 @@ import type { SQL } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { authenticateApiKey, requireScope } from "@/lib/api/auth";
 import { getDb } from "@/db";
-import { messages, users } from "@/db/schema";
+import { messages } from "@/db/schema";
 import { getMailboxAccessLevel, listAccessibleMailboxIds } from "@/lib/mailboxes/access";
 import { buildSearchConditions } from "@/lib/search/conditions";
 import { getRequestTimeZone } from "@/lib/time/utils";
+import { clampIntParam } from "@/lib/http/pagination";
 
 export async function GET(request: Request) {
 	const env = getEnv();
@@ -20,13 +21,11 @@ export async function GET(request: Request) {
 	const mailboxId = url.searchParams.get("mailboxId");
 	const direction = url.searchParams.get("direction");
 	const query = url.searchParams.get("q")?.trim();
-	const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 100);
+	const limit = clampIntParam(url.searchParams.get("limit"), 50, 1, 100);
 
 	const db = getDb(env);
-	const [user] = await db.select().from(users).where(eq(users.id, auth.userId)).limit(1);
-	if (!user || user.disabled) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	// Authentication already loaded the key's user and refused a disabled one.
+	const { user } = auth;
 	const conditions: SQL[] = [];
 	if (mailboxId) {
 		if (auth.mailboxIds && !auth.mailboxIds.includes(mailboxId)) {

@@ -129,6 +129,7 @@ export function MessageAttachmentViewer({
 
 				<div className="flex min-h-0 flex-1 items-center justify-center overflow-auto rounded-lg bg-neutral-100">
 					{previewKind === "image" && (
+						// eslint-disable-next-line @next/next/no-img-element -- attachment served by an authenticated API route, shown at its own size
 						<img
 							src={previewUrl}
 							alt={attachment.filename}

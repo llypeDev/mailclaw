@@ -1,7 +1,9 @@
 import { and, count, eq, inArray, isNull, sql } from "drizzle-orm";
 import { mailboxChangesSince } from "./changes";
 import { folders, messages } from "@/db/schema";
+import { isMissingTableError } from "@/lib/database-errors";
 import { newId } from "@/lib/ids";
+import { loadCounterRows } from "@/lib/messages/counters";
 import { JmapError } from "./errors";
 import { decodeMailboxRef, encodeMailboxRef, roleToStatus, SYSTEM_ROLES } from "./ids";
 import { getMailboxState } from "./state";
@@ -21,23 +23,33 @@ const ROLE_ORDER: Record<SystemRole, number> = { inbox: 1, drafts: 2, sent: 3, a
 type Counts = { total: number; unread: number };
 
 /**
- * Per-mailbox tallies in one pass: rows grouped by (mailbox, status, folder)
- * are folded into the JMAP Mailbox each combination belongs to.
+ * Per-mailbox tallies from message_counters (kept by triggers, migration 0089):
+ * each (mailbox, status, folder) key is folded into the JMAP Mailbox it
+ * belongs to. Before that migration the messages are grouped directly.
  */
 async function loadCounts(ctx: JmapContext, mailboxIds: string[]): Promise<Map<string, Counts>> {
 	const result = new Map<string, Counts>();
 	if (mailboxIds.length === 0) return result;
-	const rows = await ctx.db
-		.select({
-			mailboxId: messages.mailboxId,
-			status: messages.status,
-			folderId: messages.folderId,
-			total: count(),
-			unread: sql<number>`sum(case when not ${messages.read} and ${messages.direction} = 'inbound' then 1 else 0 end)`,
-		})
-		.from(messages)
-		.where(inArray(messages.mailboxId, mailboxIds))
-		.groupBy(messages.mailboxId, messages.status, messages.folderId);
+	let rows: Array<{ mailboxId: string | null; status: string; folderId: string | null; total: number; unread: number }>;
+	try {
+		rows = (await loadCounterRows(ctx.db, mailboxIds)).map((row) => ({
+			...row,
+			unread: !row.read && row.direction === "inbound" ? row.total : 0,
+		}));
+	} catch (error) {
+		if (!isMissingTableError(error)) throw error;
+		rows = await ctx.db
+			.select({
+				mailboxId: messages.mailboxId,
+				status: messages.status,
+				folderId: messages.folderId,
+				total: count(),
+				unread: sql<number>`sum(case when not ${messages.read} and ${messages.direction} = 'inbound' then 1 else 0 end)`,
+			})
+			.from(messages)
+			.where(inArray(messages.mailboxId, mailboxIds))
+			.groupBy(messages.mailboxId, messages.status, messages.folderId);
+	}
 
 	const add = (key: string, row: { total: number; unread: number }) => {
 		const current = result.get(key) ?? { total: 0, unread: 0 };

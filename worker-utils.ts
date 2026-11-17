@@ -3,6 +3,7 @@ import { withD1Session } from "./src/lib/d1-session-context";
 import type { InboundQueueMessage } from "./src/lib/email/inbound";
 import type { WebhookRetryMessage } from "./src/lib/email/webhooks";
 import type { ImportJobMessage } from "./src/lib/import/jobs-types";
+import type { QueueKind } from "./src/lib/queues/retry-utils";
 
 export function isInboundQueueMessage(payload: unknown): payload is InboundQueueMessage {
 	return (
@@ -30,6 +31,22 @@ export function isImportJobMessage(payload: unknown): payload is ImportJobMessag
 		(payload as { kind?: unknown }).kind === "import.run" &&
 		typeof (payload as { jobId?: unknown }).jobId === "string"
 	);
+}
+
+export function isAgentDraftMessage(payload: unknown): payload is { kind: "agent.draft"; jobId: string } {
+	return (
+		typeof payload === "object" &&
+		payload !== null &&
+		(payload as { kind?: unknown }).kind === "agent.draft" &&
+		typeof (payload as { jobId?: unknown }).jobId === "string"
+	);
+}
+
+/** Which consumer's retry policy applies: one handler serves all three queues, told apart by the body. */
+export function queueKindOf(payload: unknown): QueueKind {
+	if (isInboundQueueMessage(payload)) return "inbound";
+	if (isAgentDraftMessage(payload)) return "agent";
+	return "outbound";
 }
 
 /**

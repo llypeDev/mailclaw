@@ -1,5 +1,6 @@
 import type { MessageCounts, MessageFolder } from "@/hooks/types";
-import type { CountableFolder, MessageCountRow } from "./types";
+import type { CounterRow } from "@/lib/messages/counters-types";
+import type { CountableFolder, MessageCountRow, SnoozedCountRow } from "./types";
 
 export function getMessageFolder(row: MessageCountRow): CountableFolder {
 	if (row.snoozedUntil && row.snoozedUntil > new Date()) return "snoozed";
@@ -74,4 +75,28 @@ export function buildMessageCounts(rows: MessageCountRow[]): MessageCounts {
 
 export function getFolderLabelCount(folder: MessageFolder, counts: MessageCounts["folders"]) {
 	return counts[folder].unread;
+}
+
+/** Stands in for any snooze end the database already found to be in the future. */
+const SNOOZED = new Date(8.64e15);
+
+/**
+ * The rows `buildMessageCounts` would get from grouping every message, built
+ * from the stored tallies plus the messages snoozed right now. Tallies cannot
+ * tell snoozed messages apart (a snooze ends with the clock, not a write), so
+ * each live snoozed group is added as snoozed and taken back out of the plain
+ * tallies with a negative weight. `buildMessageCounts` is linear in `total`, so
+ * the pair moves those messages from their folder to Snoozed (and out of the
+ * mailbox's inbox figure) while totals, unread, starred and custom folders
+ * keep counting them once, exactly as the grouped query did.
+ */
+export function withLiveSnoozedRows(tallies: CounterRow[], snoozed: SnoozedCountRow[]): MessageCountRow[] {
+	const rows: MessageCountRow[] = tallies.map((row) => ({ ...row, snoozedUntil: null }));
+	for (const group of snoozed) {
+		const total = Number(group.total) || 0;
+		if (!total) continue;
+		rows.push({ ...group, snoozedUntil: SNOOZED, total });
+		rows.push({ ...group, snoozedUntil: null, total: -total });
+	}
+	return rows;
 }

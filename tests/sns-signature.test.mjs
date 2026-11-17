@@ -18,9 +18,18 @@ await build({
 });
 const { verifySnsSignature, isValidSigningCertUrl } = await import(pathToFileURL(join(dir, "sns.mjs")).href);
 
-execFileSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", join(dir, "key.pem"), "-out", join(dir, "cert.pem"), "-subj", "/CN=sns.test", "-days", "2"], { stdio: "ignore" });
-const keyPem = readFileSync(join(dir, "key.pem"), "utf8");
-const certPem = readFileSync(join(dir, "cert.pem"), "utf8");
+// The certificate comes from the openssl binary, which Windows does not ship. Without it the
+// signed cases are skipped (and reported as skipped) instead of failing the whole file at import.
+let hasOpenssl = true;
+try {
+	execFileSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", join(dir, "key.pem"), "-out", join(dir, "cert.pem"), "-subj", "/CN=sns.test", "-days", "2"], { stdio: "ignore" });
+} catch (error) {
+	if (error?.code !== "ENOENT") throw error;
+	hasOpenssl = false;
+}
+const skip = hasOpenssl ? false : "openssl is not installed";
+const keyPem = hasOpenssl ? readFileSync(join(dir, "key.pem"), "utf8") : "";
+const certPem = hasOpenssl ? readFileSync(join(dir, "cert.pem"), "utf8") : "";
 const der = Buffer.from(certPem.replace(/-----[A-Z ]+-----/g, "").replace(/\s+/g, ""), "base64");
 const loadCertificate = async () => der.buffer.slice(der.byteOffset, der.byteOffset + der.byteLength);
 
@@ -31,22 +40,25 @@ function sign(envelope, algorithm = "RSA-SHA256") {
 	return signer.sign(keyPem, "base64");
 }
 
-test("accepts a correctly signed notification and rejects tampering", async () => {
+test("accepts a correctly signed notification and rejects tampering", { skip }, async () => {
 	const envelope = { ...base, Signature: sign(base) };
 	assert.equal(await verifySnsSignature(envelope, { loadCertificate }), true);
 	assert.equal(await verifySnsSignature({ ...envelope, Message: "{\"x\":1}" }, { loadCertificate }), false);
 	assert.equal(await verifySnsSignature({ ...envelope, TopicArn: "arn:other" }, { loadCertificate }), false);
 });
 
-test("accepts SignatureVersion 1 (SHA-1)", async () => {
+test("accepts SignatureVersion 1 (SHA-1)", { skip }, async () => {
 	const v1 = { ...base, SignatureVersion: "1" };
 	assert.equal(await verifySnsSignature({ ...v1, Signature: sign(v1, "RSA-SHA1") }, { loadCertificate }), true);
 });
 
-test("rejects stale timestamps, missing signatures and foreign certificate URLs", async () => {
+test("rejects stale timestamps and missing signatures", { skip }, async () => {
 	const old = { ...base, Timestamp: new Date(Date.now() - 3 * 86_400_000).toISOString() };
 	assert.equal(await verifySnsSignature({ ...old, Signature: sign(old) }, { loadCertificate }), false);
 	assert.equal(await verifySnsSignature(base, { loadCertificate }), false);
+});
+
+test("rejects foreign certificate URLs", () => {
 	for (const url of ["http://sns.us-east-1.amazonaws.com/c.pem", "https://evil.example/c.pem", "https://sns.us-east-1.amazonaws.com.evil.example/c.pem", "https://sns.us-east-1.amazonaws.com:8443/c.pem", "https://sns.us-east-1.amazonaws.com/c.txt"]) {
 		assert.equal(isValidSigningCertUrl(url), false, url);
 	}

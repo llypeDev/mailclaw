@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
 import { getEmailAddress } from "@/lib/email/address";
-import { resolveInboundAddress } from "@/lib/email/routing";
+import type { RoutingDecision } from "@/lib/email/routing";
 
 export const MAILCLAW_FORWARDED_HEADER = "X-Mailclaw-Forwarded";
 
@@ -39,13 +39,18 @@ export async function isForwardedMarkerValid(env: CloudflareEnv, value: string |
 	return diff === 0;
 }
 
+/**
+ * The account-level forwarding address of the user who receives this message. `decision` is the
+ * routing decision the receiving handler already resolved for the recipient (with the sender, as
+ * the queue consumer resolves it), so this reuses its mailbox instead of resolving it again.
+ */
 export async function getAccountForwardingDestination(
 	env: CloudflareEnv,
 	recipient: string,
+	decision: RoutingDecision | null,
 ): Promise<string | null> {
-	const db = getDb(env);
-	const decision = await resolveInboundAddress(db, recipient);
 	if (!decision?.mailbox) return null;
+	const db = getDb(env);
 	const [account] = await db
 		.select({ forwardingEmail: users.forwardingEmail })
 		.from(users)

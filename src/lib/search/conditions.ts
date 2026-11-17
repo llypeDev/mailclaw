@@ -7,7 +7,8 @@ import type { ParsedSearchQuery } from "./types";
 
 /** `!` is the escape character because it needs no escaping itself in either SQL string syntax. */
 const likePattern = (term: string) => `%${term.toLowerCase().replace(/[!%_]/g, "!$&")}%`;
-const contains = (column: SQL | AnyColumn, term: string) => sql`lower(${column}) like ${likePattern(term)} escape '!'`;
+/** NULL columns read as '' so a negated match stays true for them instead of turning NULL and dropping the row. */
+const contains = (column: SQL | AnyColumn, term: string) => sql`lower(coalesce(${column}, '')) like ${likePattern(term)} escape '!'`;
 
 /**
  * Text search for databases without FTS5 (PostgreSQL, MySQL): every term must appear as a substring of the
@@ -48,8 +49,12 @@ export function buildSearchConditions(raw: string, timeZone = "UTC"): SQL[] {
 
 	if (schemaDialect() === "sqlite") {
 		const match = buildFtsMatch(parsed);
-		if (match) {
-			conditions.push(sql`${messages}.rowid IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ${match})`);
+		if (match?.mode === "include") {
+			conditions.push(sql`${messages}.rowid IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ${match.expression})`);
+		} else if (match) {
+			// Only negations: the subquery is uncorrelated, so SQLite runs it once and reads just the index rows
+			// matching the excluded terms; the caller's scope still bounds the scan of `messages`.
+			conditions.push(sql`${messages}.rowid NOT IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ${match.expression})`);
 		}
 	} else {
 		conditions.push(...buildLikeConditions(parsed));

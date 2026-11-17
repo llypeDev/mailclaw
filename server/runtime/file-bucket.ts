@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -17,6 +17,13 @@ type StoredMeta = {
 	uploaded: string;
 	etag: string;
 };
+
+const PARTIAL_SUFFIX = /\.[0-9a-f-]{36}\.partial$/;
+
+/** Sidecars and in-progress writes live next to objects but are not objects. */
+function isObjectFile(name: string) {
+	return !name.endsWith(".meta.json") && !PARTIAL_SUFFIX.test(name);
+}
 
 function assertInside(root: string, path: string) {
 	const full = resolve(path);
@@ -61,9 +68,24 @@ class FileObject {
 		return false;
 	}
 	async arrayBuffer(): Promise<ArrayBuffer> {
-		const buffer = await readFile(this.path);
-		const slice = this.range ? buffer.subarray(this.range.offset, this.range.offset + this.range.length) : buffer;
-		return slice.buffer.slice(slice.byteOffset, slice.byteOffset + slice.byteLength) as ArrayBuffer;
+		if (!this.range) {
+			const buffer = await readFile(this.path);
+			return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+		}
+		// Read only the requested bytes; a header sniff must not load a 36 MB message.
+		const handle = await open(this.path, "r");
+		try {
+			const buffer = new Uint8Array(Math.max(this.range.length, 0));
+			let filled = 0;
+			while (filled < buffer.byteLength) {
+				const { bytesRead } = await handle.read(buffer, filled, buffer.byteLength - filled, this.range.offset + filled);
+				if (bytesRead === 0) break;
+				filled += bytesRead;
+			}
+			return buffer.buffer.slice(0, filled) as ArrayBuffer;
+		} finally {
+			await handle.close();
+		}
 	}
 	async text(): Promise<string> {
 		return Buffer.from(await this.arrayBuffer()).toString("utf8");
@@ -129,13 +151,29 @@ export class FileBucket {
 	) {
 		const path = this.pathFor(key);
 		await mkdir(dirname(path), { recursive: true });
-		let buffer: Buffer;
-		if (value === null) buffer = Buffer.alloc(0);
-		else if (typeof value === "string") buffer = Buffer.from(value);
-		else if (value instanceof ArrayBuffer) buffer = Buffer.from(value);
-		else if (ArrayBuffer.isView(value)) buffer = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
-		else if (value instanceof Blob) buffer = Buffer.from(await value.arrayBuffer());
-		else buffer = Buffer.from(await new Response(value).arrayBuffer());
+		let size: number;
+		if (value instanceof ReadableStream || value instanceof Blob) {
+			// Streams and blobs go to disk as they arrive instead of being buffered whole;
+			// the temporary name keeps a half-written object from ever being readable.
+			const temporary = `${path}.${randomUUID()}.partial`;
+			try {
+				const source = Readable.fromWeb((value instanceof Blob ? value.stream() : value) as never);
+				await pipeline(source, createWriteStream(temporary));
+				({ size } = await stat(temporary));
+				await rename(temporary, path);
+			} catch (error) {
+				await rm(temporary, { force: true });
+				throw error;
+			}
+		} else {
+			let buffer: Buffer;
+			if (value === null) buffer = Buffer.alloc(0);
+			else if (typeof value === "string") buffer = Buffer.from(value);
+			else if (value instanceof ArrayBuffer) buffer = Buffer.from(value);
+			else buffer = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+			await writeFile(path, buffer);
+			size = buffer.byteLength;
+		}
 		const httpMetadata =
 			options?.httpMetadata instanceof Headers
 				? { contentType: options.httpMetadata.get("content-type") ?? undefined }
@@ -143,11 +181,10 @@ export class FileBucket {
 		const meta: StoredMeta = {
 			httpMetadata,
 			customMetadata: options?.customMetadata,
-			size: buffer.byteLength,
+			size,
 			uploaded: new Date().toISOString(),
-			etag: `${Date.now().toString(16)}-${buffer.byteLength.toString(16)}`,
+			etag: `${Date.now().toString(16)}-${size.toString(16)}`,
 		};
-		await writeFile(path, buffer);
 		await writeFile(`${path}.meta.json`, JSON.stringify(meta));
 		return new FileObject(key, path, meta);
 	}
@@ -204,11 +241,19 @@ export class FileBucket {
 		}
 	}
 
-	/** Lists objects under a prefix in key order; the cursor is the last key returned. */
+	/**
+	 * Lists objects under a prefix in key order; the cursor is the last key returned.
+	 * The walk starts at the prefix's directory, visits entries in key order, skips
+	 * whole directories that sort before the cursor and stops one key past the page,
+	 * so a page costs about what it returns rather than the whole tree.
+	 */
 	async list(options: { prefix?: string; cursor?: string; limit?: number } = {}) {
 		const prefix = options.prefix ?? "";
-		const limit = Math.min(options.limit ?? 1000, 1000);
+		const cursor = options.cursor ?? "";
+		const limit = Math.max(1, Math.min(options.limit ?? 1000, 1000));
 		const keys: string[] = [];
+		const slash = prefix.lastIndexOf("/");
+		const base = slash >= 0 ? prefix.slice(0, slash) : "";
 		const walk = async (directory: string, relative: string): Promise<void> => {
 			let entries;
 			try {
@@ -216,22 +261,31 @@ export class FileBucket {
 			} catch {
 				return;
 			}
-			for (const entry of entries) {
-				const key = relative ? `${relative}/${entry.name}` : entry.name;
-				if (entry.isDirectory()) await walk(join(directory, entry.name), key);
-				else if (!entry.name.endsWith(".meta.json") && key.startsWith(prefix)) keys.push(key);
+			// A directory's keys all start with `name/`, so that is what it sorts by among its siblings.
+			const ordered = entries
+				.filter((entry) => !(relative === "" && entry.name === ".multipart"))
+				.map((entry) => ({ entry, sortKey: `${relative ? `${relative}/` : ""}${entry.name}${entry.isDirectory() ? "/" : ""}` }))
+				.sort((a, b) => (a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : 0));
+			for (const { entry, sortKey } of ordered) {
+				if (keys.length > limit) return;
+				if (entry.isDirectory()) {
+					// Skip directories outside the prefix, and ones whose every key sorts at or before the cursor.
+					if (!sortKey.startsWith(prefix) && !prefix.startsWith(sortKey)) continue;
+					if (cursor && sortKey < cursor && !cursor.startsWith(sortKey)) continue;
+					await walk(join(directory, entry.name), sortKey.slice(0, -1));
+				} else if (isObjectFile(entry.name) && sortKey.startsWith(prefix) && sortKey > cursor) {
+					keys.push(sortKey);
+				}
 			}
 		};
-		await walk(this.root, "");
-		keys.sort();
-		const after = options.cursor ? keys.filter((key) => key > options.cursor!) : keys;
-		const page = after.slice(0, limit);
+		await walk(base ? this.pathFor(base) : this.root, base);
+		const truncated = keys.length > limit;
+		const page = keys.slice(0, limit);
 		const objects: { key: string; size: number; uploaded: Date }[] = [];
 		for (const key of page) {
 			const meta = await this.readMeta(key);
 			if (meta) objects.push({ key, size: meta.size, uploaded: new Date(meta.uploaded) });
 		}
-		const truncated = after.length > limit;
 		return { objects, truncated, cursor: truncated ? page[page.length - 1] : undefined };
 	}
 }

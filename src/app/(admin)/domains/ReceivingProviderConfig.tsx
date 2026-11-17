@@ -52,6 +52,7 @@ export default function ReceivingProviderConfig({ domainId, provider, onReady }:
 			.catch((err) => { if (active) setError(err instanceof Error ? err.message : t("domains.providerUnreachable")); })
 			.finally(() => { if (active) setLoading(false); });
 		return () => { active = false; };
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- `t` only words the error; a language switch does not need to re-query the provider
 	}, [domainId, provider, reload]);
 
 	useEffect(() => { if (!loading) onReady?.(view ? view.ready : credentials === false ? false : null); }, [loading, view, credentials, onReady]);

@@ -90,7 +90,10 @@ export type MessageFilterOptions = {
 
 export type MessageListResponse = {
 	messages?: Message[];
-	total?: number;
+	/** Null when only a separate count could tell (a full page does not carry it; see message-total-cache). */
+	total?: number | null;
+	/** Whether another page follows this one. */
+	hasMore?: boolean;
 	limit?: number;
 	offset?: number;
 };
