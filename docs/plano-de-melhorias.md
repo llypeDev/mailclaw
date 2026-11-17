@@ -27,8 +27,8 @@ Suspeita, ainda sem medição. O plano Workers Free limita cada requisição a 1
 
 | # | Item | Onde | Estado |
 |---|---|---|---|
-| P2.1 | Confirmar a causa do erro 1102 visto em `/inbox`: filtrar `EXCEEDED_CPU` em Observability, nas requisições e nas execuções da fila. | Painel da Cloudflare | Pendente (só no painel da Cloudflare) |
-| P2.2 | Medir o tempo de CPU do login (bcrypt custo 12 síncrono), de `/inbox` e do processamento de um e-mail recebido com anexo. | `src/lib/auth/password.ts`, `src/lib/email/inbound.ts` | Parcial (medido só localmente; ver Medições) |
+| P2.1 | Confirmar a causa do erro 1102 visto em `/inbox`: filtrar `EXCEEDED_CPU` em Observability, nas requisições e nas execuções da fila. | Painel da Cloudflare | Feito (17/11/2026, pela API GraphQL de Analytics: a versão anterior às melhorias, `ff036185`, teve 35 de ~2.400 requisições em `exceededResources` nas últimas 24 h; as versões novas ainda não tiveram nenhuma, com poucas requisições) |
+| P2.2 | Medir o tempo de CPU do login (bcrypt custo 12 síncrono), de `/inbox` e do processamento de um e-mail recebido com anexo. | `src/lib/auth/password.ts`, `src/lib/email/inbound.ts` | Feito (produção, 24 h: CPU p50 ≈ 25 ms, p90 ≈ 70–86 ms, p99 ≈ 170 ms por invocação, acima dos 10 ms do Workers Free; ver P2.4) |
 | P2.3 | Tratar o item 2.1 como prioridade máxima: um estouro de CPU no consumidor da fila, somado à falta de dead-letter queue, perde o e-mail recebido em silêncio após 3 tentativas. | `wrangler.jsonc`, `src/lib/email/raw-sweeper.ts` | Feito (ver 2.1) |
 | P2.4 | Com os números, decidir: se a fila estoura, o Workers Paid é requisito para uso real e a documentação deve dizer isso. | `README.md`, `docs/deployment.md` | Feito (Paid recomendado na documentação; a decisão é de quem instala) |
 
