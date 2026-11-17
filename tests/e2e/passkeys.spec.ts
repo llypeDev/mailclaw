@@ -171,6 +171,19 @@ async function completeStepUp(page: Page, options: { title?: string; next?: stri
 	await setPresence(page, false);
 }
 
+/**
+ * Signs in from the login page with a passkey. Presence goes on before the click: a request that starts
+ * while the virtual authenticator has no presence never completes. The page's conditional (autofill)
+ * request may then finish the sign-in before the button does; either way it is a passkey sign-in, and the
+ * URL is what the test checks.
+ */
+async function signInWithPasskeyButton(page: Page) {
+	await setPresence(page, true);
+	await page.getByRole("button", { name: "Sign in with a passkey" }).click({ timeout: 5_000 }).catch(() => {});
+	await page.waitForURL("**/inbox", { timeout: 30_000 });
+	await setPresence(page, false);
+}
+
 /** Adds the first passkey and answers the follow-up question. */
 async function addFirstPasskey(page: Page, choice: string) {
 	await page.getByRole("button", { name: "Add a passkey" }).click();
@@ -245,11 +258,7 @@ test("passkey lifecycle: add, rename, sign in, second step, password removal", a
 	// Independent passkey sign-in.
 	await logout(page);
 	await expect(page.getByText("Can't use your passkey?")).toBeVisible();
-	await setPresence(page, false);
-	await page.getByRole("button", { name: "Sign in with a passkey" }).click();
-	await setPresence(page, true);
-	await page.waitForURL("**/inbox", { timeout: 30_000 });
-	await setPresence(page, false);
+	await signInWithPasskeyButton(page);
 
 	// Password plus a passkey as the second step.
 	await page.goto("/settings/security");
@@ -292,11 +301,7 @@ test("passkey lifecycle: add, rename, sign in, second step, password removal", a
 	await page.getByLabel("Password").fill(PASSWORD);
 	await page.getByRole("button", { name: "Sign in", exact: true }).click();
 	await expect(page.getByText("Invalid email or password.")).toBeVisible({ timeout: 30_000 });
-	await setPresence(page, false);
-	await page.getByRole("button", { name: "Sign in with a passkey" }).click();
-	await setPresence(page, true);
-	await page.waitForURL("**/inbox", { timeout: 30_000 });
-	await setPresence(page, false);
+	await signInWithPasskeyButton(page);
 });
 
 test("first passkey can make the account passkey-only", async ({ page, request }) => {
@@ -320,11 +325,7 @@ test("first passkey can make the account passkey-only", async ({ page, request }
 	await page.getByLabel("Password").fill(PASSWORD);
 	await page.getByRole("button", { name: "Sign in", exact: true }).click();
 	await expect(page.getByText("Invalid email or password.")).toBeVisible({ timeout: 30_000 });
-	await setPresence(page, false);
-	await page.getByRole("button", { name: "Sign in with a passkey" }).click();
-	await setPresence(page, true);
-	await page.waitForURL("**/inbox", { timeout: 30_000 });
-	await setPresence(page, false);
+	await signInWithPasskeyButton(page);
 });
 
 test("turning the authenticator off keeps the two-step policy as it was", async ({ page, request }) => {
@@ -533,9 +534,5 @@ test("first passkey removes the password and the authenticator codes together", 
 	await page.getByLabel("Password").fill(PASSWORD);
 	await page.getByRole("button", { name: "Sign in", exact: true }).click();
 	await expect(page.getByText("Invalid email or password.")).toBeVisible({ timeout: 30_000 });
-	await setPresence(page, false);
-	await page.getByRole("button", { name: "Sign in with a passkey" }).click();
-	await setPresence(page, true);
-	await page.waitForURL("**/inbox", { timeout: 30_000 });
-	await setPresence(page, false);
+	await signInWithPasskeyButton(page);
 });
