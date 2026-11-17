@@ -137,7 +137,7 @@ function KeyRow({ field, envName, title, hint, signupUrl, source, disabled, onSa
 		<p className={source ? "text-sm text-success-text" : "text-sm text-fg-subtle"}>{sourceText}</p>
 		<div className="flex flex-wrap gap-2">
 			<Input id={inputId} type="password" autoComplete="off" spellCheck={false} value={value} onChange={(event) => setValue(event.target.value)} disabled={disabled || saving} placeholder={source ? t("spamFilter.keyReplacePlaceholder") : t("spamFilter.keyPlaceholder")} className="max-w-md flex-1" />
-			<Button type="submit" disabled={disabled || saving || !value.trim()}>{saving ? t("common.saving") : t("spamFilter.saveKey")}</Button>
+			<Button type="submit" variant="outline" disabled={disabled || saving || !value.trim()}>{saving ? t("common.saving") : t("spamFilter.saveKey")}</Button>
 			{source === "settings" && <Button type="button" variant="outline" disabled={disabled || saving} onClick={() => void save(null)}>{t("spamFilter.removeKey")}</Button>}
 		</div>
 		{status && <p role={status.error ? "alert" : "status"} className={status.error ? "text-sm text-danger-text" : "text-sm text-fg-muted"}>{status.text}</p>}

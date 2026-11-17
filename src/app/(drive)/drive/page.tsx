@@ -10,7 +10,7 @@ import toast, { Toaster } from "react-hot-toast";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import clsx from "clsx";
 import { EmptyState } from "@orangesys/ui";
-import { ArrowDown, ArrowUp, ChevronRight, Download, ExternalLink, HardDrive, Mail, MoreVertical, Paperclip, Pencil, RotateCcw, Search, Share2, Trash2, UploadCloud, UsersRound, X } from "@/components/icons";
+import { ArrowDown, ArrowUp, ChevronRight, Download, ExternalLink, Eye, HardDrive, Mail, MoreVertical, Paperclip, Pencil, RotateCcw, Search, Share2, Trash2, UploadCloud, UsersRound, X } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -330,15 +330,16 @@ export default function DrivePage() {
 										{item.shared && item.role === "owner" && <Share2 size={12} className="shrink-0 text-fg-subtle" aria-label={t("drive.share")} />}
 									</button>
 									<span className="hidden md:block"><DriveOwnerAvatar item={item} /></span>
-									<span className="hidden font-mono text-xs tabular-nums text-fg-muted md:block">{dateFormat.format(new Date(item.updatedAt))}</span>
-									<span className="hidden font-mono text-xs tabular-nums text-fg-muted md:block">{item.kind === "file" ? formatDriveSize(item.size) : "—"}</span>
+									{/* <bdi>: a date or size that starts with a number keeps its own order on a right-to-left page. */}
+									<span className="hidden font-mono text-xs tabular-nums text-fg-muted md:block"><bdi>{dateFormat.format(new Date(item.updatedAt))}</bdi></span>
+									<span className="hidden font-mono text-xs tabular-nums text-fg-muted md:block"><bdi>{item.kind === "file" ? formatDriveSize(item.size) : "—"}</bdi></span>
 									<DropdownMenu.Root>
 										<DropdownMenu.Trigger asChild>
 											<button type="button" aria-label={t("drive.actions")} className="flex h-9 w-9 items-center justify-center text-fg-muted hover:bg-surface-active hover:text-fg"><MoreVertical size={16} /></button>
 										</DropdownMenu.Trigger>
 										<DropdownMenu.Portal>
 											<DropdownMenu.Content align="end" sideOffset={4} className="z-[200] min-w-52 border border-line bg-surface-raised p-1 shadow-lg">
-												{!item.trashedAt && <DropdownMenu.Item className={menuItemClass} onSelect={() => open(item)}>{t("drive.open")}</DropdownMenu.Item>}
+												{!item.trashedAt && <DropdownMenu.Item className={menuItemClass} onSelect={() => open(item)}><Eye size={16} />{t("drive.open")}</DropdownMenu.Item>}
 												{item.kind === "file" && !(item.source && item.trashedAt) && <DropdownMenu.Item asChild className={menuItemClass}><a href={driveFileUrl(item, true)}><Download size={16} />{t("drive.download")}</a></DropdownMenu.Item>}
 												{item.source && !item.trashedAt && <DropdownMenu.Item asChild className={menuItemClass}><a href={emailUrl(item.source)} target="_blank" rel="noopener noreferrer"><Mail size={16} />{t("drive.openEmail")}<span className="sr-only"> ({t("common.opensInNewTab")})</span></a></DropdownMenu.Item>}
 												{item.role === "owner" && !item.trashedAt && <DropdownMenu.Item className={menuItemClass} onSelect={() => setSharing(item)}><Share2 size={16} />{t("drive.share")}</DropdownMenu.Item>}

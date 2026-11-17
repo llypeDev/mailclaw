@@ -15,7 +15,9 @@ export function ContactRow({ mailboxId, contact, onEmail, onEdit, onDelete }: Co
 	const label = contact.displayName ?? contact.email;
 
 	return (
-		<ListRow className={`${CONTACT_COLUMNS} group px-5 py-4 transition-colors hover:bg-surface-hover`}>
+		// `p-0` drops ListRow's `p-5`, which globals.css flattens to no side padding on phones (`.page-flush .bg-surface.p-5`):
+		// the row keeps its own padding so it stays aligned with the header row.
+		<ListRow className={`${CONTACT_COLUMNS} group p-0 px-5 py-4 transition-colors hover:bg-surface-hover`}>
 			<ContactAvatar
 				mailboxId={mailboxId}
 				address={contact.email}
@@ -44,7 +46,7 @@ export function ContactRow({ mailboxId, contact, onEmail, onEdit, onDelete }: Co
 					<Button
 						type="button"
 						variant="ghost"
-						size="sm"
+						size="roundedSM"
 						onClick={() => onEmail(contact)}
 						aria-label={t("contacts.sendEmail", { name: label })}
 					>
@@ -55,7 +57,7 @@ export function ContactRow({ mailboxId, contact, onEmail, onEdit, onDelete }: Co
 					<Button
 						type="button"
 						variant="ghost"
-						size="sm"
+						size="roundedSM"
 						onClick={() => onEdit(contact)}
 						aria-label={t("contacts.edit")}
 					>
@@ -66,7 +68,7 @@ export function ContactRow({ mailboxId, contact, onEmail, onEdit, onDelete }: Co
 					<Button
 						type="button"
 						variant="ghost"
-						size="sm"
+						size="roundedSM"
 						onClick={() => onDelete(contact)}
 						aria-label={t("contacts.delete")}
 						className="hover:bg-danger-subtle hover:text-danger-text"

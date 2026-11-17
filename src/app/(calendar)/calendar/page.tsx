@@ -432,7 +432,7 @@ export default function CalendarPage() {
               setMonthPickerPos({ top: rect.bottom + 12, left: Math.max(12, Math.min(rect.left, window.innerWidth - 460)) });
               setPickerMonth(startOfMonth(visibleDate));
               setMonthPickerOpen((open) => !open);
-            }} className="flex h-10 items-center gap-2 whitespace-nowrap px-2 font-display text-base font-semibold text-fg hover:bg-surface-hover" aria-haspopup="dialog" aria-expanded={monthPickerOpen}>
+            }} className="flex h-10 items-center gap-2 whitespace-nowrap px-2 font-display text-base font-semibold text-fg hover:bg-surface-hover max-md:gap-1 max-md:px-1 max-md:text-sm" aria-haspopup="dialog" aria-expanded={monthPickerOpen}>
               {formatUserDate(visibleDate, { month: "long", year: "numeric" })}
               <ChevronDown className="h-5 w-5 text-fg-subtle" />
             </button>
@@ -479,7 +479,7 @@ export default function CalendarPage() {
             <button type="button" aria-label={t(`calendar.nextView.${view}`)} onClick={() => setVisibleDate(view === "month" ? addMonths(visibleDate, 1) : addDays(visibleDate, view === "week" ? 7 : 1))} className="flex h-10 w-10 items-center justify-center border border-line bg-surface text-fg-muted hover:bg-surface-hover"><ChevronRight className="h-5 w-5 rtl:-scale-x-100" /></button>
             <button type="button" onClick={() => setVisibleDate(new Date())} className="h-10 border border-line bg-surface px-4 text-sm font-medium text-fg hover:bg-surface-hover max-md:hidden">{t("calendar.today")}</button>
             <div className="ms-1 flex items-center max-md:ms-0">
-              <Button disabled={pendingAction !== null} onClick={() => openNewEvent()} className="h-10 ps-4 pe-3"><Plus className="h-5 w-5" />{t("calendar.newEvent")}</Button>
+              <Button disabled={pendingAction !== null} onClick={() => openNewEvent()} className="h-10 ps-4 pe-3 max-md:px-2.5"><Plus className="h-5 w-5" />{/* On a phone the row has no room for the label; it stays the button's name. */}<span className="max-md:sr-only">{t("calendar.newEvent")}</span></Button>
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
                   <button type="button" aria-label={t("calendar.options")} className="flex h-10 w-9 items-center justify-center border-s border-on-accent/30 bg-accent text-on-accent hover:bg-accent-hover"><ChevronDown className="h-5 w-5" /></button>

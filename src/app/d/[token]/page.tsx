@@ -47,7 +47,7 @@ export default function PublicDrivePage({ params }: { params: Promise<{ token: s
 				{isFile && <a href={publicContentUrl(token, item.id, true)} className={`${buttonVariants()} ms-auto gap-2 font-sans`}><Download size={16} />{t("drive.download")}</a>}
 			</nav>
 			{isFile ? (
-				<div className="min-h-[70vh] flex-1 border border-line bg-canvas-subtle p-3"><DrivePreviewBody src={publicContentUrl(token, item.id)} downloadHref={publicContentUrl(token, item.id, true)} contentType={item.contentType} name={item.name} /></div>
+				<div className="grid min-h-[70vh] flex-1 border border-line bg-canvas-subtle p-3">{/* A grid, so the preview fills the box: in a min-height block the iframe's h-full has no height to resolve against. */}<DrivePreviewBody src={publicContentUrl(token, item.id)} downloadHref={publicContentUrl(token, item.id, true)} contentType={item.contentType} name={item.name} /></div>
 			) : (
 				<div className="divide-y divide-line-subtle border border-line bg-surface">
 					{items.length === 0 ? <EmptyState animated={false} headingLevel={2} icon={<Folder className="h-6 w-6" aria-hidden="true" />} title={t("drive.empty")} /> : sortDriveItems(items, "name", true).map((entry) => <PublicRow key={entry.id} entry={entry} token={token} onOpen={setItemId} />)}

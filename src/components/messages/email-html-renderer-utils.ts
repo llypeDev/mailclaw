@@ -38,7 +38,7 @@ body { margin:0; overflow-x:auto; overflow-y:hidden; }
 html.mf-dark { filter:invert(1) hue-rotate(180deg); }
 html.mf-dark img, html.mf-dark video, html.mf-dark picture { filter:invert(1) hue-rotate(180deg); }
 .email-quote-toggle { margin-top:1.4em; }
-.email-quote-toggle > summary { cursor:pointer; list-style:none; width:26px; border-radius:20px; background:#ececec; text-align:center; }
+.email-quote-toggle > summary { cursor:pointer; list-style:none; width:26px; background:#ececec; text-align:center; }
 .email-quote-toggle > summary::-webkit-details-marker { display:none; }
 .email-quote-toggle > summary::before { content:'•••'; }
 .email-quote-content { display:flow-root; }

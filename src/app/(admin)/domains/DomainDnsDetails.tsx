@@ -58,6 +58,7 @@ export default function DomainDnsDetails({
 					<Button
 						variant="outline"
 						size="sm"
+						className="w-fit sm:col-start-4"
 						disabled={manual || setupRecord === record}
 						title={manual ? t("domains.manualDns") : t("domains.createRecord", { label: item.label })}
 						onClick={() => onSetup?.(record)}

@@ -73,7 +73,8 @@ export default function CalendarLayout({ children }: { children: React.ReactNode
                         <div key={pathname} className="page-transition-enter h-full min-h-0">{children}</div>
                       </main>
                     </AssistantOpenContext.Provider>
-                    <aside className={clsx(assistantFullSize ? "ps-0" : "ps-4", "min-h-0 min-w-0 shrink-0 overflow-hidden pb-2 pe-2 max-md:p-0 transition-[width] duration-300 ease-in-out motion-reduce:transition-none", assistantVisible ? "" : "opacity-0")} style={{ width: assistantVisible ? assistantFullSize ? "100%" : "min(390px, 100%)" : "0px" }} aria-hidden={!assistantVisible} inert={!assistantVisible}>
+                    {/* Padded only while open: at width 0 the padding would still leave a 24px strip beside the calendar. */}
+                    <aside className={clsx(assistantVisible && (assistantFullSize ? "ps-0 pb-2 pe-2" : "ps-4 pb-2 pe-2"), "min-h-0 min-w-0 shrink-0 overflow-hidden max-md:p-0 transition-[width] duration-300 ease-in-out motion-reduce:transition-none", assistantVisible ? "" : "opacity-0")} style={{ width: assistantVisible ? assistantFullSize ? "100%" : "min(390px, 100%)" : "0px" }} aria-hidden={!assistantVisible} inert={!assistantVisible}>
                       {assistantEnabled && <LazyAgentPanel open={assistantVisible} fullSize={assistantFullSize} onToggleFullSize={() => setAssistantFullSize((current) => !current)} onClose={() => { setAssistantOpen(false); setAssistantFullSize(false); }} />}
                     </aside>
                   </div>

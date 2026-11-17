@@ -35,5 +35,7 @@ export function getInlineContentType(contentType: string | null | undefined): st
 	if (!INLINE_TYPES.has(essence) && !essence.startsWith("audio/") && !essence.startsWith("video/")) return null;
 	if (!essence.startsWith("text/")) return essence;
 	const charset = contentType?.match(CHARSET_PARAMETER)?.[1];
-	return charset ? `${essence}; charset=${charset}` : essence;
+	// Without a declared charset browsers fall back to windows-1252, which garbles UTF-8 text (by far the
+	// common case, and a superset of the RFC's US-ASCII default).
+	return `${essence}; charset=${charset ?? "utf-8"}`;
 }

@@ -101,7 +101,7 @@ export function ApiKeysSettings() {
 			{error && !createOpen && <p role="alert" className="text-sm text-danger-text">{error}</p>}
 			{loading && <SectionRowSkeleton />}
 			{!loading && keys.length === 0 && <div className="border border-line bg-surface"><EmptyState variant="compact" icon={<KeyRound className="h-5 w-5" />} title={t("apiKeys.none")} headingLevel={2} /></div>}
-			{keys.length > 0 && <List>
+			{keys.length > 0 && <List className="grid-cols-1">
 				{keys.map((key) => <ListRow key={key.id} className="px-5 py-4">
 					<span className="flex h-10 w-10 shrink-0 items-center justify-center border border-accent-border bg-accent-subtle text-accent-text"><KeyRound className="h-5 w-5" /></span>
 					<span className="min-w-0 flex-1 space-y-2">

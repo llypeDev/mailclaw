@@ -124,10 +124,11 @@ export function RecipientInput({
 
 	return (
 		<div
-			className="flex min-h-9 items-center gap-2 border-b border-line-subtle px-4 py-1"
+			className="flex min-h-9 items-start gap-2 border-b border-line-subtle px-4 py-1"
 			onClick={() => inputRef.current?.focus()}
 		>
-			<Label htmlFor={id} className="w-8 shrink-0 text-sm text-fg-subtle">
+			{/* Label and toggles sit on the first line when the chips wrap onto several. */}
+			<Label htmlFor={id} className="flex h-7 w-8 shrink-0 items-center text-sm text-fg-subtle">
 				{label}
 			</Label>
 			<div className="relative flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
@@ -204,7 +205,7 @@ export function RecipientInput({
 			{trailing && (
 				// Toggles live inside the clickable row; keep their clicks from refocusing this field.
 				<div
-					className="flex shrink-0 items-center gap-1 text-xs text-fg-subtle"
+					className="flex h-7 shrink-0 items-center gap-1 text-xs text-fg-subtle"
 					onClick={(event) => event.stopPropagation()}
 				>
 					{trailing}

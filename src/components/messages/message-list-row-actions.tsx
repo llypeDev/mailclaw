@@ -48,22 +48,22 @@ function MessageListRowActionsComponent({ message, onAction }: MessageListRowAct
 			<div className="pointer-events-none absolute end-6 top-1/2 z-10 flex -translate-y-1/2 items-center gap-1 ps-3 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 bg-surface-hover">
 				{message.hasUnsubscribe && <MessageUnsubscribeButton key={message.id} messageId={message.id} variant="row" />}
 				<Tooltip label={t("common.archive")}>
-					<Button type="button" variant="ghost" size="sm" onClick={() => void onAction("archive")} aria-label={t("common.archive")}>
+					<Button type="button" variant="ghost" size="roundedSM" onClick={() => void onAction("archive")} aria-label={t("common.archive")}>
 						<Archive className="h-4 w-4" />
 					</Button>
 				</Tooltip>
 				<Tooltip label={t("common.trash")}>
-					<Button type="button" variant="ghost" size="sm" onClick={() => void onAction("trash")} aria-label={t("common.trash")}>
+					<Button type="button" variant="ghost" size="roundedSM" onClick={() => void onAction("trash")} aria-label={t("common.trash")}>
 						<Trash2 className="h-4 w-4" />
 					</Button>
 				</Tooltip>
 				<Tooltip label={readAction === "read" ? t("common.markRead") : t("common.markUnread")}>
-					<Button type="button" variant="ghost" size="sm" onClick={() => void onAction(readAction)} aria-label={readAction === "read" ? t("common.markRead") : t("common.markUnread")}>
+					<Button type="button" variant="ghost" size="roundedSM" onClick={() => void onAction(readAction)} aria-label={readAction === "read" ? t("common.markRead") : t("common.markUnread")}>
 						{readAction === "read" ? <MailOpen className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
 					</Button>
 				</Tooltip>
 				<Tooltip label={snoozed ? t("common.unsnooze") : t("common.snooze")}>
-					<Button type="button" variant="ghost" size="sm" onClick={() => {
+					<Button type="button" variant="ghost" size="roundedSM" onClick={() => {
 						if (snoozed) {
 							void unsnoozeMessage(message.id);
 							return;

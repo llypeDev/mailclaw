@@ -39,7 +39,7 @@ export function ComposeFields({
 	return (
 		<>
 			<div className="flex flex-row items-center border-b border-line-subtle px-4 py-1">
-				<Label htmlFor={`${mode}-from`} className="text-sm text-fg-subtle">{t("compose.from")}</Label>
+				<Label htmlFor={`${mode}-from`} className="w-8 shrink-0 text-sm text-fg-subtle">{t("compose.from")}</Label>
 				<Select
 					id={`${mode}-from`}
 					value={senderValue}
@@ -48,7 +48,7 @@ export function ComposeFields({
 					required
 					disabled={disabled || senderOptions.length === 0}
 					className="h-8 px-0 py-1 text-sm shadow-none focus-visible:ring-0"
-					containerClassName="border-0 flex-1"
+					containerClassName="flex-1 border-0 bg-transparent"
 				>
 					{senderOptions.length === 0 && <option value="">{t("compose.selectMailboxFirst")}</option>}
 					{senderOptions.map(({ mailbox, address }) => (
@@ -114,7 +114,7 @@ export function ComposeFields({
 					placeholder={t("compose.subject")}
 					required
 					disabled={disabled}
-					className="h-8 border-0 px-0 py-1 shadow-none focus-visible:ring-0"
+					className="h-8 border-0 bg-transparent px-0 py-1 shadow-none focus-visible:ring-0"
 				/>
 			</div>
 		</>

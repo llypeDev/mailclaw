@@ -31,7 +31,7 @@ import type { CurrentAccountResponse, Domain, MailboxOwner, MailboxesResponse } 
 import { formatAccountDateTime } from "../accounts/utils";
 import { getMailboxAddress, getMailboxesBase, getMailboxName } from "./utils";
 
-const COLUMNS = "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 md:grid-cols-[auto_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]";
+const COLUMNS = "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 md:grid-cols-[auto_minmax(0,2fr)_minmax(11rem,1fr)_minmax(6rem,1fr)_minmax(0,1fr)]";
 const STATUS_TONES: Record<"active" | "disabled" | "pendingDeletion", TagTone> = {
 	active: "success",
 	disabled: "neutral",
@@ -260,7 +260,7 @@ export default function MailboxesPage() {
 						className="border border-line bg-surface px-5 py-4"
 					/>
 				)}
-				<List>
+				<List className="grid-cols-1">
 					<div className={`${COLUMNS} bg-canvas-subtle px-5 py-3 font-display text-[length:var(--or-text-2xs)] font-medium uppercase tracking-[var(--or-tracking-meta)] text-fg-subtle`}>
 						<span className="w-10" />
 						<span>{t("common.name")}</span>

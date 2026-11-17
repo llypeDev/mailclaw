@@ -91,15 +91,15 @@ export default function WebhooksPage() {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex flex-wrap items-end justify-between gap-4">
-				<div>
+			<div className="flex items-start justify-between gap-4">
+				<div className="min-w-0">
 					<h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-fg md:text-3xl">{t("webhooks.title")}</h1>
 					<p className="mt-2 text-sm text-fg-muted">
 						{t("webhooks.description")}
 					</p>
 				</div>
 				<Button
-					className={mobilePrimaryActionClass}
+					className={`shrink-0 ${mobilePrimaryActionClass}`}
 					onClick={() => {
 						setError(null);
 						setDialogOpen(true);
@@ -139,6 +139,7 @@ export default function WebhooksPage() {
 						title={t("webhooks.none")}
 						action={
 							<Button
+								variant="outline"
 								onClick={() => {
 									setError(null);
 									setDialogOpen(true);

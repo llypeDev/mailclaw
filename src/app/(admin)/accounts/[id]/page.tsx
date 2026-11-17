@@ -80,12 +80,12 @@ export default function AccountDetailsPage() {
 						)}
 					</span>
 					{account.editable && (
-						<Label className="cursor-pointer">
-							<span className="inline-flex h-9 items-center gap-2 border border-line-control bg-surface px-3 text-sm transition-colors hover:bg-surface-hover">
+						<Label className="group relative cursor-pointer">
+							<span className="inline-flex h-9 items-center gap-2 border border-line-control bg-surface px-3 text-sm transition-colors hover:bg-surface-hover group-has-[:focus-visible]:outline-2 group-has-[:focus-visible]:outline-offset-2 group-has-[:focus-visible]:outline-focus">
 								<Upload className="h-4 w-4" />
 								{t("account.changeAvatar")}
 							</span>
-							<Input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={(event) => void uploadAvatar(event.target.files?.[0])} />
+							<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={(event) => void uploadAvatar(event.target.files?.[0])} />
 						</Label>
 					)}
 				</div>

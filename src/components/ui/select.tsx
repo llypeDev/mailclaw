@@ -3,6 +3,8 @@
 import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown } from "@/components/icons";
+import { useLanguage } from "@/components/language-provider";
+import { getDirection } from "@/lib/i18n/utils";
 import { cn } from "@/lib/utils";
 import type { SelectProps } from "./select-types";
 
@@ -82,6 +84,12 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
     const toInternal = (raw: string) => (raw === "" && hasEmptyOption ? EMPTY_VALUE : raw);
     const [uncontrolled, setUncontrolled] = React.useState(String(defaultValue ?? ""));
     const current = value === undefined ? uncontrolled : String(value);
+    // Call sites size the trigger (h-9, h-10…) as if it were the whole control, so while the frame draws its
+    // 1px border the trigger reaches into it: the control keeps the height it was given, and the open list,
+    // sized from the trigger, is exactly as wide as the frame.
+    const framed = !/(^|\s)(contents|border-0)(\s|$)/.test(containerClassName ?? "");
+    // Radix positions the list and reads arrow keys from `dir`; it defaults to ltr instead of the document's.
+    const dir = getDirection(useLanguage().locale);
 
     function handleValueChange(next: string) {
       const raw = next === EMPTY_VALUE ? "" : next;
@@ -92,7 +100,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
     return (
       <span
         className={cn(
-          "relative inline-flex border border-line-control bg-surface px-2 text-fg transition-[border-color,box-shadow,background-color] duration-150 ease-out hover:border-fg-subtle focus-within:border-accent has-[button:disabled]:border-line has-[button:disabled]:bg-canvas-subtle",
+          "relative inline-flex border border-line-control bg-surface text-fg transition-[border-color,box-shadow,background-color] duration-150 ease-out hover:border-fg-subtle focus-within:border-accent has-[button:disabled]:border-line has-[button:disabled]:bg-canvas-subtle",
           containerClassName,
         )}
       >
@@ -100,6 +108,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
           value={toInternal(current)}
           onValueChange={handleValueChange}
           disabled={disabled}
+          dir={dir}
         >
           <SelectPrimitive.Trigger
             ref={ref}
@@ -109,7 +118,8 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
             aria-labelledby={ariaLabelledBy}
             aria-describedby={ariaDescribedBy}
             className={cn(
-              "group flex w-full min-w-0 items-center justify-between gap-2 bg-transparent text-left outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:text-fg-disabled data-[placeholder]:text-fg-subtle",
+              "group flex w-full min-w-0 items-center justify-between gap-2 bg-transparent px-2 text-start outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:text-fg-disabled data-[placeholder]:text-fg-subtle",
+              framed && "-m-px w-[calc(100%+2px)]",
               className,
             )}
           >
@@ -139,10 +149,10 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                     value={toInternal(option.value)}
                     disabled={option.disabled}
                     lang={option.lang}
-                    className="relative flex cursor-pointer select-none items-center py-2 pr-8 pl-3 outline-none before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:scale-y-0 before:bg-accent before:transition-transform before:duration-200 data-[disabled]:pointer-events-none data-[disabled]:text-fg-disabled data-[highlighted]:bg-surface-hover data-[highlighted]:before:scale-y-100 data-[state=checked]:font-medium motion-reduce:before:transition-none"
+                    className="relative flex cursor-pointer select-none items-center py-2 pe-8 ps-3 outline-none before:absolute before:inset-y-0 before:start-0 before:w-[3px] before:scale-y-0 before:bg-accent before:transition-transform before:duration-200 data-[disabled]:pointer-events-none data-[disabled]:text-fg-disabled data-[highlighted]:bg-surface-hover data-[highlighted]:before:scale-y-100 data-[state=checked]:font-medium motion-reduce:before:transition-none"
                   >
                     <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
-                    <SelectPrimitive.ItemIndicator className="absolute right-2 inline-flex text-accent-text">
+                    <SelectPrimitive.ItemIndicator className="absolute end-2 inline-flex text-accent-text">
                       <Check size={16} />
                     </SelectPrimitive.ItemIndicator>
                   </SelectPrimitive.Item>

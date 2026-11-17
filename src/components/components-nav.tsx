@@ -50,7 +50,8 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
     link.primary &&
     "mb-3 h-12 w-fit bg-accent px-5 font-display font-semibold text-on-accent before:hidden hover:bg-accent-hover hover:text-on-accent",
     link.count && "font-semibold",
-    link.primary && minimal && "h-11 w-11 px-0",
+    // In the rail the compose button lines up with the logo and the items: 40px, from the same start edge.
+    link.primary && minimal && "h-10 w-10 px-0",
     wrap && !minimal && "h-auto min-h-9 items-start py-2",
   );
   const dropProps = link.onMessageDrop
@@ -99,7 +100,7 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
         )}
       </button>
     );
-    return minimal && link.label ? <Tooltip label={link.label} placement="right" className="mx-auto">{composeButton}</Tooltip> : composeButton;
+    return minimal && link.label ? <Tooltip label={link.label} placement="right" className="self-start">{composeButton}</Tooltip> : composeButton;
   }
 
   function prefetch() {

@@ -166,7 +166,7 @@ export function TwoStepSettings() {
 									<Button variant="ghost" size="sm" onClick={() => setPending("disable")} disabled={busy}>{t("mfa.turnOff")}</Button>
 								</>
 							) : (
-								<Button size="sm" onClick={() => setPending("enroll")} disabled={busy}>{t("mfa.turnOn")}</Button>
+								<Button variant="outline" size="sm" onClick={() => setPending("enroll")} disabled={busy}>{t("mfa.turnOn")}</Button>
 							)}
 						</div>
 					</div>

@@ -115,6 +115,8 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 	const fallbackRules = (rules.data?.rules ?? []).filter((r) => r.action !== "reject");
 	if (!canManage) return null;
 
+	// "Add route" is the filled action only on the admin Routing page (`domain` given). In Settings the
+	// mailbox rules below keep the page's one filled accent action, so this one is outlined.
 	return (
 		<SettingsSection
 			title={t("routing.title")}
@@ -127,7 +129,7 @@ export function DomainRouting({ domain }: DomainRoutingProps = {}) {
 			}
 			description={t("routing.rulesFor", { host: hostname || t("routing.selectInbox") })}
 			actions={
-				<Button onClick={openCreate} disabled={!domainId}>
+				<Button variant={domain ? "default" : "outline"} onClick={openCreate} disabled={!domainId}>
 					<Plus className="h-4 w-4" /> {t("routing.addRoute")}
 				</Button>
 			}

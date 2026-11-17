@@ -204,7 +204,7 @@ export function PasskeySettings() {
 								{checking ? t("common.pleaseWait") : t("passkey.check")}
 							</Button>
 						)}
-						<Button type="button" onClick={() => setAddOpen(true)}>
+						<Button type="button" variant="outline" onClick={() => setAddOpen(true)}>
 							<Plus className="h-4 w-4" />
 							{t("passkey.add")}
 						</Button>

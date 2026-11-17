@@ -105,7 +105,7 @@ export function DriveShareDialog({ item, onClose, onChanged }: { item: DriveItem
 				{linkToken && (
 					<div className="mt-2 flex gap-2">
 						<Input readOnly value={linkUrl} onFocus={(event) => event.currentTarget.select()} aria-label={t("drive.copyLink")} className="font-mono text-xs" />
-						<Button type="button" variant="outline" onClick={() => { void navigator.clipboard.writeText(linkUrl).then(() => toast.success(t("drive.linkCopied"))); }}><Copy size={16} />{t("drive.copyLink")}</Button>
+						<Button type="button" variant="outline" className="shrink-0" onClick={() => { void navigator.clipboard.writeText(linkUrl).then(() => toast.success(t("drive.linkCopied"))); }}><Copy size={16} />{t("drive.copyLink")}</Button>
 					</div>
 				)}
 			</DialogContent>

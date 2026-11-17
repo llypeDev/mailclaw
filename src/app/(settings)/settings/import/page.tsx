@@ -198,7 +198,7 @@ export default function SettingsImportPage() {
                 onChange={(event) =>
                   setActiveTab(event.target.value as ImportTab)
                 }
-                className="text-sm w-full py-2"
+                className="h-10 w-full text-sm"
               >
                 <option value="file">{t("importPage.backupFile")}</option>
                 <option value="imap">{t("importPage.imap")}</option>

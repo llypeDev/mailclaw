@@ -114,8 +114,8 @@ export default function BackupsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-fg md:text-3xl">
             {t("backups.title")}
           </h1>
@@ -123,7 +123,7 @@ export default function BackupsPage() {
             {t("backups.description")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Input
             ref={restoreInput}
             type="file"
@@ -380,6 +380,9 @@ export default function BackupsPage() {
           <DatabaseBackup className="h-5 w-5 text-fg-subtle" />
           <h2 className="font-display font-semibold text-fg">{t("backups.history")}</h2>
         </div>
+        {/* The five columns need about 38rem; narrower screens scroll the table sideways instead of clipping it. */}
+        <div className="overflow-x-auto">
+        <div className="min-w-[38rem]">
         <div className="grid grid-cols-[1fr_110px_110px_170px_120px] gap-4 border-b border-line-strong bg-canvas-subtle px-4 py-2 font-display text-[length:var(--or-text-2xs)] font-medium uppercase tracking-[var(--or-tracking-meta)] text-fg-subtle">
           <span>{t("backups.col.file")}</span>
           <span>{t("backups.col.status")}</span>
@@ -388,13 +391,6 @@ export default function BackupsPage() {
           <span>{t("backups.col.actions")}</span>
         </div>
         {backups.isLoading && <SkeletonRows count={5} />}
-        {!backups.isLoading && (backups.data?.backups ?? []).length === 0 && (
-          <EmptyState
-            variant="compact"
-            icon={<DatabaseBackup className="h-5 w-5" />}
-            title={t("backups.none")}
-          />
-        )}
         {(backups.data?.backups ?? []).map((backup: BackupItem) => (
           <div
             key={backup.id}
@@ -446,6 +442,15 @@ export default function BackupsPage() {
             </div>
           </div>
         ))}
+        </div>
+        </div>
+        {!backups.isLoading && (backups.data?.backups ?? []).length === 0 && (
+          <EmptyState
+            variant="compact"
+            icon={<DatabaseBackup className="h-5 w-5" />}
+            title={t("backups.none")}
+          />
+        )}
       </section>
     </div>
   );

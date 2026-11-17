@@ -75,7 +75,7 @@ export default function DashboardLayout({
                       >
                         <HelpCircle className="h-5 w-5" />
                       </Link> */}
-                      {assistantEnabled && <Button type="button" variant="ghost" size="sm" className={assistantOpen ? "bg-accent-subtle text-accent-text" : "text-fg-muted"} onClick={() => { setAssistantOpen((current) => !current); setAssistantFullSize(false); }} onPointerEnter={() => void preloadAgentPanel().catch(() => undefined)} onFocus={() => void preloadAgentPanel().catch(() => undefined)} aria-label={assistantOpen ? t("agent.assistant.close") : t("agent.assistant.open")} aria-expanded={assistantOpen} aria-controls="email-assistant-panel"><Sparkles className="h-5 w-5" /></Button>}
+                      {assistantEnabled && <Button type="button" variant="ghost" size="icon" className={assistantOpen ? "bg-accent-subtle text-accent-text" : "text-fg-muted"} onClick={() => { setAssistantOpen((current) => !current); setAssistantFullSize(false); }} onPointerEnter={() => void preloadAgentPanel().catch(() => undefined)} onFocus={() => void preloadAgentPanel().catch(() => undefined)} aria-label={assistantOpen ? t("agent.assistant.close") : t("agent.assistant.open")} aria-expanded={assistantOpen} aria-controls="email-assistant-panel"><Sparkles className="h-5 w-5" /></Button>}
                       <MailboxSelector />
                     </header>
                     <DnsSkippedBanner />
@@ -85,12 +85,14 @@ export default function DashboardLayout({
                           {children}
                         </main>
                       </AssistantOpenContext.Provider>
-                      <aside className={clsx(assistantFullSize ? "ps-0" : "ps-4", `min-h-0 min-w-0 shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out motion-reduce:transition-none pe-2 pb-2 max-md:p-0`, assistantVisible ? "" : "opacity-0")} style={{ width: assistantVisible ? assistantFullSize ? "100%" : "min(390px, 100%)" : "0px" }} aria-hidden={!assistantVisible} inert={!assistantVisible}>
+                      {/* Padded only while open: at width 0 the padding would still leave a 24px strip beside the page. */}
+                      <aside className={clsx(assistantVisible && (assistantFullSize ? "ps-0 pe-2 pb-2" : "ps-4 pe-2 pb-2"), `min-h-0 min-w-0 shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out motion-reduce:transition-none max-md:p-0`, assistantVisible ? "" : "opacity-0")} style={{ width: assistantVisible ? assistantFullSize ? "100%" : "min(390px, 100%)" : "0px" }} aria-hidden={!assistantVisible} inert={!assistantVisible}>
                         {assistantEnabled && <LazyAgentPanel open={assistantVisible} fullSize={assistantFullSize} onToggleFullSize={() => setAssistantFullSize((current) => !current)} onClose={() => { setAssistantOpen(false); setAssistantFullSize(false); }} />}
                       </aside>
                     </div>
                   </div>
-                  <LazyFloatingComposer showButton />
+                  {/* The phone Compose button would sit on the open assistant's message box. */}
+                  <LazyFloatingComposer showButton={!assistantVisible} />
                 </div>
               </ShortcutsProvider>
             </MailSearchProvider>

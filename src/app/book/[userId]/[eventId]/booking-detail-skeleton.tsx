@@ -15,8 +15,9 @@ export function BookingDetailSkeleton() {
 		</div>
 		<div className="border-b border-line p-7 sm:p-9 lg:border-b-0 lg:border-e">
 			<Skeleton className="block h-6 w-1/2" />
+			{/* h-auto: Orange's rect skeleton brings its own height, which would beat aspect-square. */}
 			<div className="mx-auto mt-10 grid max-w-[440px] grid-cols-7 gap-1">
-				{Array.from({ length: 35 }, (_, index) => <Skeleton key={index} className="block aspect-square" />)}
+				{Array.from({ length: 35 }, (_, index) => <Skeleton key={index} className="block aspect-square h-auto" />)}
 			</div>
 		</div>
 		<div className="space-y-2 p-7 sm:p-9">

@@ -32,10 +32,10 @@ export default function ActivityPage() {
         <table className="w-full min-w-[760px] table-fixed text-start">
           <thead className="border-b border-line-strong bg-canvas-subtle font-display text-[length:var(--or-text-2xs)] font-medium uppercase tracking-[var(--or-tracking-meta)] text-fg-subtle">
             <tr>
-              <th scope="col" className="w-32 px-5 py-3 font-medium">{t("activity.col.activity")}</th>
-              <th scope="col" className="px-5 py-3 font-medium">{t("activity.col.user")}</th>
-              <th scope="col" className="w-64 px-5 py-3 font-medium">{t("activity.col.device")}</th>
-              <th scope="col" className="w-48 px-5 py-3 font-medium">{t("activity.col.time")}</th>
+              <th scope="col" className="w-32 px-5 py-3 text-start font-medium">{t("activity.col.activity")}</th>
+              <th scope="col" className="px-5 py-3 text-start font-medium">{t("activity.col.user")}</th>
+              <th scope="col" className="w-64 px-5 py-3 text-start font-medium">{t("activity.col.device")}</th>
+              <th scope="col" className="w-48 px-5 py-3 text-start font-medium">{t("activity.col.time")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">

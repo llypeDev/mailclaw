@@ -144,7 +144,7 @@ export default function ApiKeysPage() {
 							icon={<KeyRound className="h-6 w-6" />}
 							title={t("apiKeys.none")}
 							action={
-								<Button onClick={() => setCreateOpen(true)}>
+								<Button variant="outline" onClick={() => setCreateOpen(true)}>
 									<Plus className="h-4 w-4" />
 									{t("apiKeys.new")}
 								</Button>
@@ -152,7 +152,7 @@ export default function ApiKeysPage() {
 						/>
 					</div>
 				)}
-				{(data?.apiKeys ?? []).length > 0 && <List>
+				{(data?.apiKeys ?? []).length > 0 && <List className="grid-cols-1">
 					{(data?.apiKeys ?? []).map((key) => (
 						<ListRow
 							key={key.id}

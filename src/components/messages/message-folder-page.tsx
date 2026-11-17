@@ -261,7 +261,7 @@ function MessageListRowComponent({
 					<Button
 						type="button"
 						variant="ghost"
-						size="sm"
+						size="roundedSM"
 						className="relative z-10"
 						onClick={() => {
 							void toggleMessageStar(message.id).then((result) => setStarred(result.starred));
@@ -625,7 +625,7 @@ export function MessageFolderPage({
 						<Tooltip label={t("list.previousPage")}>
 							<Button
 								variant="ghost"
-								size="sm"
+								size="roundedSM"
 								disabled={offset === 0 || isLoading}
 								onClick={() => setOffset(Math.max(offset - limit, 0))}
 								aria-label={t("list.previousPage")}
@@ -636,7 +636,7 @@ export function MessageFolderPage({
 						<Tooltip label={t("list.nextPage")}>
 							<Button
 								variant="ghost"
-								size="sm"
+								size="roundedSM"
 								disabled={!hasMore || isLoading}
 								onClick={() => setOffset(offset + limit)}
 								aria-label={t("list.nextPage")}
@@ -649,7 +649,7 @@ export function MessageFolderPage({
 								<Button
 									type="button"
 									variant="ghost"
-									size="sm"
+									size="roundedSM"
 									aria-label={t("list.showUnreadOnly")}
 									aria-pressed={unreadOnly}
 									onClick={() => setUnreadOnly((current) => !current)}

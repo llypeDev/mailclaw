@@ -35,10 +35,12 @@ export function useDriveColumns() {
 	return { widths, resize, template };
 }
 
+const isRtl = (element: Element) => getComputedStyle(element).direction === "rtl";
+
 /**
- * Drag handle on the left edge of a column header: dragging left makes the column wider. The drag is tracked on
- * `window` from the width it started with, so it ends cleanly wherever the pointer is released and never leaves a
- * listener behind on the handle.
+ * Drag handle on the start edge of a column header (left, or right in a right-to-left page): dragging toward the
+ * start makes the column wider. The drag is tracked on `window` from the width it started with, so it ends cleanly
+ * wherever the pointer is released and never leaves a listener behind on the handle.
  */
 export function ColumnResizeHandle({ column, width, onResize, label }: { column: DriveColumn; width: number; onResize: (column: DriveColumn, width: number, persist?: boolean) => void; label: string }) {
 	const { t } = useLanguage();
@@ -52,10 +54,12 @@ export function ColumnResizeHandle({ column, width, onResize, label }: { column:
 		cleanup.current?.();
 		const startX = event.clientX;
 		const startWidth = width;
+		// Moving toward the start edge widens the column: leftwards, or rightwards in a right-to-left page.
+		const toStart = isRtl(event.currentTarget) ? -1 : 1;
 		let latest = startWidth;
-		const move = (moveEvent: globalThis.PointerEvent) => { latest = startWidth + (startX - moveEvent.clientX); onResize(column, latest); };
+		const move = (moveEvent: globalThis.PointerEvent) => { latest = startWidth + (startX - moveEvent.clientX) * toStart; onResize(column, latest); };
 		const end = (endEvent?: globalThis.PointerEvent) => {
-			if (endEvent && endEvent.type === "pointerup") latest = startWidth + (startX - endEvent.clientX);
+			if (endEvent && endEvent.type === "pointerup") latest = startWidth + (startX - endEvent.clientX) * toStart;
 			window.removeEventListener("pointermove", move);
 			window.removeEventListener("pointerup", end);
 			window.removeEventListener("pointercancel", end);
@@ -78,8 +82,9 @@ export function ColumnResizeHandle({ column, width, onResize, label }: { column:
 	}
 	function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
 		const step = event.shiftKey ? 40 : 10;
-		if (event.key === "ArrowLeft") { event.preventDefault(); onResize(column, width + step, true); }
-		if (event.key === "ArrowRight") { event.preventDefault(); onResize(column, width - step, true); }
+		const [wider, narrower] = isRtl(event.currentTarget) ? ["ArrowRight", "ArrowLeft"] : ["ArrowLeft", "ArrowRight"];
+		if (event.key === wider) { event.preventDefault(); onResize(column, width + step, true); }
+		if (event.key === narrower) { event.preventDefault(); onResize(column, width - step, true); }
 	}
 	return (
 		<div
@@ -92,7 +97,7 @@ export function ColumnResizeHandle({ column, width, onResize, label }: { column:
 			tabIndex={0}
 			onPointerDown={onPointerDown}
 			onKeyDown={onKeyDown}
-			className="group/handle absolute -left-2 top-0 flex h-full w-4 cursor-col-resize touch-none items-center justify-center outline-none"
+			className="group/handle absolute -start-2 top-0 flex h-full w-4 cursor-col-resize touch-none items-center justify-center outline-none"
 		>
 			<span className={clsx("h-5 w-0.5 transition-colors", dragging ? "bg-accent" : "bg-line group-hover/handle:bg-accent group-focus-visible/handle:bg-focus")} />
 		</div>

@@ -99,10 +99,11 @@ export function ContactsPage() {
 				{items.length > 0 && (
 					<List>
 						<div className={`${CONTACT_COLUMNS} bg-canvas-subtle px-5 py-3 font-display text-xs font-medium uppercase tracking-wider text-fg-subtle`}>
-							<span className="w-10" />
+							<span className="w-9" />
 							<span>{t("common.name")}</span>
 							<span className="hidden md:block">{t("contact.lastSeen")}</span>
-							<span className="w-[7.5rem]" />
+							{/* The avatar (36px) and the three 32px row actions, so the columns line up with the rows. */}
+							<span className="w-[6.5rem]" />
 						</div>
 						{items.map((contact) => (
 							<ContactRow

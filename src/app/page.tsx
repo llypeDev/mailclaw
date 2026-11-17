@@ -86,7 +86,8 @@ export default async function HomePage() {
               <ShieldCheck className="h-4 w-4" aria-hidden="true" />
               {t("home.badge")}
             </p>
-            <h1 className="max-w-[12ch] font-display text-5xl font-semibold leading-[0.96] tracking-tight text-fg sm:text-6xl lg:text-7xl">
+            {/* Right-to-left scripts (Arabic, Persian, Urdu) need room above and below the line, so they get a taller leading. */}
+            <h1 className="max-w-[12ch] font-display text-5xl font-semibold leading-[0.96] tracking-tight text-fg sm:text-6xl lg:text-7xl rtl:leading-tight">
               {t("home.headline")}
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-fg-muted">
@@ -96,8 +97,8 @@ export default async function HomePage() {
           </div>
 
           {/* A static picture of the app, drawn with the same tokens as the real shell. */}
-          <div className="relative min-h-[520px] overflow-hidden border border-line bg-canvas-subtle bg-[linear-gradient(var(--or-color-grid-line)_1px,transparent_1px),linear-gradient(90deg,var(--or-color-grid-line)_1px,transparent_1px)] bg-[size:48px_48px] bg-[position:-1px_-1px]">
-            <div className="grid h-full min-h-[520px] grid-cols-[176px_1fr]">
+          <div className="relative min-h-[360px] overflow-hidden border border-line bg-canvas-subtle bg-[linear-gradient(var(--or-color-grid-line)_1px,transparent_1px),linear-gradient(90deg,var(--or-color-grid-line)_1px,transparent_1px)] bg-[size:48px_48px] bg-[position:-1px_-1px] sm:min-h-[520px]">
+            <div className="grid h-full min-h-[360px] grid-cols-[176px_1fr] sm:min-h-[520px]">
               <aside className="hidden flex-col gap-px border-e border-line-subtle bg-canvas py-5 pe-3 sm:flex">
                 <div className="mb-4 flex items-center gap-3 px-4 text-fg">
                   <Inbox className="h-5 w-5" />
@@ -143,7 +144,7 @@ export default async function HomePage() {
                   </div>
                 </div>
 
-                <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-s border-t border-line-subtle bg-surface">
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-line-subtle bg-surface sm:border-s">
                   <div className="flex h-14 items-center justify-between border-b border-line px-6">
                     <div className="flex items-center gap-3">
                       <h2 className="font-display text-xl font-bold tracking-tight text-fg">
@@ -161,13 +162,14 @@ export default async function HomePage() {
                     {heroMessages.map((message) => (
                       <div
                         key={message.sender}
-                        className="grid min-h-14 grid-cols-[28px_minmax(112px,180px)_1fr_auto] items-center gap-3 px-5 text-sm"
+                        className="grid min-h-14 grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 px-5 text-sm sm:grid-cols-[28px_minmax(112px,180px)_1fr_auto]"
                       >
                         <message.icon className="h-4 w-4 text-fg-disabled" />
                         <span className="truncate font-semibold text-fg">
                           {message.sender}
                         </span>
-                        <span className="truncate text-fg-muted">
+                        {/* On a phone the row keeps the sender and the tag; a subject squeezed to a letter or two says nothing. */}
+                        <span className="hidden truncate text-fg-muted sm:block">
                           <span className="font-medium text-fg">
                             {t(message.subjectKey)}
                           </span>

@@ -39,7 +39,7 @@ export function DialogContent({
 				{children}
 				{showCloseButton && (
 					<DialogPrimitive.Close
-						className={cn(buttonVariants({ variant: "ghost", size: "roundedSM" }), "absolute right-3 top-3", closeClassName)}
+						className={cn(buttonVariants({ variant: "ghost", size: "roundedSM" }), "absolute end-3 top-3", closeClassName)}
 					>
 						<X className="h-4 w-4" aria-hidden="true" />
 						<span className="sr-only">{closeLabel ?? t("navigation.close")}</span>

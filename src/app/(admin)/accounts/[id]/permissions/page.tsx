@@ -97,7 +97,7 @@ export default function AccountPermissionsPage() {
 					{t("account.permissions.primaryNote")}
 				</Alert>
 			)}
-			<section className="space-y-3 border border-line bg-surface p-6">
+			<section className="space-y-3 border border-line bg-surface p-5">
 				<label htmlFor="account-role" className="block font-display text-sm font-semibold text-fg">{t("accounts.role")}</label>
 				<Select
 					id="account-role"
@@ -214,7 +214,7 @@ export default function AccountPermissionsPage() {
 				</Button>
 			)}
 			{isPrimary && (
-				<section className="space-y-4 border border-line bg-surface p-6">
+				<section className="space-y-4 border border-line bg-surface p-5">
 					<div>
 						<h2 className="font-display text-sm font-semibold text-fg">{t("account.permissions.transferTitle")}</h2>
 						<p className="mt-1 text-xs text-fg-subtle">{t("account.permissions.transferHint")}</p>

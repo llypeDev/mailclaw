@@ -257,7 +257,7 @@ export default function MailboxSettingsPage() {
                 : t("mailbox.aliasesLoadFailed")}
             </p>
           )}
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               value={aliasLocalPart}
               onChange={(event) => setAliasLocalPart(event.target.value)}
@@ -279,6 +279,7 @@ export default function MailboxSettingsPage() {
             </Select>
             <Button
               type="button"
+              variant="outline"
               disabled={!aliasLocalPart.trim() || !aliasDomainId || addAlias.isPending}
               onClick={() => addAlias.mutate()}
             >
@@ -346,7 +347,7 @@ export default function MailboxSettingsPage() {
                   : t("mailbox.sharedLoadFailed")}
               </p>
             )}
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Select
                 value={selectedUserId}
                 onChange={(event) => setSelectedUserId(event.target.value)}
@@ -366,6 +367,7 @@ export default function MailboxSettingsPage() {
               </Select>
               <Button
                 type="button"
+                variant="outline"
                 disabled={!selectedUserId || addMember.isPending}
                 onClick={() => addMember.mutate()}
               >

@@ -45,9 +45,9 @@ export function ResetPasswordClient() {
 	if (!token) {
 		return (
 			<AuthShell icon={LockKeyhole} title={t("auth.reset.linkMissing")} description={t("auth.reset.linkMissingDescription")}>
-				<Link href="/forgot-password" className="text-sm text-accent-text hover:underline">
-					{t("auth.reset.requestNew")}
-				</Link>
+				<Button asChild className="h-11 w-full px-6">
+					<Link href="/forgot-password">{t("auth.reset.requestNew")}</Link>
+				</Button>
 			</AuthShell>
 		);
 	}
@@ -61,14 +61,13 @@ export function ResetPasswordClient() {
 					? t("auth.reset.doneDescription")
 					: t("auth.reset.description")
 			}
-			footer={
-				done ? (
-					<Link href="/login" className="text-sm font-medium text-accent-text hover:underline">
-						{t("auth.reset.goToSignIn")}
-					</Link>
-				) : undefined
-			}
 		>
+			{/* Done, signing in is the only next step, so it takes the form's place as a button. */}
+			{done && (
+				<Button asChild className="h-11 w-full px-6">
+					<Link href="/login">{t("auth.reset.goToSignIn")}</Link>
+				</Button>
+			)}
 			{!done && (
 				<form onSubmit={onSubmit} className="space-y-5">
 					<div className="space-y-2">

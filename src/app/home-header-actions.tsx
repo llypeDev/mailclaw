@@ -14,8 +14,9 @@ export function HomeHeaderActions() {
 
 	return (
 		<>
+			{/* The hero below carries the filled primary action, so the header steps each action down one level. */}
 			{getHomeActions(false).map((action) => (
-				<Button key={action.href} variant={action.variant} asChild>
+				<Button key={action.href} variant={action.variant === "default" ? "outline" : "ghost"} asChild>
 					<Link href={action.href}>{t(action.labelKey)}</Link>
 				</Button>
 			))}

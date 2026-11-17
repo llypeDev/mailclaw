@@ -12,7 +12,7 @@ test("inline types are served as their bare essence", () => {
 	assert.equal(getInlineContentType("video/mp4"), "video/mp4");
 	assert.equal(getInlineContentType("audio/mpeg"), "audio/mpeg");
 	assert.equal(getInlineContentType("text/plain; charset=\"ISO-8859-1\"; format=flowed"), "text/plain; charset=ISO-8859-1");
-	assert.equal(getInlineContentType("text/csv"), "text/csv");
+	assert.equal(getInlineContentType("text/csv"), "text/csv; charset=utf-8");
 });
 
 test("active or unparsable types never render inline", () => {

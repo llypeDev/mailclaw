@@ -444,7 +444,7 @@ export default function DomainsPage() {
             className="border border-line bg-surface px-5 py-4"
           />
         )}
-        <List>
+        <List className="grid-cols-1">
           {(data?.domains ?? []).map((d) => {
             const dns = data?.dns?.[d.id];
             return (

@@ -100,8 +100,9 @@ export function ScheduleSendSheet({ open, onOpenChange, value, onChange, allowCl
 									)}
 									{options.map((option) => (
 										<button key={option.labelKey} type="button" onClick={() => choose(option.value)} className={cn(rowClass, "justify-between")}>
-											<span>{t(option.labelKey)}</span>
-											<span className="font-mono text-sm text-fg-subtle">{option.value && formatScheduledSend(option.value)}</span>
+											<span className="text-start">{t(option.labelKey)}</span>
+											{/* The monospaced date keeps one line; a long label wraps instead. */}
+											<span className="shrink-0 whitespace-nowrap font-mono text-sm text-fg-subtle">{option.value && formatScheduledSend(option.value)}</span>
 										</button>
 									))}
 								</div>

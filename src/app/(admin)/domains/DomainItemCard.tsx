@@ -13,7 +13,7 @@ import {
   Check,
   AlertTriangle,
   ChevronDown,
-  ChevronRight,
+  ChevronUp,
   Globe2,
   MoreVertical,
   Trash2,
@@ -124,7 +124,7 @@ export default function DomainItemCard({
             >
               {expanded ? (
                 <>
-                  {t("domains.hideDetails")} <ChevronRight className="h-3 w-3 rtl:-scale-x-100" />
+                  {t("domains.hideDetails")} <ChevronUp className="h-3 w-3" />
                 </>
               ) : (
                 <>

@@ -145,7 +145,7 @@ export default function PublicBookingEventPage() {
 							{showGuests ? <label className="block text-sm font-medium text-fg">{t("public.guestEmails")} <span className="font-normal text-fg-subtle">{t("public.commaSeparated")}</span><Input type="text" value={guestEmails} onChange={(input) => setGuestEmails(input.target.value)} placeholder="guest@example.com" className="mt-2" /></label> : <Button type="button" variant="outline" onClick={() => setShowGuests(true)}>{t("public.addGuests")}</Button>}
 							<label className="block text-sm font-medium text-fg">{t("public.notes")}<Textarea value={notes} onChange={(input) => setNotes(input.target.value)} maxLength={2000} rows={4} className="mt-2 resize-y" /></label>
 							{error && <p role="alert" className="border-s-2 border-danger bg-danger-subtle px-3 py-2 text-sm text-danger-text">{error}</p>}
-							<Button type="submit" disabled={submitting || !name.trim() || !email.trim()} className="h-11 px-7 text-sm font-medium">{submitting ? t("public.booking") : t("public.schedule")}</Button>
+							<Button type="submit" disabled={submitting || !name.trim() || !email.trim()} className="h-11 px-7">{submitting ? t("public.booking") : t("public.schedule")}</Button>
 						</form> : <>
 							<section className="page-transition-enter min-w-0 border-b border-line lg:min-h-0 lg:overflow-y-auto lg:border-b-0 lg:border-e">
 								<div className="mx-auto md:mt-8 my-2 flex max-w-[440px] items-center justify-between gap-3 px-5"><h3 className="flex-1 text-lg font-semibold">{formatCalendarDate(`${visibleMonth}-01`, { month: "long", year: "numeric" })}</h3>

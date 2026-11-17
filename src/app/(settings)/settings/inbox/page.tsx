@@ -12,6 +12,7 @@ import { TrashRetentionSettings } from "@/components/settings/trash-retention-se
 import { PushNotificationSettings } from "@/components/settings/push-notification-settings";
 import { BrowserNotificationSettings } from "@/components/settings/browser-notification-settings";
 import { SettingsPageHeader, SettingsSection, SettingsSubsection } from "@/components/settings/settings-section";
+import { SETTING_STACK_CLASS } from "@/components/settings/settings-section-utils";
 
 export default async function SettingsInboxPage() {
 	const t = await getServerTranslator();
@@ -39,7 +40,7 @@ export default async function SettingsInboxPage() {
 						<InboxShortcutsSettings />
 					</SettingsSubsection>
 					<SettingsSubsection title={t("settingsPage.inbox.notifications")} description={t("settingsPage.inbox.notificationsDescription")}>
-						<div className="space-y-3">
+						<div className={SETTING_STACK_CLASS}>
 							<BrowserNotificationSettings />
 							<PushNotificationSettings />
 						</div>

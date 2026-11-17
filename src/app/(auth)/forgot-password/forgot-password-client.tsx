@@ -48,11 +48,19 @@ export function ForgotPasswordClient() {
 					: t("auth.forgot.description")
 			}
 			footer={
-				<Link href="/login" className="text-sm text-fg-subtle hover:text-fg">
-					{t("auth.backToSignIn")}
-				</Link>
+				sent ? undefined : (
+					<Link href="/login" className="text-sm text-fg-subtle hover:text-fg">
+						{t("auth.backToSignIn")}
+					</Link>
+				)
 			}
 		>
+			{/* Once sent, the way back is the only thing left to do, so it takes the form's place as a button. */}
+			{sent && (
+				<Button asChild className="h-11 w-full px-6">
+					<Link href="/login">{t("auth.backToSignIn")}</Link>
+				</Button>
+			)}
 			{!sent && (
 				<form onSubmit={onSubmit} className="space-y-5">
 					<div className="space-y-2">

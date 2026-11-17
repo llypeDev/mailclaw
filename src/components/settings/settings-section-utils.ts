@@ -29,6 +29,7 @@ export const SETTING_STACK_CLASS = "flex flex-col [&>*+*]:-mt-px";
 /** A framed panel holding a form or a list. */
 export const SETTING_PANEL_CLASS = "border border-line bg-surface p-4 sm:p-6";
 
-/** A native file input styled as Orange's control. */
+/** A native file input styled as Orange's control. Inside the 40px control a 4px padding leaves room
+ * for the picker button (20px line + 2 × 4px), so it sits centred instead of spilling onto the border. */
 export const SETTING_FILE_INPUT_CLASS =
-	"block w-full border border-line-control bg-surface px-3 py-2 text-sm text-fg transition-colors hover:border-fg-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus file:me-3 file:border-0 file:bg-surface-active file:px-3 file:py-1.5 file:font-display file:text-sm file:font-semibold file:text-fg";
+	"block w-full border border-line-control bg-surface px-1 py-1 text-sm text-fg transition-colors hover:border-fg-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus file:me-3 file:border-0 file:bg-surface-active file:px-3 file:py-1 file:font-display file:text-sm file:font-semibold file:text-fg";

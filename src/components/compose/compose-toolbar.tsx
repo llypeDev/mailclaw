@@ -11,8 +11,9 @@ import { followUpOptionKey } from "@/components/follow-ups/follow-up-client-util
 import { ScheduleSendMenu } from "@/components/compose/schedule-send-menu";
 import { cn } from "@/lib/utils";
 
-/** A square icon button in the editor toolbar. */
-const TOOL_BUTTON_CLASS = "p-1.5 hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus disabled:pointer-events-none disabled:text-fg-disabled max-md:px-2";
+/** A square icon button in the editor toolbar. Its tooltip wrapper is `shrink-0`: on a phone the row is
+ * full and a shrinking wrapper squeezes the icon to a sliver. */
+const TOOL_BUTTON_CLASS = "flex items-center justify-center p-1.5 hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-focus disabled:pointer-events-none disabled:text-fg-disabled max-md:h-10";
 
 /** Start of the editor toolbar: Cancel (phones only), Send and the schedule/template menu. */
 export function ComposeSendControls({
@@ -37,7 +38,8 @@ export function ComposeSendControls({
 	const { t } = useLanguage();
 	return (
 		<div className="flex items-center max-md:contents">
-			<Button type="button" variant="secondary" size="sm" onClick={onCancel} className="md:hidden max-md:h-10 max-md:px-3.5 max-md:text-[15px]">
+			{/* Outline, so Send stays the one filled action of the phone sheet. */}
+			<Button type="button" variant="outline" size="sm" onClick={onCancel} className="shrink-0 md:hidden max-md:h-10 max-md:px-3.5 max-md:text-[15px]">
 				{t("common.cancel")}
 			</Button>
 			<div className="flex items-center max-md:order-last max-md:ms-auto">
@@ -45,7 +47,7 @@ export function ComposeSendControls({
 					type="submit"
 					size="sm"
 					disabled={disabled}
-					className="px-4 max-md:h-10 max-md:px-5 max-md:text-[15px]"
+					className="px-4 max-md:h-10 max-md:text-[15px]"
 				>
 					{sendLabel}
 				</Button>
@@ -96,7 +98,7 @@ export function ComposeToolbarActions({
 				className="hidden"
 				onChange={(event) => onAddFiles(event.target.files)}
 			/>
-			<Tooltip label={t("compose.attachTooltip", { max: maxAttachmentMb })}>
+			<Tooltip label={t("compose.attachTooltip", { max: maxAttachmentMb })} className="shrink-0">
 				<button
 					type="button"
 					aria-label={t("compose.attachFiles")}
@@ -107,7 +109,7 @@ export function ComposeToolbarActions({
 					<Paperclip className="h-4 w-4" />
 				</button>
 			</Tooltip>
-			<Tooltip label={trackOpens ? t("compose.trackOpensOn") : t("compose.trackOpensOff")}>
+			<Tooltip label={trackOpens ? t("compose.trackOpensOn") : t("compose.trackOpensOff")} className="shrink-0">
 				<button
 					type="button"
 					aria-label={t("compose.trackOpens")}
@@ -122,7 +124,7 @@ export function ComposeToolbarActions({
 					{trackOpens ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
 				</button>
 			</Tooltip>
-			<Tooltip label={followUpDays ? t("followUp.remindOn", { when: t(followUpOptionKey(followUpDays)) }) : t("followUp.remindMe")}>
+			<Tooltip label={followUpDays ? t("followUp.remindOn", { when: t(followUpOptionKey(followUpDays)) }) : t("followUp.remindMe")} className="shrink-0">
 				<FollowUpMenu
 					disabled={disabled}
 					onPick={onFollowUpChange}
@@ -142,7 +144,7 @@ export function ComposeToolbarActions({
 				/>
 			</Tooltip>
 			<span className="flex-1 max-md:hidden" />
-			<Tooltip label={t("compose.deleteDraft")}>
+			<Tooltip label={t("compose.deleteDraft")} className="shrink-0">
 				<button
 					type="button"
 					aria-label={t("compose.deleteDraft")}

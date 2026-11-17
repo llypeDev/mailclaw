@@ -68,8 +68,9 @@ export function DueFollowUps({ mailboxId }: { mailboxId?: string | null }) {
 				{items.map((item) => (
 					<li key={item.id} className="flex items-center gap-2 px-6 py-1.5 text-sm">
 						<Link href={`/sent/${item.messageId}`} className="flex min-w-0 flex-1 items-baseline gap-3 hover:underline">
-							<span className="w-40 shrink-0 truncate text-fg-muted max-md:w-28">{t("followUp.to", { to: item.toAddr })}</span>
-							<span className="min-w-0 flex-1 truncate font-medium text-fg">{item.subject || t("list.noSubject")}</span>
+							{/* Both columns give way in a narrow list (the split view), so the date never runs into the actions. */}
+							<span className="w-40 min-w-0 shrink truncate text-fg-muted max-md:w-28">{t("followUp.to", { to: item.toAddr })}</span>
+							<span className="min-w-0 flex-1 basis-24 truncate font-medium text-fg">{item.subject || t("list.noSubject")}</span>
 							<time dateTime={item.sentAt} className="shrink-0 text-xs tabular-nums text-fg-subtle">{formatUserDate(item.sentAt, DATE_FORMAT)}</time>
 						</Link>
 						<FollowUpMenu
