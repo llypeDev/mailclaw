@@ -5,6 +5,8 @@ CF_TOKEN=your_api_token_with_zone_email_permissions
 # GITHUB_UPDATE_TOKEN=github_pat_with_actions_write
 # GITHUB_UPDATE_REPO=owner/repo
 # GITHUB_UPDATE_REF=main
+# Repository that publishes releases; the update card checks versions against it.
+# GITHUB_UPDATE_SOURCE_REPO=owner/repo
 
 # Legacy Global API Key alternative. Use this only instead of CF_TOKEN.
 # CF_EMAIL=you@example.com
@@ -36,3 +38,23 @@ CF_TOKEN=your_api_token_with_zone_email_permissions
 # S3_REGION=us-east-1
 # S3_ACCESS_KEY_ID=AKIA...
 # S3_SECRET_ACCESS_KEY=your_secret_access_key
+
+# Optional: Turnstile bot check on sign-in and first-run forms. Its site key, NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+# is inlined at build time from the build's environment, not read from this file.
+# TURNSTILE_SECRET_KEY=
+
+# Optional: Web Push. Generate once with `npm run push:keys`.
+# VAPID_PUBLIC_KEY=
+# VAPID_PRIVATE_KEY=
+# VAPID_SUBJECT=mailto:admin@example.com
+
+# Optional: native push to the iOS app, with your Apple key (.p8 contents) or through a push relay.
+# APNS_KEY_ID=
+# APNS_TEAM_ID=
+# APNS_PRIVATE_KEY=
+# APNS_RELAY_URL=https://relay.example.com
+
+# Optional: spam lookups. Keys can also be set under Admin > Spam filter. "off" disables domain-age lookups.
+# SPAMHAUS_DQS_KEY=
+# ABUSECH_AUTH_KEY=
+# SPAM_DOMAIN_AGE_CHECK=off

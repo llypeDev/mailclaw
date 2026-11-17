@@ -57,6 +57,16 @@ Migrations are plain SQL, one directory per dialect, applied by the same code ev
 
 PostgreSQL and MySQL start from a single baseline generated from the current schema (`0000_baseline.sql`), followed by `0001_triggers_and_seeds.sql` for what drizzle-kit cannot generate (seed rows and triggers). SQLite keeps its full history.
 
+Every runner applies a dialect's files in filename order and skips names already in the ledger: the Worker (setup and **Update database**), and the self-hosted server on start. Two runs at once, such as two containers starting together or an admin pressing **Update database** twice, do not interleave:
+
+- **SQLite / D1:** each migration and its ledger row are one atomic batch. A second runner's ledger insert fails, its batch rolls back, and it moves on.
+- **PostgreSQL:** each migration is one transaction that first takes `pg_advisory_xact_lock`, so a second runner waits, then finds the migration recorded and skips it. The lock is per transaction because on Workers each query may use its own connection.
+- **MySQL:** MySQL commits DDL as it goes, so a migration cannot be one transaction. The runner holds `GET_LOCK('mailclaw_migrations')` on one connection for the whole run (a second runner waits up to 120 seconds, then reports that another run is in progress) and records progress after every statement as a ledger row named `<migration>#partial:<n>`, meaning the first `n` statements are done. A run that fails or is interrupted resumes at statement `n + 1` next time instead of repeating statements that already took effect; the row is renamed to the migration's name when its last statement succeeds. `#partial` rows are not counted as applied, so the update card keeps showing the migration as pending until then. A driver that cannot hold a connection (or a service that refuses `GET_LOCK`) runs without the lock and logs a warning.
+
+After applying migrations on SQLite (D1, libSQL or the self-hosted file), the runner runs `PRAGMA optimize` so the query planner has statistics for new indexes; the daily maintenance run repeats it.
+
+SQLite migrations `0088` and `0089` are not listed in `drizzle/migrations/meta/_journal.json`, like `0041` to `0051` before them. That is deliberate and harmless: no runner reads the journal, only drizzle-kit does.
+
 Changing the schema (`src/db/schema/index.ts`) means generating a migration for each dialect:
 
 ```bash
@@ -72,7 +82,9 @@ npm run db:bundle          # rebuild the bundles the Worker applies
 
 The application code is written once. `getDb(env)` and `env.DB` work as before: on other databases `env.DB` is an adapter with the D1 interface (`prepare`, `bind`, `batch`) over the configured driver, and the Drizzle instance is built for the right dialect. Stored values are identical across dialects: timestamps are whole seconds in a `bigint`, booleans are booleans (`tinyint(1)` on MySQL), so SQL fragments and **backups are portable**: a backup taken on D1 restores onto PostgreSQL or MySQL and back.
 
-Also kept on every dialect: foreign keys and cascades, the JMAP change log and mailbox revisions (via triggers), automatic `trashed_at` tracking, and seed rows.
+Also kept on every dialect: foreign keys and cascades, the JMAP change log and mailbox revisions (via triggers), automatic `trashed_at` tracking, the `message_counters` tallies behind the sidebar counts (via triggers), and seed rows.
+
+`message_counters` holds one row per mailbox, folder, direction, status and read and starred flag, so the sidebar and JMAP read a handful of rows instead of grouping every message of a mailbox. It is derived data: backups leave it out, and a restore empties it and lets the triggers count the restored messages. MySQL fires no triggers for foreign-key cascades, so when a purged account's messages leave by cascade the tallies of a mailbox it shared stay too high; the daily 02:00 UTC maintenance run recounts the table on MySQL to repair that.
 
 ## What differs
 
@@ -83,7 +95,8 @@ Also kept on every dialect: foreign keys and cascades, the JMAP change log and m
 | `agent_send_approvals` duplicate-delivery guard | Partial unique index | Partial unique index | Plain index (MySQL has no partial indexes); the status claim still prevents double sends |
 | Wide covering indexes on `messages` | Full | Full | Trimmed to fit InnoDB's 3072-byte key limit; expression keys (`coalesce(thread_id, id)`) dropped. Conversation view is slower on very large mailboxes |
 | One agent job per mailbox | Atomic in the claim statement | Atomic | Checked just before the claim (small race window) |
-| `batch` atomicity | Atomic | Atomic | Atomic for DML; MySQL commits DDL implicitly, so a failed migration can leave earlier statements applied |
+| `batch` atomicity | Atomic | Atomic | Atomic for DML; MySQL commits DDL implicitly, so a failed migration leaves earlier statements applied and the next run resumes after them (see [Migrations](#migrations)) |
+| Sidebar counters after an account purge | Exact | Exact | Recounted by the daily maintenance run (cascades fire no triggers) |
 | `neon` (HTTP) | n/a | Batches run as separate statements (the HTTP protocol has no interactive transaction); use `node-postgres` for atomic batches | n/a |
 
 Why search is the main difference: FTS5 is an SQLite extension, PostgreSQL's equivalent (`tsvector`) and MySQL's `FULLTEXT` have different grammars and ranking, and the search syntax (`from:`, `subject:`, quoted phrases, `-term`) is translated into plain predicates on those dialects instead. That is correct but unindexed, so searches scan the messages of the mailbox being searched. For large mailboxes, D1/SQLite, or PostgreSQL with `pg_trgm`, searches faster.

@@ -26,11 +26,11 @@ Licença: **MIT**. Sem conta, sem telemetria, sem serviço externo obrigatório.
 
 | Item | Valor |
 |---|---|
-| Código | ~85.900 linhas de TypeScript em 1.327 arquivos (`src`, `server`, `scripts`, `worker.ts`) |
-| Testes | 119 arquivos, ~12.400 linhas, `node:test` |
-| Rotas de API | 208 arquivos `route.ts` |
-| Banco | Drizzle sobre SQLite/D1, PostgreSQL e MySQL, a partir de um schema só: 58 tabelas |
-| Migrações | 88 no SQLite, 12 no PostgreSQL, 12 no MySQL |
+| Código | ~92.500 linhas de TypeScript em 1.381 arquivos (`src`, `server`, `scripts`, `worker.ts`) |
+| Testes | 141 arquivos, ~18.300 linhas, `node:test` |
+| Rotas de API | 213 arquivos `route.ts` |
+| Banco | Drizzle sobre SQLite/D1, PostgreSQL e MySQL, a partir de um schema só: 59 tabelas |
+| Migrações | 90 no SQLite, 14 no PostgreSQL, 14 no MySQL |
 | Frontend | Next.js 16 via vinext (Vite) + React 19, Tailwind v4, Radix, TanStack Query |
 | Idiomas | 34, incluindo direita-para-esquerda |
 
@@ -38,6 +38,12 @@ Licença: **MIT**. Sem conta, sem telemetria, sem serviço externo obrigatório.
 
 Nada de chave de ativação, de verificação em servidor de licença, de limite de assentos ou de
 tela de upgrade. O código não tem tabela de licença, rota de licença nem verificação de plano.
+
+Isso vale para o software. A conta da Cloudflare onde ele roda tem plano próprio: no Workers
+Free o recebimento pela Cloudflare funciona, mas o envio pela Cloudflare exige o Workers Paid (no
+gratuito, envie pelo Resend ou SES), cada requisição tem 10 ms de CPU e as cotas diárias (100 mil
+requisições, 5 milhões de linhas lidas no D1, 10 mil operações de fila) param o app até 00:00 UTC
+quando acabam. Detalhes em [Cloudflare plans and limits](deployment.md#cloudflare-plans-and-limits).
 
 Uma versão anterior deste código tinha cinco permissões controladas por chave: branding, gestão de
 contas, limite de assentos, encaminhamento por conta e caixas compartilhadas. Todas foram removidas
@@ -60,24 +66,29 @@ configurar as de usuários comuns. Isso não dá acesso às mensagens nem à ide
 
 Entrada: Cloudflare Email Routing → R2 (MIME bruto) → fila → `processInboundMessage` →
 decisão de roteamento (`deliver` / `reject` / `forward`) → `parseRawMime` → mensagem +
-anexos → contatos → webhooks → aviso em tempo real pelo Durable Object.
+anexos → contatos → webhooks (também pela fila) → aviso em tempo real pelo Durable Object.
+Uma mensagem que falha é tentada de novo com espera crescente (10 s até 15 min, 5 vezes) e
+depois vai para a fila de mensagens mortas (`mailclaw-inbound-dlq` / `mailclaw-outbound-dlq`),
+de onde pode ser reenviada; ver [Queues, retries and dead-letter queues](deployment.md#queues-retries-and-dead-letter-queues).
 
 Saída: `src/lib/email/send.ts` monta com `mimetext` e entrega pelo provedor do domínio de envio
 (Cloudflare, Resend ou SES), com a linha em `outbound_jobs` acompanhando o job.
 
-Fora dos Workers, o mesmo caminho existe em Node: SMTP com `smtp-server` + `mailauth`, fila em
-memória, agendador próprio.
+Fora dos Workers, o mesmo caminho existe em Node: SMTP com `smtp-server` + `mailauth` (recusa
+destinatário desconhecido já no `RCPT TO`), fila em memória com as mesmas tentativas, agendador
+próprio, e na partida o servidor reenfileira o que a reinicialização interrompeu.
 
 ## 4. Verificação
 
-No estado atual do repositório:
+No estado do repositório em 17/11/2026:
 
 | Verificação | Resultado |
 |---|---|
 | `npx tsc --noEmit` | sem erros |
-| `npm run lint` | 0 erros |
-| `node --test tests/*.test.mjs` | 675 passam, 2 pulados de propósito, 1 falha só em máquina sem `openssl` |
+| `npm run lint` | 0 erros e 0 avisos |
+| `node --test tests/*.test.mjs` | 904 passam, 2 pulados de propósito, 0 falhas |
 | `npm run build` | build completo do Worker |
+| `npm audit --omit=dev` | sem vulnerabilidades |
 
 ## 5. O que vem depois
 

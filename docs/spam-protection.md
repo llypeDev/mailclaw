@@ -2,6 +2,8 @@
 
 Mailclaw analyzes stored incoming messages locally. The filter combines trusted authentication results, sender relationships, mailbox-scoped reputation, bounded Bayesian token learning, URL checks, message structure, and attachment metadata. Message bodies are never sent to an external service. Optional lookups do send the sender's IP address and the sender and link domains: Spamhaus DQS (with your key), abuse.ch URLhaus (with your key) and, unless switched off under **Admin → Spam filter**, domain-age queries to rdap.org. Redirects from these lookups are followed only to public https hosts.
 
+The keys are entered under **Admin → Spam filter**, or set as the variables `SPAMHAUS_DQS_KEY` and `ABUSECH_AUTH_KEY`; a key saved on the page wins. `SPAM_DOMAIN_AGE_CHECK=off` turns the domain-age lookups off for the whole installation. Spamhaus' free public mirrors refuse queries sent through public DNS resolvers, which is how Mailclaw resolves, so only a DQS key works. Lookup results are cached under `spam-cache/` in the storage bucket; see [Expire the bucket's cache prefixes](deployment.md#expire-the-buckets-cache-prefixes).
+
 Scores range from 0 to 100. Messages scoring 70 or higher move to Spam. Scores from 40 through 69 are recorded as suspicious but remain in their normal Inbox or custom folder. Analysis failures also deliver normally. Automatic replies and new-message notifications are suppressed for messages placed in Spam.
 
 The Spam Filter switch is under **Settings → Inbox → Spam protection** and is enabled by default. Disabling it affects future incoming messages; it does not move or rescan existing mail.

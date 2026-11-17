@@ -17,10 +17,35 @@ Open `http://your-host:3000/setup`, create the admin account and add your
 domain. All data lives in the `mailclaw-data` volume (`/data` in the
 container): the SQLite database, raw messages, attachments and backups.
 
+Sign-in works over plain `http://` too: the session cookie is marked
+`Secure` only when the request arrived over HTTPS (directly, or through a
+proxy that sends `X-Forwarded-Proto: https`). Use HTTPS for anything beyond a
+trial on a private network; passkeys, push notifications and the PWA need it.
+
 Behind a reverse proxy, set `APP_URL=https://mail.example.com` so links in
 password-reset mail and the JMAP session point at the public address, and
 forward WebSocket upgrades for `/api/realtime`. Passkeys also bind to this
 origin, so they need `APP_URL` (or a direct HTTPS connection) to work.
+
+Also set `TRUST_PROXY=1` behind a reverse proxy. Without it the server sees
+every request coming from the proxy's address, so all users share one
+sign-in rate limit and audit logs record the proxy instead of the client.
+With it, the server takes the client address from the last entry of
+`X-Forwarded-For`, the one your proxy appended, so the proxy must append
+(not pass through) that header. Leave it unset when the container is exposed
+directly: a client could then set the header itself and dodge the rate limit.
+If another proxy or CDN sits in front of yours, have your proxy restore the
+real client address first (nginx `real_ip`, Caddy `trusted_proxies`).
+
+`TRUST_PROXY=1` also tells the server which address the browser used, from
+`X-Forwarded-Proto` and `X-Forwarded-Host` (or `Host`). The server refuses
+changes made with the session cookie (`POST`, `PUT`, `PATCH`, `DELETE` under
+`/api/`) unless the browser's `Origin` matches that address, so behind an
+HTTPS proxy without it every save fails with `403 Cross-site request
+blocked`. Have the proxy send `X-Forwarded-Proto` and keep the original
+`Host` (Caddy does both by default; in nginx add
+`proxy_set_header Host $host;` and
+`proxy_set_header X-Forwarded-Proto $scheme;`).
 
 ### PWA and push notifications
 
@@ -49,6 +74,24 @@ most VPS providers do not). The domain page in the app lists the MX, SPF and
 DMARC records to create. Domain routing rules work as on Cloudflare: reject
 rules answer the sender with a 550 during delivery, forward rules relay the
 message through your outbound SMTP.
+
+The listener decides each recipient when the sender names it (`RCPT TO`),
+before any message data is sent:
+
+- an address on a domain Mailclaw does not manage: `550 Relay access denied`;
+- an unknown address on one of your domains: `550 No such user here`, so the
+  sender gets a bounce instead of the mail vanishing;
+- a sender blocked by a reject rule: `550` with the rule's reason, for that
+  recipient only;
+- the database cannot be reached: `451`, so the sender retries later.
+
+After the message data, SMTP has a single answer for all recipients: `451`
+if storing it failed for any of them (the sender retries), `550` if every
+recipient was refused, otherwise `250`. When a sender retries after a `451`,
+recipients that already received the message, and forwards already sent, are
+not repeated. The server remembers that for 24 hours, in memory only: after
+a restart a retry runs again, and while stored copies are still recognised
+by their content, a forward rule can send a second copy.
 
 Optional: `SMTP_TLS_KEY` and `SMTP_TLS_CERT` (paths inside the container)
 enable STARTTLS with your own certificate. Without them STARTTLS is not
@@ -93,18 +136,21 @@ and the DNS page shows what to set by hand.
 | Variable | Default | Purpose |
 |---|---|---|
 | `PORT` | `3000` | HTTP port |
+| `HOST` | `0.0.0.0` | Address the HTTP server listens on; `127.0.0.1` keeps it reachable only through a proxy on the same host |
+| `TRUST_PROXY` | unset | `1` (or `true`, `yes`) behind a reverse proxy: trust the client address it appends to `X-Forwarded-For`. See [Quick start](#quick-start) |
 | `DATA_DIR` | `/data` | SQLite database, blobs and backups |
 | `DATABASE_URL` | unset | Use PostgreSQL, MySQL or libSQL instead of the SQLite file in `DATA_DIR`; see [Databases](databases.md). Migrations are applied on start. |
 | `DATABASE_DRIVER` | inferred | Only to override the driver inferred from `DATABASE_URL` |
 | `APP_URL` | request origin | Public URL behind a proxy |
 | `SMTP_INBOUND_PORT` | `25` | Inbound SMTP; `0` disables |
+| `SMTP_INBOUND_HOST` | all addresses | Address the SMTP listener binds to |
 | `MAIL_HOSTNAME` | `mail.<domain>` | Host the MX record points at; SMTP banner |
 | `SMTP_MAX_SIZE` | 36 MiB | Largest raw inbound message; allows for encoding overhead on up to 25 MB of attachments. Oversized mail receives an SMTP rejection, which the sender's mail provider can report as a delivery failure. |
 | `SMTP_TLS_KEY`, `SMTP_TLS_CERT` | unset | STARTTLS certificate for the listener |
 | `SMTP_URL` | unset | Outbound relay |
 | `SMTP_TLS_REJECT_UNAUTHORIZED` | `true` | Trust self-signed relay certificates when `false` |
 | `CF_ACCOUNT_ID`, `CF_TOKEN` | unset | Cloudflare Email Sending, and zone management if the token allows |
-| `B2_KEY_ID`, `B2_APPLICATION_KEY`, `B2_BUCKET`, `B2_ENDPOINT` | unset | Store blobs in Backblaze B2 (all four required) instead of files under `/data/blobs`; see [Deployment](deployment.md#object-storage-r2-or-backblaze-b2) |
+| `B2_KEY_ID`, `B2_APPLICATION_KEY`, `B2_BUCKET`, `B2_ENDPOINT` | unset | Store blobs in Backblaze B2 (all four required) instead of files under `/data/blobs`; see [Deployment](deployment.md#object-storage-r2-backblaze-b2-or-aws-s3) |
 | `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | unset | Store blobs in AWS S3; the keys fall back to `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. Backblaze wins if both are set |
 | `RESEND_API_KEY` | unset | Resend key, used when none is saved in the app |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` | unset | Amazon SES credentials, used when none are saved in the app |
@@ -117,6 +163,32 @@ and the DNS page shows what to set by hand.
 | `AI_BASE_URL` | unset | OpenAI-compatible model API base URL for the assistant |
 | `AI_API_KEY` | unset | Server-only key for that model API |
 | `AI_MODEL` | `gpt-4o-mini` | Model ID supported by the configured API |
+| `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` | unset | Native push to the iOS app straight through Apple: key ID, team ID and the contents of the `.p8` key |
+| `APNS_RELAY_URL` | unset | Native push through a Mailclaw push relay (`https://` origin) instead of your own Apple key |
+| `SPAMHAUS_DQS_KEY` | unset | Spamhaus DQS key: ZEN (sending IP) and DBL (domain) checks on incoming mail. Can also be set under **Admin → Spam filter** |
+| `ABUSECH_AUTH_KEY` | unset | abuse.ch Auth-Key: URLhaus checks on links in incoming mail. Can also be set under **Admin → Spam filter** |
+| `SPAM_DOMAIN_AGE_CHECK` | on | `off` disables the domain-age lookups to rdap.org |
+| `SQLITE_CACHE_KB` | SQLite default | Page cache size in KiB, for large databases |
+| `SQLITE_MMAP_BYTES` | `0` | Memory-mapped I/O window in bytes; reads are then served from the OS page cache |
+| `SQLITE_TEMP_STORE` | file | `memory` keeps temporary sort tables in memory |
+| `SQLITE_SYNCHRONOUS` | `FULL` | `NORMAL` writes faster; safe from corruption under WAL, but a power loss can roll back the last transactions |
+| `MIGRATIONS_DIR` | `./drizzle/migrations` | Where the SQLite migrations applied at start are read from |
+| `PUBLIC_DIR` | `./public` | Static files served by the app |
+
+The `SQLITE_*` variables apply only to the built-in SQLite file. The defaults
+suit small installs; raise the cache and mmap window when the database grows
+to several gigabytes.
+
+The server passes a fixed list of variables from its environment to the app:
+the ones in this table, plus the legacy `CF_EMAIL` / `CF_API_KEY` pair.
+Anything else from the Workers list in
+[Deployment](deployment.md#worker-variables-and-secrets) has no effect on a
+self-hosted install.
+
+Calls to outside services (Cloudflare, AWS, Resend, push services) give up
+after a fixed time instead of hanging: 30 seconds for API calls, 60 for
+sending a message, 120 for moving a whole raw message to or from storage and
+10 for a push notification.
 
 ## Operations
 
@@ -126,9 +198,16 @@ and the DNS page shows what to set by hand.
 - **Updates.** Pull the new image and recreate the container; migrations run
   at start. The in-app update button is disabled on self-hosted installs.
 - **Logs.** `docker compose logs -f mailclaw`.
-- **Queues.** Jobs are held in memory. Inbound mail is written to the volume
-  before it is queued, so a restart never loses a message; at worst one
-  stays unparsed until it is re-imported.
+- **Queues.** Jobs are held in memory and run a few at a time (2 inbound, 4
+  outbound, 2 assistant), the rest waiting their turn. A failed job is retried
+  like on Workers: 5 times for mail (3 for the assistant), waiting 10 s, 30 s,
+  90 s and so on up to 15 minutes. There is no dead-letter queue; a job that
+  runs out of retries is logged (`giving up after`) and dropped.
+- **Restarts.** Inbound mail is written to the volume before it is queued,
+  so a restart never loses a message. On start the server re-queues raw
+  messages from the last 24 hours that no stored message refers to (up to
+  1,000 per start), and re-queues scheduled and undo-window sends whose
+  timers died with the previous process.
 
 ## Email assistant and MCP
 
@@ -143,6 +222,10 @@ npm ci
 npm run build:node
 MAILCLAW_RUNTIME=node NODE_ENV=production DATA_DIR=./data node dist/server.mjs
 ```
+
+`npm run start:node` runs the same server and sets `MAILCLAW_RUNTIME` and
+`NODE_ENV` itself, so it also works from a Windows shell; `DATA_DIR`
+defaults to `./data`.
 
 Port 25 needs root or a capability (`setcap cap_net_bind_service=+ep`); use
 `SMTP_INBOUND_PORT=2525` behind a port forward otherwise.

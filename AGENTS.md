@@ -8,10 +8,10 @@ Mailclaw runs on SQLite/D1, PostgreSQL and MySQL from one schema file. Any chang
 2. `npm run db:generate:pg` → `drizzle/migrations-pg/` (PostgreSQL)
 3. `npm run db:generate:mysql` → `drizzle/migrations-mysql/` (MySQL/MariaDB)
 4. `npm run db:bundle` to refresh `src/lib/migrations/bundle*.json` (commit them).
-5. Touching `messages`, `folders`, `mailboxes` or `mailbox_aliases` behaviour that SQLite does with triggers (JMAP change log, `trashed_at`, search index): add the equivalent trigger SQL to a new hand-written PostgreSQL and MySQL migration too.
+5. Touching `messages`, `folders`, `mailboxes` or `mailbox_aliases` behaviour that SQLite does with triggers (JMAP change log, `trashed_at`, `message_counters` tallies, search index): add the equivalent trigger SQL to a new hand-written PostgreSQL and MySQL migration too.
 6. Run `node --test tests/*.test.mjs` (`tests/database-dialects.test.mjs` fails if the dialects diverge or a bundle is stale) and, if a database is available, `npm run db:smoke -- <DATABASE_URL>`.
 
-Raw SQL must also work on all three dialects; see "The database is D1 unless `DATABASE_URL` says otherwise" in CLAUDE.md and `docs/databases.md`. Never edit an already-applied migration; add a new one.
+Migrations are applied in filename order on every runtime; a hand-written SQLite migration does not need a `meta/_journal.json` entry (0041–0051, 0088 and 0089 have none). Raw SQL must also work on all three dialects; see "The database is D1 unless `DATABASE_URL` says otherwise" in CLAUDE.md and `docs/databases.md`. Never edit an already-applied migration; add a new one.
 
 ## Database backup and restore
 
