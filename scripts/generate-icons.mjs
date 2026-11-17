@@ -1,10 +1,12 @@
 // Builds the app icon set and favicon from one piece of artwork (assets/icon.png).
-// No dependencies: a small PNG codec, a rounded-plate compositor and a Lanczos resampler.
+// No dependencies: a small PNG codec, a plate compositor and a Lanczos resampler.
 import zlib from "node:zlib";
 import fs from "node:fs";
 
 const SOURCE = "assets/icon.png";
 const SIZES = [48, 96, 192, 512];
+// Transparent artwork for use inside the app (the loading screen draws it at 80px, so 256 stays sharp at 3x).
+const LOGO_SIZE = 256;
 const ICO_SIZES = [16, 24, 32, 48, 64, 128, 256];
 const PLATE_TOP = [255, 255, 255];
 const PLATE_BOTTOM = [234, 240, 250];
@@ -199,10 +201,13 @@ function trim(source, threshold = 8) {
 }
 
 /**
- * Artwork is drawn on a light plate so launchers and iOS do not have to invent a background;
- * below 64px the art grows so the mailbox does not shrink into mush.
+ * `plate` is "none" (transparent, for icons drawn inside the app, the browser tab and notifications),
+ * "rounded" or "square". Launcher icons get a square light plate so launchers and iOS do not have to
+ * invent a background. Below 64px the art grows so the mailbox does not shrink into mush.
  */
-function compose(art, artWidth, artHeight, size, rounded = true) {
+function compose(art, artWidth, artHeight, size, plateShape = "none") {
+	if (plateShape === "none") return composeTransparent(art, artWidth, artHeight, size);
+	const rounded = plateShape === "rounded";
 	const scale = size <= 32 ? 0.98 : size <= 64 ? 0.94 : 0.86;
 	const target = Math.max(1, Math.round(size * scale));
 	const fit = target / Math.max(artWidth, artHeight);
@@ -218,7 +223,8 @@ function compose(art, artWidth, artHeight, size, rounded = true) {
 		for (let x = 0; x < size; x += 1) {
 			const px = x + 0.5;
 			const py = y + 0.5;
-			const plate = clamp(0.5 - sdRoundRect(px, py, size / 2, size / 2, size / 2 - 0.5, size / 2 - 0.5, radius), 0, 1);
+			// A square plate covers every pixel; the rounded-rect distance would leave its edge pixels half transparent.
+			const plate = rounded ? clamp(0.5 - sdRoundRect(px, py, size / 2, size / 2, size / 2 - 0.5, size / 2 - 0.5, radius), 0, 1) : 1;
 			const t = py / size;
 			let r = PLATE_TOP[0] + (PLATE_BOTTOM[0] - PLATE_TOP[0]) * t;
 			let g = PLATE_TOP[1] + (PLATE_BOTTOM[1] - PLATE_TOP[1]) * t;
@@ -247,9 +253,35 @@ function compose(art, artWidth, artHeight, size, rounded = true) {
 	return canvas;
 }
 
-function renderIcon(source, size, rounded = true) {
+/** The artwork alone on a transparent square, centred, filling it except for a hairline of room for edge smoothing. */
+function composeTransparent(art, artWidth, artHeight, size) {
+	const target = Math.max(1, Math.round(size * (size <= 32 ? 1 : 0.96)));
+	const fit = target / Math.max(artWidth, artHeight);
+	const scaledWidth = Math.max(1, Math.round(artWidth * fit));
+	const scaledHeight = Math.max(1, Math.round(artHeight * fit));
+	const scaled = resize(art, artWidth, artHeight, scaledWidth, scaledHeight);
+	const insetX = Math.round((size - scaledWidth) / 2);
+	const insetY = Math.round((size - scaledHeight) / 2);
+
+	const canvas = Buffer.alloc(size * size * 4);
+	for (let y = 0; y < scaledHeight; y += 1) {
+		for (let x = 0; x < scaledWidth; x += 1) {
+			const index = (y * scaledWidth + x) * 4;
+			// Lanczos rings slightly past 0 and 255 at hard edges.
+			const alpha = clamp(scaled[index + 3], 0, 255);
+			if (alpha < 0.5) continue;
+			const out = ((y + insetY) * size + x + insetX) * 4;
+			// `scaled` is premultiplied; PNG wants straight alpha.
+			for (let channel = 0; channel < 3; channel += 1) canvas[out + channel] = Math.round(clamp((scaled[index + channel] * 255) / alpha, 0, 255));
+			canvas[out + 3] = Math.round(alpha);
+		}
+	}
+	return canvas;
+}
+
+function renderIcon(source, size, plateShape = "none") {
 	const art = premultiply(source.pixels, source.width * source.height);
-	return compose(art, source.width, source.height, size, rounded);
+	return compose(art, source.width, source.height, size, plateShape);
 }
 
 // ---------- PNG / ICO encode ----------
@@ -361,12 +393,14 @@ function writeIcons(directory = "public") {
 	fs.mkdirSync(directory, { recursive: true });
 	for (const size of SIZES) {
 		// 192 and 512 are launcher and apple-touch icons: a square, fully opaque plate, because iOS
-		// renders transparent corners black and every launcher applies its own mask.
-		fs.writeFileSync(`${directory}/icon-${size}.png`, encodePNG(size, size, renderIcon(source, size, size < 192)));
+		// renders transparent corners black and every launcher applies its own mask. 48 and 96 are
+		// drawn inside the app and in notifications, on whatever background is there, so they have none.
+		fs.writeFileSync(`${directory}/icon-${size}.png`, encodePNG(size, size, renderIcon(source, size, size >= 192 ? "square" : "none")));
 	}
-	const ico = ICO_SIZES.map((size) => ({ size, png: encodePNG(size, size, renderIcon(source, size)) }));
+	fs.writeFileSync(`${directory}/logo.png`, encodePNG(LOGO_SIZE, LOGO_SIZE, renderIcon(source, LOGO_SIZE, "none")));
+	const ico = ICO_SIZES.map((size) => ({ size, png: encodePNG(size, size, renderIcon(source, size, "none")) }));
 	fs.writeFileSync(`${directory}/favicon.ico`, encodeICO(ico));
-	console.log(`icons written to ${directory}/ (${SIZES.join(", ")} and a ${ICO_SIZES.length}-size favicon)`);
+	console.log(`icons written to ${directory}/ (${SIZES.join(", ")}, logo.png and a ${ICO_SIZES.length}-size favicon)`);
 }
 
 function writeContactSheet(file) {
@@ -387,7 +421,7 @@ function writeContactSheet(file) {
 	for (const row of rows) {
 		let cursor = 8;
 		for (const [size, scale] of row.items) {
-			const pixels = renderIcon(source, size);
+			const pixels = renderIcon(source, size, size >= 192 ? "square" : "none");
 			const drawn = size * scale;
 			for (let y = 0; y < drawn; y += 1) {
 				for (let x = 0; x < drawn; x += 1) {

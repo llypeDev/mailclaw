@@ -11,7 +11,7 @@ import type { LoadingTransitionProps } from "./loading-transition-types";
 const MINIMUM_LOADING_TIME = 600;
 const COMPLETION_TIME = 220;
 const MAXIMUM_DATA_WAIT = 10_000;
-const SPLASH_ICON = "/icon-192.png";
+const SPLASH_ICON = "/logo.png";
 let hasShownInitialLoadingTransition = false;
 
 // The splash is for entering the app: the home page, sign-in, a typed URL, a bookmark or another site. A full page load
@@ -143,7 +143,7 @@ export function LoadingTransition({ children, ready }: LoadingTransitionProps) {
 						<img
 							src={SPLASH_ICON}
 							alt=""
-							className="h-20 w-20 rounded-2xl object-contain"
+							className="h-20 w-20 object-contain"
 						/>
 						<div className="w-full">
 							<div className="h-1.5 overflow-hidden rounded-full bg-blue-100">
