@@ -26,7 +26,9 @@ function chunks<T>(items: T[], size = CHUNK): T[][] {
  */
 export async function transferAccountData(env: CloudflareEnv, fromId: string, fromName: string, toId: string): Promise<void> {
 	const db = getDb(env);
-	const items = await db.select().from(driveItems).where(eq(driveItems.ownerId, fromId));
+	// An unfinished upload stays with the deleted account and goes with its purge; moving it would
+	// leave a row the recipient can see but does not own.
+	const items = await db.select().from(driveItems).where(and(eq(driveItems.ownerId, fromId), isNull(driveItems.uploadId)));
 	if (items.length) {
 		// Stored objects are keyed by owner unless the row records its key, so pin the key before the owner changes.
 		for (const row of items) {

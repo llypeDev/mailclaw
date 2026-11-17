@@ -1,6 +1,7 @@
 import { forwardedMarker, getAccountForwardingDestination, isForwardedMarkerValid, MAILCLAW_FORWARDED_HEADER } from "@/lib/email/account-forwarding";
 import { resolveIncomingMail } from "@/lib/email/incoming";
 import { inboundStorageKey } from "@/lib/email/inbound-id";
+import { inboundRouteFromDecision } from "@/lib/email/inbound-route-utils";
 import type { InboundQueueMessage } from "@/lib/email/inbound";
 import type { IntakeActions, IntakeInput, IntakeResult } from "@/lib/email/intake-types";
 import { inboundTraceMetadata } from "@/lib/email/intake-utils";
@@ -47,7 +48,9 @@ export async function intakeIncomingMail(env: CloudflareEnv, input: IntakeInput,
 		// (server/runtime/inbound-recovery.ts) keeps its authentication signals.
 		customMetadata: { from: input.from, to: input.to, ...inboundTraceMetadata(input) },
 	});
-	const payload: InboundQueueMessage = { from: input.from, to: input.to, rawR2Key, headers: input.headers, verdicts: input.verdicts, senderIp: input.senderIp };
+	// The decision rides along so the consumer does not resolve the address a second time.
+	const route = inboundRouteFromDecision(decision);
+	const payload: InboundQueueMessage = { from: input.from, to: input.to, rawR2Key, headers: input.headers, verdicts: input.verdicts, senderIp: input.senderIp, ...(route ? { route } : {}) };
 	await env.INBOUND_QUEUE.send(payload);
 
 	const forwardAfterStore = async (destination: string) => {

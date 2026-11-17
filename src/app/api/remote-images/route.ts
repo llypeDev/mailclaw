@@ -24,7 +24,9 @@ export async function GET(request: Request) {
 	const remoteUrl = requestUrl.searchParams.get("url") ?? "";
 	try {
 		const image = await fetchRemoteImage(remoteUrl, { blockedOrigins: [requestUrl.origin] });
-		// The bytes are already a fresh buffer of their own; no second copy.
+		// Streamed: the signature is already checked, and a body that later passes the size cap or the
+		// deadline errors mid-response. The browser then sees a truncated image; with no validator to
+		// resume it from, the incomplete entry is not kept in its cache.
 		return new Response(image.body, {
 			headers: { ...IMAGE_HEADERS, "Content-Type": image.contentType },
 		});

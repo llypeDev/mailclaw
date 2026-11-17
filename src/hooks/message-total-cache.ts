@@ -1,6 +1,7 @@
 import { authFetch, AUTH_SESSION_CHANGED_EVENT } from "@/lib/auth/client";
 import { isReadOnlyChange, MESSAGES_CHANGED_EVENT } from "@/lib/messages/change-events";
-import { getMessageTotalKey, isReadFilteredTotalKey } from "./message-total-utils";
+import { getMessageTotalKey, isReadFilteredTotalKey, rememberPageCursor, withPageCursor } from "./message-total-utils";
+import type { MessagePageCursors } from "./message-total-utils";
 
 /**
  * List totals per view. A list page carries its total only when the page proves it (the last page);
@@ -8,6 +9,12 @@ import { getMessageTotalKey, isReadFilteredTotalKey } from "./message-total-util
  */
 const totals = new Map<string, number>();
 const requests = new Map<string, Promise<number | null>>();
+/**
+ * Keyset cursors per view (see `withPageCursor`). They outlive message changes: a cursor is a
+ * position in the sort order, still valid after the rows around it moved, so a refreshed page
+ * keeps its place instead of shifting by the rows deleted before it.
+ */
+const pageCursors = new Map<string, MessagePageCursors>();
 let generation = 0;
 
 function clearAll() {
@@ -28,7 +35,10 @@ if (typeof window !== "undefined") {
 		}
 		requests.clear();
 	});
-	window.addEventListener(AUTH_SESSION_CHANGED_EVENT, clearAll);
+	window.addEventListener(AUTH_SESSION_CHANGED_EVENT, () => {
+		clearAll();
+		pageCursors.clear();
+	});
 }
 
 export function peekMessageTotal(params: URLSearchParams): number | undefined {
@@ -63,4 +73,26 @@ export function fetchMessageTotal(params: URLSearchParams): Promise<number | nul
 		});
 	requests.set(key, request);
 	return request;
+}
+
+/** The list params for a page, with the keyset cursor that starts it when this view has one. */
+export function getMessagePageParams(params: URLSearchParams): URLSearchParams {
+	return withPageCursor(params, pageCursors.get(getMessageTotalKey(params)));
+}
+
+/** Records the `nextCursor` a page of this view returned, for the page after it. */
+export function rememberMessagePageCursor(params: URLSearchParams, offset: number, limit: number, nextCursor: string | null | undefined) {
+	const key = getMessageTotalKey(params);
+	let pages = pageCursors.get(key);
+	if (!pages) {
+		if (!nextCursor) return;
+		pages = new Map();
+		pageCursors.set(key, pages);
+	}
+	rememberPageCursor(pages, offset, limit, nextCursor);
+}
+
+/** Drops the view's cursors, so its pages load by offset. */
+export function forgetMessagePageCursors(params: URLSearchParams) {
+	pageCursors.delete(getMessageTotalKey(params));
 }

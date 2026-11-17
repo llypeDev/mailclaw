@@ -20,9 +20,3 @@ export async function getCurrentUser(env: CloudflareEnv, request?: Request) {
 	const user = await getUserFromSession(env, token);
 	return user?.disabled || user?.deletedAt ? null : user;
 }
-
-export async function requireUser(env: CloudflareEnv, request?: Request) {
-	const user = await getCurrentUser(env, request);
-	if (!user) throw new Error("Unauthorized");
-	return user;
-}

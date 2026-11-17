@@ -4,8 +4,9 @@ function trimTrailingLineBreaks(value: string): string {
 	return value.replace(/\r?\n$/, "");
 }
 
+/** mboxrd: drop one `>` from each quoted `From ` line. Also reads mboxo files, whose only quoting is one `>`. */
 function unescapeMboxBody(value: string): string {
-	return value.replace(/\n>From /g, "\nFrom ");
+	return value.replace(/^>(>*From )/gm, "$1");
 }
 
 export function splitMboxMessages(content: string): string[] {

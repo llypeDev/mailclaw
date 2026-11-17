@@ -52,9 +52,34 @@ and `X-Forwarded-Host` only when `TRUST_PROXY=1`; see [Self-hosting](self-hostin
 ## Content Security Policy
 
 The app's pages send a Content Security Policy with `script-src-attr 'none'`: inline event-handler
-attributes such as `<img onerror=…>` never run, so the usual way to turn HTML injected through an
-email into script is disarmed even if it got past the sanitizer. Attachments are served with their
-own, stricter policy (`default-src 'none'; sandbox`).
+attributes such as `<img onerror=…>` never run anywhere in the app. The policy still allows inline
+`<script>` elements (`'unsafe-inline'`), which the framework's bootstrap needs. Attachments are
+served with their own, stricter policy (`default-src 'none'; sandbox`).
+
+Email HTML is never placed in the app's own document. After sanitising (DOMPurify), the reader
+shows it in an `<iframe srcdoc>` with `sandbox="allow-same-origin allow-popups
+allow-popups-to-escape-sandbox"`:
+
+* No `allow-scripts`, so nothing in the frame can run, even markup that got past the sanitizer:
+  `<script>`, event handlers and `javascript:` links are all refused by the browser. Without
+  `allow-scripts`, `allow-same-origin` cannot be used to lift the sandbox; it is there so the
+  frame's image requests carry the session cookie.
+* The frame document carries its own policy in a `<meta>` tag, on top of the app's:
+  `default-src 'none'; img-src data: <origin>/api/remote-images <origin>/api/messages/;
+  style-src 'unsafe-inline'; script-src 'none'; base-uri 'none'; form-action 'none'`. Images can
+  therefore only be inline `data:` images, `cid:` attachments and the remote image proxy; with
+  the proxy switched off and remote content allowed, `https:` is added to `img-src`. Fonts,
+  stylesheets, frames and fetches are refused. The frame also sends no referrer.
+* Links open in a new tab outside the sandbox (`target="_blank"`, `rel="noopener noreferrer"`),
+  so the message never navigates the app or the frame. `mailto:` and `tel:` links go to the
+  system handler from the app window; `#fragment` links scroll within the message.
+* The app sizes the frame to its content, applies the dark theme and forwards key presses in the
+  frame (except Tab) to the app, so keyboard shortcuts keep working while the message has focus.
+
+Nonces would let the app drop `'unsafe-inline'` from `script-src` too. The framework supports
+them (it reads the nonce from a per-request `Content-Security-Policy` header set by middleware),
+but that needs a per-request policy and the nonce on the layout's inline scripts; it is not
+done yet.
 
 ## Calls to outside services
 

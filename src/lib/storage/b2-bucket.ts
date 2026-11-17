@@ -3,6 +3,7 @@ import { API_TIMEOUT_MS, TRANSFER_TIMEOUT_MS } from "@/lib/http/fetch-timeout";
 import { xmlBlocks, xmlTag } from "@/lib/aws/xml";
 import type { AwsConfig } from "@/lib/aws/aws-types";
 import type { B2Config, B2HttpMetadata } from "@/lib/storage/b2-types";
+import { decodeCustomMetadata, encodeCustomMetadata } from "@/lib/storage/b2-metadata-utils";
 
 /**
  * The slice of the R2 bucket API the app uses (get with a range, put, head, delete, multipart uploads),
@@ -26,8 +27,9 @@ async function toBuffer(value: PutValue): Promise<ArrayBuffer> {
 }
 
 function readMetadata(headers: Headers): { httpMetadata: B2HttpMetadata; customMetadata: Record<string, string> } {
-	const customMetadata: Record<string, string> = {};
-	headers.forEach((value, name) => { if (name.startsWith(META_PREFIX)) customMetadata[name.slice(META_PREFIX.length)] = value; });
+	const entries: Record<string, string> = {};
+	headers.forEach((value, name) => { if (name.startsWith(META_PREFIX)) entries[name.slice(META_PREFIX.length)] = value; });
+	const customMetadata = decodeCustomMetadata(entries);
 	return {
 		httpMetadata: {
 			contentType: headers.get("content-type") ?? undefined,
@@ -102,7 +104,8 @@ export class B2Bucket {
 		if (http.contentType) headers["Content-Type"] = http.contentType;
 		if (http.contentDisposition) headers["Content-Disposition"] = http.contentDisposition;
 		if (http.cacheControl) headers["Cache-Control"] = http.cacheControl;
-		for (const [name, value] of Object.entries(options?.customMetadata ?? {})) headers[`${META_PREFIX}${name.toLowerCase()}`] = value;
+		// S3 lower-cases metadata names; encodeCustomMetadata records the original spelling.
+		for (const [name, value] of Object.entries(encodeCustomMetadata(options?.customMetadata))) headers[`${META_PREFIX}${name}`] = value;
 		return headers;
 	}
 

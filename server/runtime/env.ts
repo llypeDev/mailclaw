@@ -41,6 +41,8 @@ export const PASSTHROUGH_VARIABLES = [
 	"CF_TOKEN",
 	"CF_API_KEY",
 	"CF_EMAIL",
+	// Worker the zone's Email Routing rules target (the relay Worker when self-hosted).
+	"CF_EMAIL_WORKER_NAME",
 	"CF_ACCOUNT_ID",
 	"TURNSTILE_SECRET_KEY",
 	"GITHUB_UPDATE_TOKEN",

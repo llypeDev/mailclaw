@@ -6,8 +6,9 @@ function escapeHeader(value: string | null): string {
 	return (value ?? "").replace(/\r?\n/g, " ").trim();
 }
 
+/** mboxrd: every line that is `From ` after any number of `>` gains one more, the first line included. */
 function escapeMboxBody(value: string): string {
-	return value.replace(/\nFrom /g, "\n>From ");
+	return value.replace(/^(>*From )/gm, ">$1");
 }
 
 function getMboxFromLine(date: Date): string {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { preload } from "react-dom";
 import { Providers } from "@/components/providers";
 import { LanguageProvider } from "@/components/language-provider";
 import { DEFAULT_LOCALE, catalogPath, getDirection } from "@/lib/i18n/utils";
@@ -52,9 +53,12 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 	const locale = await getRequestLocale();
 	// The catalog is loaded here (once per isolate) so the server-rendered HTML is translated, but it is not
 	// passed down: LanguageProvider reads it from the catalog store while rendering HTML, and the browser
-	// fetches the static `/locales/<code>.json` preloaded below instead of receiving it inside every page.
+	// fetches the static `/locales/<code>.json` preloaded here instead of receiving it inside every page.
 	const translated = locale !== DEFAULT_LOCALE;
 	const catalogReadable = translated && !!(await loadServerMessages(locale));
+	// A hint, not a `<link>` element: React's RSC renderer turns a `<link rel="preload">` in a Server
+	// Component into this same hint and SSR still renders the element, so the tag came out twice.
+	if (catalogReadable) preload(catalogPath(locale), { as: "fetch", crossOrigin: "anonymous" });
 	const { iconHref, ...branding } = await getHomeBranding();
 	return (
 		<html lang={locale} dir={getDirection(locale)} data-remote-image-proxy="enabled" suppressHydrationWarning>
@@ -62,7 +66,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 				<script dangerouslySetInnerHTML={{ __html: sidebarBootstrapScript }} />
 				<script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
 				<link rel="icon" href={iconHref ?? DEFAULT_ICON_HREF}></link>
-				{catalogReadable && <link rel="preload" href={catalogPath(locale)} as="fetch" crossOrigin="anonymous" />}
 			</head>
 			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
 				{/* An unreadable catalog renders English on both sides (`{}` falls back per key) rather than translating only in the browser. */}

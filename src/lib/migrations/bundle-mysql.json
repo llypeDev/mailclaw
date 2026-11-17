@@ -359,6 +359,12 @@
         "CREATE TRIGGER message_counters_au AFTER UPDATE ON messages FOR EACH ROW\nBEGIN\n\tIF NOT (OLD.mailbox_id <=> NEW.mailbox_id AND OLD.folder_id <=> NEW.folder_id AND OLD.direction <=> NEW.direction\n\t\tAND OLD.status <=> NEW.status AND OLD.`read` <=> NEW.`read` AND OLD.starred <=> NEW.starred) THEN\n\t\tIF OLD.mailbox_id IS NOT NULL THEN\n\t\t\tINSERT INTO message_counters (mailbox_id, folder_key, direction, status, `read`, starred, total)\n\t\t\tVALUES (OLD.mailbox_id, coalesce(OLD.folder_id, ''), OLD.direction, OLD.status, OLD.`read`, OLD.starred, -1)\n\t\t\tON DUPLICATE KEY UPDATE total = total - 1;\n\t\tEND IF;\n\t\tIF NEW.mailbox_id IS NOT NULL THEN\n\t\t\tINSERT INTO message_counters (mailbox_id, folder_key, direction, status, `read`, starred, total)\n\t\t\tVALUES (NEW.mailbox_id, coalesce(NEW.folder_id, ''), NEW.direction, NEW.status, NEW.`read`, NEW.starred, 1)\n\t\t\tON DUPLICATE KEY UPDATE total = total + 1;\n\t\tEND IF;\n\tEND IF;\nEND;",
         "CREATE TRIGGER message_counters_ad AFTER DELETE ON messages FOR EACH ROW\nBEGIN\n\tIF OLD.mailbox_id IS NOT NULL THEN\n\t\tINSERT INTO message_counters (mailbox_id, folder_key, direction, status, `read`, starred, total)\n\t\tVALUES (OLD.mailbox_id, coalesce(OLD.folder_id, ''), OLD.direction, OLD.status, OLD.`read`, OLD.starred, -1)\n\t\tON DUPLICATE KEY UPDATE total = total - 1;\n\tEND IF;\nEND;"
       ]
+    },
+    {
+      "name": "0014_totp_last_step.sql",
+      "statements": [
+        "ALTER TABLE `users` ADD `totp_last_step` bigint;"
+      ]
     }
   ]
 }

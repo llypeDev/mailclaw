@@ -1,0 +1,82 @@
+name: Browser tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    # Update Mailclaw copies .github/workflows into every installation
+    # repository. SKIP_CHECKS=true turns off every check there; SKIP_E2E=true
+    # turns off only these browser tests (they take several minutes).
+    if: vars.SKIP_CHECKS != 'true' && vars.SKIP_E2E != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Local dev only: no Cloudflare account, no remote bindings, no secrets.
+      CLOUDFLARE_REMOTE_BINDINGS: "false"
+      MAILCLAW_TEST_STATE_PATH: ${{ github.workspace }}/.wrangler/e2e-state
+      PLAYWRIGHT_BASE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Use the npm Cloudflare builds with
+        run: |
+          version="$(node -p "(/^npm@([^+]+)/.exec(require('./package.json').packageManager || '') || [])[1] || '10.9.2'")"
+          npm install --global "npm@${version}"
+      - run: npm ci
+      - run: npm run db:bundle
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      # The setup route only checks that Cloudflare credentials are present; the
+      # passkey scenarios never call the Cloudflare API. Turnstile stays off
+      # because TURNSTILE_SECRET_KEY is not set.
+      - name: Write .dev.vars
+        run: printf 'CF_TOKEN=ci-placeholder-not-a-real-token\n' > .dev.vars
+      # Same local D1 the dev server opens: binding DB (no database_id) under the
+      # disposable state directory.
+      - name: Apply migrations to the local D1 database
+        run: npx wrangler d1 migrations apply DB --local --persist-to "$MAILCLAW_TEST_STATE_PATH"
+      - name: Start the app
+        run: |
+          nohup npx vp dev --port 3000 --strictPort > "$RUNNER_TEMP/dev-server.log" 2>&1 &
+          for attempt in $(seq 1 90); do
+            if curl -fsS -o /dev/null http://localhost:3000/login; then exit 0; fi
+            sleep 2
+          done
+          echo "::error::The dev server did not answer /login within 180 s."
+          cat "$RUNNER_TEMP/dev-server.log"
+          exit 1
+      - name: Prepare the database through the setup route
+        run: |
+          status="$(curl -sS -o "$RUNNER_TEMP/prepare.json" -w '%{http_code}' -X POST http://localhost:3000/api/setup/prepare)"
+          cat "$RUNNER_TEMP/prepare.json"; echo
+          if [ "$status" != "200" ] && [ "$status" != "403" ]; then
+            echo "::error::POST /api/setup/prepare answered $status."
+            exit 1
+          fi
+      - run: npm run test:e2e
+      - name: Dev server log
+        if: failure()
+        run: cat "$RUNNER_TEMP/dev-server.log" || true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

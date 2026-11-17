@@ -21,6 +21,7 @@ import { sweepOrphanedRawMail } from "./src/lib/email/raw-sweeper";
 import { processImportJob, sweepImportJobs } from "./src/lib/import/jobs";
 import { processWebhookRetry, type WebhookRetryMessage } from "./src/lib/email/webhooks";
 import { resolveIncomingMail, forwardMessage } from "./src/lib/email/incoming";
+import { inboundRouteFromDecision } from "./src/lib/email/inbound-route-utils";
 import { getUserFromSession } from "./src/lib/auth/session";
 import { getSessionTokenFromRequest } from "./src/lib/realtime/utils";
 import { inboundAttachmentLimitReasonFromScan } from "./src/lib/email/inbound-attachments";
@@ -123,11 +124,14 @@ export default {
 			// retry is a new SMTP transaction whose bytes carry new trace headers, so it would not match.
 			const accountForward = alreadyForwarded ? null : await getAccountForwardingDestination(env, message.to, decision);
 			const rawR2Key = await storeRawToR2(env, message.from, message.to, raw);
+			// The decision rides along so the consumer does not resolve the address a second time.
+			const route = inboundRouteFromDecision(decision);
 			const payload: InboundQueueMessage = {
 				from: message.from,
 				to: message.to,
 				rawR2Key,
 				headers: Object.fromEntries(message.headers),
+				...(route ? { route } : {}),
 			};
 			await env.INBOUND_QUEUE.send(payload);
 

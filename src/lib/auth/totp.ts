@@ -72,19 +72,27 @@ export async function totp(secret: string, at: number = Date.now()): Promise<str
 }
 
 /**
- * Accept the current step and one on either side, so a phone whose clock is a
- * few seconds off still works. Comparison is constant-time.
+ * The time step `code` belongs to, or null when it matches none. Accepts the
+ * current step and one on either side, so a phone whose clock is a few seconds
+ * off still works. Every candidate is compared, in constant time; if a code
+ * happens to match two steps the later one wins, since replay protection
+ * (`verifySecondFactor`) only accepts steps after the last one used.
  */
-export async function verifyTotp(secret: string, code: string, at: number = Date.now()): Promise<boolean> {
+export async function matchTotpStep(secret: string, code: string, at: number = Date.now()): Promise<number | null> {
 	const candidate = code.replace(/\s+/g, "");
-	if (!/^\d{6}$/.test(candidate)) return false;
+	if (!/^\d{6}$/.test(candidate)) return null;
 	const counter = totpCounter(at);
-	let matched = false;
+	let matched: number | null = null;
 	for (const delta of [-1, 0, 1]) {
 		const expected = await hotp(secret, counter + delta);
-		if (timingSafeEqual(expected, candidate)) matched = true;
+		if (timingSafeEqual(expected, candidate)) matched = counter + delta;
 	}
 	return matched;
+}
+
+/** Whether `code` is valid now, without replay protection: see `matchTotpStep`. */
+export async function verifyTotp(secret: string, code: string, at: number = Date.now()): Promise<boolean> {
+	return (await matchTotpStep(secret, code, at)) !== null;
 }
 
 export function timingSafeEqual(a: string, b: string): boolean {

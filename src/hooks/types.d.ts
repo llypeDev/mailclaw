@@ -94,6 +94,8 @@ export type MessageListResponse = {
 	total?: number | null;
 	/** Whether another page follows this one. */
 	hasMore?: boolean;
+	/** Keyset cursor of the next page (pass back as `cursor`); null on the last page. */
+	nextCursor?: string | null;
 	limit?: number;
 	offset?: number;
 };

@@ -385,6 +385,12 @@
         "CREATE FUNCTION mailclaw_messages_counted() RETURNS trigger AS $$\nBEGIN\n\tIF TG_OP = 'UPDATE' THEN\n\t\tIF OLD.mailbox_id IS NOT DISTINCT FROM NEW.mailbox_id\n\t\t\tAND OLD.folder_id IS NOT DISTINCT FROM NEW.folder_id\n\t\t\tAND OLD.direction IS NOT DISTINCT FROM NEW.direction\n\t\t\tAND OLD.status IS NOT DISTINCT FROM NEW.status\n\t\t\tAND OLD.\"read\" IS NOT DISTINCT FROM NEW.\"read\"\n\t\t\tAND OLD.starred IS NOT DISTINCT FROM NEW.starred THEN\n\t\t\tRETURN NULL;\n\t\tEND IF;\n\tEND IF;\n\tIF TG_OP IN ('UPDATE', 'DELETE') THEN\n\t\tIF OLD.mailbox_id IS NOT NULL THEN\n\t\t\tPERFORM mailclaw_count_message(OLD.mailbox_id, OLD.folder_id, OLD.direction, OLD.status, OLD.\"read\", OLD.starred, -1);\n\t\tEND IF;\n\tEND IF;\n\tIF TG_OP IN ('INSERT', 'UPDATE') THEN\n\t\tIF NEW.mailbox_id IS NOT NULL THEN\n\t\t\tPERFORM mailclaw_count_message(NEW.mailbox_id, NEW.folder_id, NEW.direction, NEW.status, NEW.\"read\", NEW.starred, 1);\n\t\tEND IF;\n\tEND IF;\n\tRETURN NULL;\nEND;\n$$ LANGUAGE plpgsql;",
         "CREATE TRIGGER messages_counted AFTER INSERT OR DELETE OR UPDATE OF mailbox_id, folder_id, direction, status, \"read\", starred ON messages\nFOR EACH ROW EXECUTE FUNCTION mailclaw_messages_counted();"
       ]
+    },
+    {
+      "name": "0014_totp_last_step.sql",
+      "statements": [
+        "ALTER TABLE \"users\" ADD COLUMN \"totp_last_step\" bigint;"
+      ]
     }
   ]
 }

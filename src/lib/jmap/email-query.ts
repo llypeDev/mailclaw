@@ -137,7 +137,7 @@ export function filterToSql(filter: Filter | null | undefined, accessible: Set<s
 
 export function sortToSql(sort: Comparator[] | null | undefined): SQL[] {
 	const comparators = sort && sort.length ? sort : [{ property: "receivedAt", isAscending: false }];
-	return comparators.map((item) => {
+	const order = comparators.map((item) => {
 		const direction = item.isAscending ? asc : desc;
 		switch (item.property) {
 			case "receivedAt":
@@ -161,6 +161,12 @@ export function sortToSql(sort: Comparator[] | null | undefined): SQL[] {
 				throw invalidArguments(`Cannot sort by ${item.property}`);
 		}
 	});
+	// Messages of the same second (created_at is whole seconds) otherwise come back in any order,
+	// so `position` paging could repeat or skip one. The id in the last comparator's direction
+	// keeps the default sort on messages_nav_cover_idx and messages_status_page_idx, which end in
+	// (created_at DESC, id DESC).
+	order.push((comparators[comparators.length - 1].isAscending ? asc : desc)(messages.id));
+	return order;
 }
 
 export { gt };

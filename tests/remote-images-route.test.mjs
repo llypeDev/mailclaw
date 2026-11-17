@@ -55,3 +55,19 @@ test("authenticated Worker responses use private image headers and block the app
 	assert.equal(response.headers.get("Content-Type"), "image/png");
 	assert.deepEqual([...new Uint8Array(await response.arrayBuffer())], [1, 2, 3]);
 });
+
+test("a streamed body that fails after the headers truncates the 200 instead of buffering it", async () => {
+	globalThis.proxyAuth = { user: { id: "stream-user" }, error: null };
+	globalThis.proxyEnv = {};
+	globalThis.proxyFetch = async () => ({
+		body: new ReadableStream({
+			start(controller) { controller.enqueue(new Uint8Array([1, 2])); },
+			pull(controller) { controller.error(new Error("Remote image is too large")); },
+		}),
+		contentType: "image/png",
+	});
+	const response = await GET(request());
+	assert.equal(response.status, 200);
+	assert.equal(response.headers.get("Cache-Control"), "private, max-age=86400");
+	await assert.rejects(response.arrayBuffer());
+});

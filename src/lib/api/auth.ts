@@ -16,9 +16,8 @@ export async function authenticateApiKey(
 export const requireScope = hasScope;
 
 /**
- * Session auth for route handlers. `requireUser` throws a bare Error, which Next turns into
- * a 500; this returns a proper 401 response instead so unauthenticated callers get the right
- * status.
+ * Session auth for route handlers: returns a 401 response for unauthenticated callers rather
+ * than throwing, which Next would surface as a 500.
  */
 export async function requireSessionUser(env: CloudflareEnv, request: Request) {
 	const user = await getCurrentUser(env, request);

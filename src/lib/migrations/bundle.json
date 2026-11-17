@@ -826,6 +826,12 @@
         "CREATE TRIGGER `message_counters_au_new` AFTER UPDATE OF mailbox_id, folder_id, direction, status, `read`, starred ON `messages`\nWHEN NEW.mailbox_id IS NOT NULL AND (\n\tOLD.mailbox_id IS NOT NEW.mailbox_id OR OLD.folder_id IS NOT NEW.folder_id OR OLD.direction IS NOT NEW.direction\n\tOR OLD.status IS NOT NEW.status OR OLD.`read` IS NOT NEW.`read` OR OLD.starred IS NOT NEW.starred\n) BEGIN\n\tINSERT INTO message_counters (mailbox_id, folder_key, direction, status, `read`, starred, total)\n\tVALUES (NEW.mailbox_id, coalesce(NEW.folder_id, ''), NEW.direction, NEW.status, NEW.`read`, NEW.starred, 1)\n\tON CONFLICT (mailbox_id, folder_key, direction, status, `read`, starred) DO UPDATE SET total = total + 1;\nEND;",
         "CREATE TRIGGER `message_counters_ad` AFTER DELETE ON `messages`\nWHEN OLD.mailbox_id IS NOT NULL BEGIN\n\tINSERT INTO message_counters (mailbox_id, folder_key, direction, status, `read`, starred, total)\n\tVALUES (OLD.mailbox_id, coalesce(OLD.folder_id, ''), OLD.direction, OLD.status, OLD.`read`, OLD.starred, -1)\n\tON CONFLICT (mailbox_id, folder_key, direction, status, `read`, starred) DO UPDATE SET total = total - 1;\nEND;"
       ]
+    },
+    {
+      "name": "0090_add_totp_last_step.sql",
+      "statements": [
+        "ALTER TABLE `users` ADD `totp_last_step` integer;"
+      ]
     }
   ]
 }

@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import type { Message, MessageFilterOptions, MessageFolder, MessageListResponse } from "./types";
-import { fetchMessageTotal, peekMessageTotal, rememberMessageTotal } from "./message-total-cache";
+import {
+	fetchMessageTotal,
+	forgetMessagePageCursors,
+	getMessagePageParams,
+	peekMessageTotal,
+	rememberMessagePageCursor,
+	rememberMessageTotal,
+} from "./message-total-cache";
 import { getMessageTotalKey, hasNextMessagePage } from "./message-total-utils";
 import {
 	clearMessageCountsCache,
@@ -11,6 +18,16 @@ import {
 } from "./utils";
 
 const REFRESH_DEBOUNCE_MS = 150;
+
+/** The page's request: the view's params plus, past the first page, the keyset cursor that starts it. */
+function pageParams(
+	folder: MessageFolder,
+	mailboxId: string | null | undefined,
+	filters: MessageFilterOptions | undefined,
+	folderId: string | null | undefined,
+): URLSearchParams {
+	return getMessagePageParams(getMessageQueryParams(folder, mailboxId, filters, folderId));
+}
 
 function initialTotal(page: MessageListResponse | undefined, params: URLSearchParams): number | null {
 	if (!page) return null;
@@ -26,17 +43,17 @@ export function useMessages(
 ) {
 	// A folder switch remounts this hook, so paint the cached page immediately.
 	const [initialPage] = useState(() => (
-		enabled ? peekMessageList(getMessageQueryParams(folder, mailboxId, filters, folderId)) : undefined
+		enabled ? peekMessageList(pageParams(folder, mailboxId, filters, folderId)) : undefined
 	));
 	const [messages, setMessages] = useState<Message[]>(initialPage?.messages ?? []);
 	const [isLoading, setIsLoading] = useState(enabled && !initialPage);
 	// Null while the view's total is unknown: a full page does not carry it, and the count is fetched apart.
-	const [total, setTotal] = useState<number | null>(() => initialTotal(initialPage, getMessageQueryParams(folder, mailboxId, filters, folderId)));
+	const [total, setTotal] = useState<number | null>(() => initialTotal(initialPage, pageParams(folder, mailboxId, filters, folderId)));
 	const [hasMore, setHasMore] = useState(() => initialPage
 		? hasNextMessagePage(initialPage, initialPage.offset ?? 0, initialPage.messages?.length ?? 0)
 		: false);
 	// Which view `total` belongs to, so paging and refreshes keep it while a new count loads.
-	const totalKey = useRef<string | null>(initialPage ? getMessageTotalKey(getMessageQueryParams(folder, mailboxId, filters, folderId)) : null);
+	const totalKey = useRef<string | null>(initialPage ? getMessageTotalKey(pageParams(folder, mailboxId, filters, folderId)) : null);
 	const [limit, setLimit] = useState(initialPage?.limit ?? filters?.limit ?? 25);
 	const [offset, setOffset] = useState(initialPage?.offset ?? filters?.offset ?? 0);
 
@@ -51,10 +68,16 @@ export function useMessages(
 			const currentRequest = ++requestNumber;
 			if (showLoading) setIsLoading(true);
 			try {
-				const params = getMessageQueryParams(folder, mailboxId, filters, folderId);
+				const params = pageParams(folder, mailboxId, filters, folderId);
 				const data = await fetchMessageList(params, force);
+				// A cursor the server refuses (malformed, or from another deployment) falls back to the offset.
+				if (!data.messages && params.has("cursor") && !cancelled && currentRequest === requestNumber) {
+					forgetMessagePageCursors(params);
+					return loadMessages(true, showLoading);
+				}
 				if (!cancelled && currentRequest === requestNumber) {
 					const pageOffset = data.offset ?? filters?.offset ?? 0;
+					rememberMessagePageCursor(params, pageOffset, data.limit ?? filters?.limit ?? 25, data.nextCursor);
 					setMessages(data.messages ?? []);
 					setHasMore(hasNextMessagePage(data, pageOffset, data.messages?.length ?? 0));
 					setLimit(data.limit ?? filters?.limit ?? 25);
@@ -82,7 +105,7 @@ export function useMessages(
 			}
 		}
 
-		void loadMessages(false, !peekMessageList(getMessageQueryParams(folder, mailboxId, filters, folderId)));
+		void loadMessages(false, !peekMessageList(pageParams(folder, mailboxId, filters, folderId)));
 		function patchReadState(event: Event) {
 			const detail = (event as CustomEvent<{ kind?: string; messageIds?: string[]; read?: boolean }>).detail;
 			if (detail?.kind !== "read" || !detail.messageIds?.length) return;

@@ -6,8 +6,10 @@ const csp = [
 	`script-src 'self' 'unsafe-inline'${scriptEval} https://challenges.cloudflare.com`,
 	// The framework's inline bootstrap needs 'unsafe-inline' for <script>
 	// elements, but nothing in the app uses handler attributes (React binds
-	// events in script). Refusing them disarms the usual mail-HTML injection,
-	// <img onerror=…>, should a payload ever get past the sanitizer.
+	// events in script). Refusing them disarms the usual HTML injection,
+	// <img onerror=…>, anywhere in the app. Mail HTML itself is not in the app
+	// document: it renders in an iframe sandboxed without allow-scripts, under
+	// its own stricter policy (src/components/messages/email-html-renderer-utils.ts).
 	"script-src-attr 'none'",
 	"style-src 'self' 'unsafe-inline'",
 	"img-src 'self' data: blob: https:",

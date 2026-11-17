@@ -47,6 +47,9 @@ export const users = sqliteTable("users", {
 	totpSecret: text("totp_secret"),
 	totpEnabled: bool("totp_enabled").notNull().default(false),
 	totpConfirmedAt: timestamp("totp_confirmed_at"),
+	// The table also has `totp_last_step` (migration 0090; PostgreSQL/MySQL 0014), the last TOTP step
+	// accepted. It is deliberately not declared here: every user read selects all declared columns, so
+	// sign-in would fail until the migration ran. src/lib/auth/mfa.ts reads and writes it with raw SQL.
 	/**
 	 * Password sign-ins must prove a second factor (a passkey or TOTP/recovery
 	 * code). Passkey sign-ins already satisfy it, so they need no extra step.

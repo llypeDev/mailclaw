@@ -162,6 +162,11 @@ export async function restoreDatabaseRecords(db: D1Database, content: ArrayBuffe
 			if (statements.length > 0) await db.batch(dialect === "mysql" ? [db.prepare("SET FOREIGN_KEY_CHECKS = 0"), ...statements, db.prepare("SET FOREIGN_KEY_CHECKS = 1")] : statements);
 		}
 	}
+	// A backup file holds its own row as it was mid-run. No runner owns a restored in-progress row, so
+	// left alone it could never be deleted or expired.
+	if (restoreTables.includes("backups")) {
+		await db.prepare("UPDATE backups SET status = 'failed', error = ? WHERE status IN ('queued', 'running')").bind("Interrupted: this backup was in progress when the restored data was saved").run();
+	}
 }
 
 function parseDatabaseBackup(content: ArrayBuffer): DatabaseBackupDocument {

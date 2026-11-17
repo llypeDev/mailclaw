@@ -27,6 +27,7 @@ export async function createBookedCalendarEvents(env: CloudflareEnv, event: Book
 			${JSON.stringify([guestEmail, ...guestEmails])}, ${event.color}, 'none', '[]', '[]', ${event.timeZone}, ${startSeconds}, ${endSeconds}, ${nowSeconds}, ${nowSeconds}
 		from (${requested}) requested_hosts
 		where (select count(*) from ${calendarEvents} busy where busy.${sql.identifier("user_id")} in (${hostList}) and busy.${sql.identifier("repeat")} = 'none'
+			and (busy.${sql.identifier("response_status")} is null or busy.${sql.identifier("response_status")} <> 'needs-action')
 			and busy.${sql.identifier("starts_at")} < ${endSeconds} and busy.${sql.identifier("ends_at")} > ${startSeconds}) = 0`);
 	return (result as unknown as { meta: { changes: number } }).meta.changes === hostIds.length;
 }

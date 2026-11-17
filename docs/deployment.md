@@ -329,6 +329,7 @@ Set these under **Workers & Pages → mailclaw → Settings → Variables and Se
 | --- | --- |
 | `CF_TOKEN` | Required. The runtime API token from [Step 1](#step-1-create-the-runtime-token-cf_token). |
 | `CF_EMAIL`, `CF_API_KEY` | Legacy alternative to `CF_TOKEN`: account email plus Global API Key. |
+| `CF_EMAIL_WORKER_NAME` | Worker that Email Routing rules deliver to; defaults to `mailclaw`. Set it only if you deploy the Worker under another name, and change `services[].service` in `wrangler.jsonc` to match. Rules created before a change keep the old name. |
 | `APP_URL` | Public HTTPS address of the app, without a trailing slash. Needed for Resend or SES receiving, and used for links in mail, passkeys, JMAP and the read-receipt pixel. |
 | `TURNSTILE_SECRET_KEY` | Turnstile bot check on the sign-in and first-run forms. Pair it with `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, which is read at build time, so it goes in the build's variables. |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push notifications; see [Optional Web Push configuration](#optional-web-push-configuration). |

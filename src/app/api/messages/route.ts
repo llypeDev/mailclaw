@@ -13,8 +13,9 @@ import { tracksAccountIdentity } from "@/lib/profile/identity-utils";
 import { buildSearchConditions } from "@/lib/search/conditions";
 import { getRequestTimeZone } from "@/lib/time/utils";
 import { scheduledMessageCondition } from "@/lib/email/scheduled";
-import { countMessageList, getMessageListColumns, loadConversationPage, pageTotalWithoutCount, splitPageRows } from "./utils";
-import type { ListMessage } from "./types";
+import { countMessageList, countMessageListFromCounters, getMessageListColumns, loadConversationPage, pageTotalWithoutCount, splitPageRows } from "./utils";
+import { decodeListCursor, encodeListCursor, listPageBound } from "./list-cursor-utils";
+import type { ListCountFilter, ListMessage } from "./types";
 import { getOpenCounts } from "@/lib/tracking/open-tracking";
 import { summarizeNotesForRows } from "@/lib/notes/service";
 import { isMissingTableError } from "@/lib/database-errors";
@@ -40,6 +41,13 @@ export async function GET(request: Request) {
 	const scheduled = url.searchParams.get("scheduled");
 	const limit = clampIntParam(url.searchParams.get("limit"), 50, 1, 100);
 	const offset = clampIntParam(url.searchParams.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER);
+	// Keyset paging: the `nextCursor` of the previous page. `offset` then only
+	// echoes the caller's position (for "51–100 of N"); the cursor places the rows.
+	const cursorParam = url.searchParams.get("cursor");
+	const cursor = cursorParam ? decodeListCursor(cursorParam) : null;
+	if (cursorParam && !cursor) {
+		return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
+	}
 	// Conversation view: one row per thread, represented by its newest message
 	// that matches the filter. Drafts are never grouped.
 	const groupByThread = url.searchParams.get("group") === "thread" && status !== "draft";
@@ -104,10 +112,26 @@ export async function GET(request: Request) {
 		conditions.push(...buildSearchConditions(title ? `${query ?? ""} subject:"${title}"` : query ?? "", getRequestTimeZone(request, user.timeZone)));
 	}
 	const where = and(...conditions);
+	// Search, Snoozed and Scheduled are served by other indexes than the folder page indexes
+	// ordered by created_at, so their page bound must not steer the planner (see `listPageBound`).
+	const searched = !!(query || title);
+	const seek = !searched && snoozed !== "true" && scheduled !== "true";
 	// `count=only` answers just the total, which lists ask for separately so paging never waits on
 	// (or repeats) a count over the whole folder.
 	if (url.searchParams.get("count") === "only") {
-		return NextResponse.json({ total: await countMessageList(db, where, groupByThread), grouped: groupByThread });
+		// Every other view is a sum over the trigger-kept tallies instead of a count over the folder.
+		const tallied = !groupByThread && seek && accessibleMailboxIds.length > 0;
+		const filter: ListCountFilter = {
+			direction: direction === "inbound" || direction === "outbound" ? direction : null,
+			folderId: folderId || null,
+			status: status || null,
+			inbox: status === "received" && !folderId,
+			starred: starred === "true",
+			read: read === "read" ? true : read === "unread" ? false : null,
+		};
+		const total = (tallied ? await countMessageListFromCounters(db, mailboxId ? [mailboxId] : accessibleMailboxIds, filter) : null)
+			?? await countMessageList(db, where, groupByThread);
+		return NextResponse.json({ total, grouped: groupByThread });
 	}
 	const accessibleMailboxIdSet = new Set(accessibleMailboxIds);
 	// The same scope as the first condition above, for rows read by id alone.
@@ -123,6 +147,7 @@ export async function GET(request: Request) {
 	// Null when only a full count could tell; the client then asks with `count=only`.
 	let total: number | null = 0;
 	let hasMore = false;
+	let nextCursor: string | null = null;
 	let rows: ListMessage[];
 	// Which stored messages each visible row stands for, so acting on a
 	// conversation row acts on the whole conversation within this folder.
@@ -131,9 +156,25 @@ export async function GET(request: Request) {
 	// has to match what marking it read will actually change.
 	const scopedThreadCounts = new Map<string, { total: number; unread: number }>();
 	if (groupByThread) {
-		const page = await loadConversationPage({ db, where, offset, limit });
+		// A conversation cursor page binds the mailbox list three times (the page, the thread check and
+		// its `where`); past ~25 mailboxes that nears D1's 100 bound parameters, so page by offset there.
+		const conversationCursor = mailboxId || accessibleMailboxIds.length <= 25 ? cursor : null;
+		const page = await loadConversationPage({
+			db,
+			where,
+			offset,
+			limit,
+			cursor: conversationCursor,
+			seek,
+			threadScope: (table) => mailboxId
+				? eq(table.mailboxId, mailboxId)
+				: accessibleMailboxIds.length > 0
+					? inArray(table.mailboxId, accessibleMailboxIds)
+					: eq(table.userId, user.id),
+		});
 		total = page.total;
 		hasMore = page.hasMore;
+		nextCursor = page.nextCursor;
 		// By primary key alone: the ids were just selected under `where`, and repeating it here lets
 		// SQLite without statistics walk the folder's wide index instead. The scope is rechecked below.
 		rows = page.ids.length
@@ -179,18 +220,22 @@ export async function GET(request: Request) {
 			}
 		}
 	} else {
+		// id breaks ties between messages of the same second, so a cursor names one position.
 		const pageRows = await db
 			.select(messageListColumns)
 			.from(messages)
-			.where(where)
-			.orderBy(desc(messages.createdAt))
+			.where(and(where, listPageBound(cursor, seek)))
+			.orderBy(desc(messages.createdAt), desc(messages.id))
 			.limit(limit + 1)
-			.offset(offset);
+			.offset(cursor ? 0 : offset);
 		const page = splitPageRows(pageRows, limit);
 		rows = page.rows;
 		hasMore = page.hasMore;
-		// The full count runs only for an offset past the end, so the client can step back to the last page.
-		total = pageTotalWithoutCount(offset, rows.length, hasMore) ?? (hasMore ? null : await countMessageList(db, where, false));
+		const last = rows[rows.length - 1];
+		nextCursor = hasMore && last ? encodeListCursor(last) : null;
+		// The full count runs only for an offset past the end, so the client can step back to the last
+		// page. A cursor page that came back empty leaves it to `count=only`.
+		total = pageTotalWithoutCount(offset, rows.length, hasMore) ?? (hasMore || cursor ? null : await countMessageList(db, where, false));
 	}
 	// Conversation sizes for the rows on this page, so the list can show "(3)"
 	// next to a subject the way threaded clients do.
@@ -282,5 +327,5 @@ export async function GET(request: Request) {
 		};
 	});
 
-	return NextResponse.json({ messages: enrichedRows, total, hasMore, limit, offset, grouped: groupByThread });
+	return NextResponse.json({ messages: enrichedRows, total, hasMore, nextCursor, limit, offset, grouped: groupByThread });
 }

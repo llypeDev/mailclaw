@@ -51,6 +51,8 @@ const {
 const { GET } = await import(pathToFileURL(join(outDir, "route.mjs")).href);
 
 const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+const publicHost = async () => ["93.184.216.34"];
+const readAll = async (stream) => new Uint8Array(await new Response(stream).arrayBuffer());
 
 test("the route requires a session before any outbound fetch", async (t) => {
 	globalThis.remoteImageTestAuthenticated = false;
@@ -75,7 +77,7 @@ test("a valid image ignores restrictive upstream response headers", async () => 
 		},
 	});
 	assert.equal(result.contentType, "image/png");
-	assert.deepEqual(result.body, png);
+	assert.deepEqual(await readAll(result.body), png);
 	assert.equal("headers" in result, false);
 	assert.equal(calls[0].init.redirect, "manual");
 	assert.equal(new Headers(calls[0].init.headers).has("cookie"), false);
@@ -155,7 +157,7 @@ test("redirect count is capped", async () => {
 	assert.equal(calls, 4);
 });
 
-test("streaming size cap cancels a body that exceeds the limit", async () => {
+test("a body that passes the cap after the signature errors the stream and cancels upstream", async () => {
 	let cancelled = false;
 	const body = new ReadableStream({
 		start(controller) {
@@ -164,15 +166,91 @@ test("streaming size cap cancels a body that exceeds the limit", async () => {
 		},
 		cancel() { cancelled = true; },
 	});
+	const result = await fetchRemoteImage("https://images.example/large.png", {
+		resolveHost: publicHost,
+		maxBytes: png.byteLength,
+		fetch: async () => new Response(body, { headers: { "Content-Type": "image/png" } }),
+	});
+	const reader = result.body.getReader();
+	assert.deepEqual((await reader.read()).value, png);
+	await assert.rejects(reader.read(), (error) => error.code === "too_large" && error.status === 413);
+	assert.equal(cancelled, true);
+});
+
+test("a body that passes the cap before the signature is complete is still a 413", async () => {
+	let cancelled = false;
+	const body = new ReadableStream({
+		start(controller) {
+			controller.enqueue(png.subarray(0, 3));
+			controller.enqueue(png.subarray(3));
+		},
+		cancel() { cancelled = true; },
+	});
 	await assert.rejects(
 		fetchRemoteImage("https://images.example/large.png", {
-		resolveHost: async () => ["93.184.216.34"],
-			maxBytes: png.byteLength,
+			resolveHost: publicHost,
+			maxBytes: 4,
 			fetch: async () => new Response(body, { headers: { "Content-Type": "image/png" } }),
 		}),
 		(error) => error.code === "too_large" && error.status === 413,
 	);
 	assert.equal(cancelled, true);
+});
+
+test("a declared Content-Length over the cap is refused before reading the body", async () => {
+	let pulled = false;
+	let cancelled = false;
+	const body = new ReadableStream({
+		pull(controller) { pulled = true; controller.enqueue(png); },
+		cancel() { cancelled = true; },
+	}, { highWaterMark: 0 });
+	await assert.rejects(
+		fetchRemoteImage("https://images.example/huge.png", {
+			resolveHost: publicHost,
+			fetch: async () => new Response(body, { headers: { "Content-Type": "image/png", "Content-Length": String(6 * 1024 * 1024) } }),
+		}),
+		(error) => error.code === "too_large" && error.status === 413,
+	);
+	assert.equal(pulled, false);
+	assert.equal(cancelled, true);
+});
+
+test("the image is answered once the signature has arrived, before the upstream body ends", async () => {
+	let finishUpstream;
+	const body = new ReadableStream({
+		start(controller) {
+			controller.enqueue(png.subarray(0, 5));
+			controller.enqueue(png.subarray(5, 9));
+			finishUpstream = () => { controller.enqueue(png.subarray(9)); controller.close(); };
+		},
+	});
+	const result = await fetchRemoteImage("https://images.example/slow-tail.png", {
+		resolveHost: publicHost,
+		fetch: async () => new Response(body, { headers: { "Content-Type": "image/png" } }),
+	});
+	assert.equal(result.contentType, "image/png");
+	const bytes = readAll(result.body);
+	finishUpstream();
+	assert.deepEqual(await bytes, png);
+});
+
+test("an AVIF signature split across chunks is read up to the end of its ftyp box", async () => {
+	const ftyp = new Uint8Array(32);
+	new DataView(ftyp.buffer).setUint32(0, 32);
+	ftyp.set(new TextEncoder().encode("ftypmif1"), 4);
+	ftyp.set(new TextEncoder().encode("miaf"), 16);
+	ftyp.set(new TextEncoder().encode("avif"), 28);
+	const image = new Uint8Array([...ftyp, 9, 9, 9]);
+	const result = await fetchRemoteImage("https://images.example/a.avif", {
+		resolveHost: publicHost,
+		fetch: async () => new Response(new ReadableStream({
+			start(controller) {
+				for (let offset = 0; offset < image.length; offset += 5) controller.enqueue(image.slice(offset, offset + 5));
+				controller.close();
+			},
+		}), { headers: { "Content-Type": "image/avif" } }),
+	});
+	assert.deepEqual(await readAll(result.body), image);
 });
 
 test("non-image MIME and spoofed image signatures are rejected", async () => {
@@ -218,6 +296,46 @@ test("the total request timeout also covers a body that stalls after headers", a
 		}),
 		(error) => error.code === "timeout" && error.status === 504,
 	);
+});
+
+test("a stalled upstream that ignores the abort signal still times out", async () => {
+	await assert.rejects(
+		fetchRemoteImage("https://images.example/deaf.png", {
+			resolveHost: publicHost,
+			timeoutMs: 10,
+			fetch: async () => new Response(new ReadableStream({ start() {} }), { headers: { "Content-Type": "image/png" } }),
+		}),
+		(error) => error.code === "timeout" && error.status === 504,
+	);
+});
+
+test("the deadline still applies after the signature: the stream errors and upstream is cancelled", async () => {
+	let cancelled = false;
+	const result = await fetchRemoteImage("https://images.example/stalls-later.png", {
+		resolveHost: publicHost,
+		timeoutMs: 30,
+		fetch: async () => new Response(new ReadableStream({
+			start(controller) { controller.enqueue(png); },
+			cancel() { cancelled = true; },
+		}), { headers: { "Content-Type": "image/png" } }),
+	});
+	const reader = result.body.getReader();
+	assert.deepEqual((await reader.read()).value, png);
+	await assert.rejects(reader.read(), (error) => error.code === "timeout" && error.status === 504);
+	assert.equal(cancelled, true);
+});
+
+test("cancelling the proxied body cancels the upstream body", async () => {
+	let cancelled = false;
+	const result = await fetchRemoteImage("https://images.example/abandoned.png", {
+		resolveHost: publicHost,
+		fetch: async () => new Response(new ReadableStream({
+			start(controller) { controller.enqueue(png); },
+			cancel() { cancelled = true; },
+		}), { headers: { "Content-Type": "image/png" } }),
+	});
+	await result.body.cancel();
+	assert.equal(cancelled, true);
 });
 
 test("invalid query targets are rejected before fetch", () => {

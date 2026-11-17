@@ -15,7 +15,7 @@ const mocks = {
 	"next/server": "export const NextResponse={json:(data,init)=>Response.json(data,init)};",
 	"@/db": "export function getDb(){return globalThis.permissionDb}",
 	"@/lib/cloudflare": "export function getEnv(){return {}}",
-	"@/lib/auth/cookies": "export async function requireUser(){return globalThis.permissionUser}",
+	"@/lib/auth/cookies": "export async function getCurrentUser(){return globalThis.permissionUser ?? null}",
 	"@/lib/api/auth": "export async function requireSessionUser(){return globalThis.permissionUser?{user:globalThis.permissionUser,error:null}:{user:null,error:Response.json({error:'Unauthorized'},{status:401})}}",
 	"@/lib/mailboxes/access": "export async function getMailboxAccessLevel(db,user,id){return globalThis.managedMailboxes.includes(id)?{canManage:true,mailbox:{id,domainId:'d-owner'}}:null} export async function listAccessibleMailboxes(){return []}",
 };

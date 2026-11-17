@@ -326,3 +326,131 @@ test("conversation rows and members are read by key, not by walking the folder",
 	assert.match(memberPlan, /SEARCH thread_member USING INDEX messages_thread_idx/, memberPlan);
 	assert.match(memberPlan, /SEARCH messages (EXISTS )?USING INDEX sqlite_autoindex_messages_1/, memberPlan);
 });
+
+const queryPlan = (f, sql) => {
+	const params = Array.from({ length: (sql.match(/\?/g) ?? []).length }, () => null);
+	return f.database.db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...params).map((row) => row.detail).join(" | ");
+};
+
+async function walk(path, limit) {
+	const pages = [];
+	let cursor = null;
+	for (let offset = 0; pages.length < 100; offset += limit) {
+		const response = await GET(request(`${path}&limit=${limit}&offset=${offset}${cursor ? `&cursor=${cursor}` : ""}`));
+		assert.equal(response.status, 200);
+		const body = await response.json();
+		pages.push(body);
+		if (!body.hasMore) return pages;
+		cursor = body.nextCursor;
+		assert.equal(typeof cursor, "string");
+	}
+	throw new Error("walk did not end");
+}
+
+test("cursor pages walk the list in (created_at, id) order without repeating rows of the same second", async (t) => {
+	const f = await fixture(t);
+	// Pairs of messages share a second, so the id breaks the tie at page boundaries.
+	for (let index = 0; index < 9; index += 1) f.message(`m${index}`, { thread: `t${index % 4}`, time: Math.floor(index / 2) });
+	const byOffset = await (await GET(request("mailboxId=mine&status=received&limit=100"))).json();
+	assert.deepEqual(byOffset.messages.map((row) => row.id), ["m8", "m7", "m6", "m5", "m4", "m3", "m2", "m1", "m0"]);
+	assert.equal(byOffset.nextCursor, null);
+	for (const limit of [1, 2, 4]) {
+		const pages = await walk("mailboxId=mine&status=received", limit);
+		assert.deepEqual(pages.flatMap((page) => page.messages.map((row) => row.id)), byOffset.messages.map((row) => row.id), `limit ${limit}`);
+		assert.equal(pages.at(-1).total, 9, "the last page proves the total from the echoed offset");
+		assert.equal(pages.at(-1).nextCursor, null);
+	}
+	// Conversation view: one row per thread, newest first, each thread once.
+	const grouped = await walk("mailboxId=mine&status=received&group=thread", 1);
+	assert.deepEqual(grouped.flatMap((page) => page.messages.map((row) => row.id)), ["m8", "m7", "m6", "m5"]);
+	assert.deepEqual(grouped[0].messages[0].threadMessageIds.sort(), ["m0", "m4", "m8"]);
+
+	assert.equal((await GET(request("mailboxId=mine&status=received&cursor=bogus"))).status, 400);
+});
+
+test("cursor pages seek the page index instead of reading the rows before them", async (t) => {
+	const f = await fixture(t);
+	for (let index = 0; index < 4; index += 1) f.message(`m${index}`, { time: index });
+	const first = await (await GET(request("mailboxId=mine&direction=inbound&status=received&limit=1"))).json();
+	for (const [path, index] of [
+		["mailboxId=mine&direction=inbound&status=received", "messages_nav_cover_idx"],
+		["mailboxId=mine&direction=inbound&status=received&read=unread", "messages_nav_cover_idx"],
+		["mailboxId=mine&direction=outbound&status=sent", "messages_status_page_idx"],
+		["mailboxId=mine&status=archived", "messages_status_page_idx"],
+		["mailboxId=mine&starred=true", "messages_starred_page_idx"],
+	]) {
+		f.queries.length = 0;
+		assert.equal((await GET(request(`${path}&limit=1&offset=1&cursor=${first.nextCursor}`))).status, 200);
+		const page = f.queries.find((sql) => sql.includes('"snippet"') && sql.includes("limit"));
+		const plan = queryPlan(f, page);
+		assert.match(plan, new RegExp(`USING INDEX ${index} \\(mailbox_id=\\? AND [^)]*created_at<\\?\\)`), `${path}: ${plan}`);
+		assert.doesNotMatch(plan, /TEMP B-TREE/, `${path}: ${plan}`);
+	}
+});
+
+test("all-mailbox pages walk the page index per mailbox instead of sorting the whole inbox", async (t) => {
+	const f = await fixture(t);
+	f.message("own", { time: 1, thread: "own" });
+	f.message("shared", { mailbox: "shared", user: "other", time: 2, thread: "shared" });
+	for (const path of ["direction=inbound&status=received", "direction=inbound&status=received&read=unread", "direction=inbound&status=received&group=thread"]) {
+		f.queries.length = 0;
+		const body = await (await GET(request(path))).json();
+		assert.deepEqual(body.messages.map((row) => row.id), ["shared", "own"]);
+		const page = f.queries.find((sql) => sql.includes('from "messages"') && sql.includes("limit") && sql.includes('"mailbox_id" in'));
+		const plan = queryPlan(f, page);
+		// The IN list still merges through a small sorter, but each mailbox's walk stops once the page
+		// is full: messages_counts_cover_idx would hand over the whole inbox unordered.
+		assert.match(plan, /USING (COVERING )?INDEX messages_nav_cover_idx \(mailbox_id=\? AND status=\? AND folder_id=\? AND created_at<\?\)/, `${path}: ${plan}`);
+	}
+});
+
+test("list totals come from message_counters where the tallies answer the view exactly", async (t) => {
+	const f = await fixture(t);
+	f.message("inbox-unread", { time: 1 });
+	f.message("inbox-read", { time: 2, read: true });
+	f.message("starred-archived", { time: 3, status: "archived" });
+	f.message("starred-sent", { time: 4, status: "sent", direction: "outbound", read: true });
+	f.message("snoozed", { time: 5 });
+	f.message("in-folder", { time: 6 });
+	f.message("template", { time: 7, status: "template", direction: "outbound" });
+	f.message("shared-starred", { mailbox: "shared", user: "other", time: 8 });
+	f.message("private-starred", { mailbox: "private", user: "other", time: 9 });
+	f.database.db.exec(`
+		INSERT INTO folders (id, user_id, mailbox_id, name, created_at) VALUES ('folder', 'owner', 'mine', 'Folder', 0);
+		UPDATE messages SET starred = 1 WHERE id IN ('starred-archived', 'starred-sent', 'snoozed', 'template', 'shared-starred', 'private-starred');
+		UPDATE messages SET snoozed_until = 4000000000 WHERE id = 'snoozed';
+		UPDATE messages SET folder_id = 'folder' WHERE id = 'in-folder';
+	`);
+	const cases = [
+		["mailboxId=mine&starred=true", 3],
+		["starred=true", 4],
+		["mailboxId=mine&starred=true&read=unread", 2],
+		["mailboxId=mine&direction=inbound&status=received", 2],
+		["direction=inbound&status=received", 3],
+		["mailboxId=mine&direction=inbound&status=received&read=unread", 1],
+		["mailboxId=mine&direction=inbound&status=received&folderId=folder", 1],
+		["mailboxId=mine&status=archived", 1],
+		["mailboxId=mine&direction=outbound&status=sent", 1],
+		// Everything but the template.
+		["mailboxId=mine", 6],
+	];
+	for (const [path, expected] of cases) {
+		f.queries.length = 0;
+		const body = await (await GET(request(`${path}&count=only`))).json();
+		assert.equal(body.total, expected, path);
+		assert.ok(f.queries.some((sql) => sql.includes('from "message_counters"')), `${path} reads the tallies`);
+		assert.ok(!f.queries.some((sql) => sql.includes("count(")), `${path} counts nothing`);
+		// The same views listed in full agree with the tallies.
+		const listed = await (await GET(request(`${path}&limit=100`))).json();
+		assert.equal(listed.messages.length, expected, `${path} listed`);
+	}
+	// Grouped, snoozed and searched views still count the rows.
+	for (const path of ["mailboxId=mine&direction=inbound&status=received&group=thread", "mailboxId=mine&snoozed=true", "mailboxId=mine&q=preview"]) {
+		f.queries.length = 0;
+		await GET(request(`${path}&count=only`));
+		assert.ok(!f.queries.some((sql) => sql.includes('from "message_counters"')), path);
+	}
+	// Before migration 0089 the total is counted as before.
+	f.database.db.exec("DROP TABLE message_counters");
+	assert.equal((await (await GET(request("mailboxId=mine&starred=true&count=only"))).json()).total, 3);
+});

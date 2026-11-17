@@ -1,5 +1,6 @@
 import { queryDns } from "@/lib/dns-query";
 import { isPublicIpv4 } from "@/lib/spam/domain-utils";
+import { readBodyPrefix, streamLimitedBody } from "./body-stream";
 import { createCachedHostResolver } from "./host-cache";
 
 export const REMOTE_IMAGE_MAX_URL_LENGTH = 4096;
@@ -30,7 +31,11 @@ export class RemoteImageError extends Error {
 }
 
 export type RemoteImageResult = {
-	body: Uint8Array<ArrayBuffer>;
+	/**
+	 * The image, streamed. Its signature was checked before this resolved; past that point a
+	 * body over the size cap or the deadline errors the stream instead of failing the request.
+	 */
+	body: ReadableStream<Uint8Array>;
 	contentType: string;
 };
 
@@ -137,41 +142,32 @@ function signatureMatches(contentType: string, bytes: Uint8Array): boolean {
 	}
 }
 
-async function readLimitedBody(response: Response, maxBytes: number): Promise<Uint8Array<ArrayBuffer>> {
-	const declaredLength = Number(response.headers.get("content-length"));
-	if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
-		await response.body?.cancel().catch(() => undefined);
-		throw new RemoteImageError("Remote image is too large", 413, "too_large");
-	}
-	if (!response.body) throw new RemoteImageError("Remote image has no body", 502, "empty_body");
+/** An AVIF `ftyp` box this long is already absurd; the brand scan never buffers more. */
+const MAX_SIGNATURE_BYTES = 1024;
 
-	const reader = response.body.getReader();
-	const chunks: Uint8Array[] = [];
-	let size = 0;
-	try {
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
-			size += value.byteLength;
-			if (size > maxBytes) {
-				await reader.cancel().catch(() => undefined);
-				throw new RemoteImageError("Remote image is too large", 413, "too_large");
-			}
-			chunks.push(value);
+/** How many leading bytes `signatureMatches` needs for `contentType`, given what has arrived so far. */
+export function signatureBytesNeeded(contentType: string, prefix: Uint8Array): number {
+	switch (contentType) {
+		case "image/png":
+			return 8;
+		case "image/jpeg":
+			return 3;
+		case "image/gif":
+			return 6;
+		case "image/webp":
+			return 12;
+		case "image/avif": {
+			if (prefix.length < 4) return 16;
+			const boxSize = new DataView(prefix.buffer, prefix.byteOffset, prefix.byteLength).getUint32(0);
+			return Math.min(Math.max(boxSize, 16), MAX_SIGNATURE_BYTES);
 		}
-	} catch (error) {
-		await reader.cancel().catch(() => undefined);
-		throw error;
+		default:
+			return 0;
 	}
-
-	const body = new Uint8Array(size);
-	let offset = 0;
-	for (const chunk of chunks) {
-		body.set(chunk, offset);
-		offset += chunk.byteLength;
-	}
-	return body;
 }
+
+const tooLarge = () => new RemoteImageError("Remote image is too large", 413, "too_large");
+const timedOut = () => new RemoteImageError("Remote image request timed out", 504, "timeout");
 
 export function isPublicAddress(address: string): boolean {
 	const value = address.trim().toLowerCase();
@@ -210,6 +206,8 @@ export async function fetchRemoteImage(value: string, options: RemoteImageFetchO
 	let current = parseRemoteImageUrl(value, blockedOrigins);
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? REMOTE_IMAGE_TIMEOUT_MS);
+	// Once the body is handed to the caller the deadline keeps running until it settles.
+	let bodyOwnsDeadline = false;
 
 	try {
 		for (let redirects = 0; ; redirects += 1) {
@@ -253,19 +251,30 @@ export async function fetchRemoteImage(value: string, options: RemoteImageFetchO
 				const receivedType = (response.headers.get("content-type") ?? "missing content type").split(";", 1)[0].slice(0, 100);
 				throw new RemoteImageError(`Remote resource is not a supported image (${receivedType})`, 415, "unsupported_type");
 			}
-			let body: Uint8Array<ArrayBuffer>;
+			const declaredLength = Number(response.headers.get("content-length"));
+			if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+				await response.body?.cancel().catch(() => undefined);
+				throw tooLarge();
+			}
+			if (!response.body) throw new RemoteImageError("Remote image has no body", 502, "empty_body");
+
+			// Only the signature is read before answering; the rest streams through the same cap and deadline.
+			const limits = { maxBytes, signal: controller.signal, tooLarge, timedOut };
+			const reader = response.body.getReader();
+			let head: { prefix: Uint8Array<ArrayBuffer>; done: boolean };
 			try {
-				body = await readLimitedBody(response, maxBytes);
+				head = await readBodyPrefix(reader, (prefix) => signatureBytesNeeded(contentType, prefix), limits);
+				if (!signatureMatches(contentType, head.prefix)) throw new RemoteImageError("Remote image signature is invalid", 415, "invalid_signature");
 			} catch (error) {
-				if (controller.signal.aborted && !(error instanceof RemoteImageError)) {
-					throw new RemoteImageError("Remote image request timed out", 504, "timeout");
-				}
+				await reader.cancel().catch(() => undefined);
+				if (controller.signal.aborted && !(error instanceof RemoteImageError)) throw timedOut();
 				throw error;
 			}
-			if (!signatureMatches(contentType, body)) throw new RemoteImageError("Remote image signature is invalid", 415, "invalid_signature");
+			const body = streamLimitedBody(reader, head.prefix, head.done, limits, () => clearTimeout(timeout));
+			bodyOwnsDeadline = true;
 			return { body, contentType };
 		}
 	} finally {
-		clearTimeout(timeout);
+		if (!bodyOwnsDeadline) clearTimeout(timeout);
 	}
 }

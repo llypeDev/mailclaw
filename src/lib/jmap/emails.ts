@@ -129,12 +129,15 @@ export const emailQuery: JmapMethodHandler = async (ctx, args) => {
 	// Anchors are resolved by materialising the ordered id list up to a bound;
 	// mailboxes here are small enough that this stays cheap.
 	const threadKey = sql<string>`coalesce(${messages.threadId}, ${messages.id})`;
+	// A plain forward page only needs the rows up to its end; anchors, collapsing, totals and
+	// negative positions need the whole bounded list.
+	const plainPage = !args.anchor && !collapse && !args.calculateTotal && Number.isFinite(position) && position >= 0;
 	const allRows = await ctx.db
 		.select({ id: messages.id, thread: threadKey })
 		.from(messages)
 		.where(where)
 		.orderBy(...order)
-		.limit(10_000);
+		.limit(plainPage ? Math.min(10_000, position + limit) : 10_000);
 	let ordered = allRows.map((row) => row.id);
 	if (collapse) {
 		const seen = new Set<string>();

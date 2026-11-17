@@ -9,6 +9,7 @@ import { getMailboxAccessLevel, listAccessibleMailboxIds } from "@/lib/mailboxes
 import { buildSearchConditions } from "@/lib/search/conditions";
 import { getRequestTimeZone } from "@/lib/time/utils";
 import { clampIntParam } from "@/lib/http/pagination";
+import { getMessageListColumns } from "@/app/api/messages/utils";
 
 export async function GET(request: Request) {
 	const env = getEnv();
@@ -22,6 +23,12 @@ export async function GET(request: Request) {
 	const direction = url.searchParams.get("direction");
 	const query = url.searchParams.get("q")?.trim();
 	const limit = clampIntParam(url.searchParams.get("limit"), 50, 1, 100);
+	// Opt-in: `fields=summary` lists messages without `textBody` and `htmlBody`, which are most of
+	// each row. Without it every column is returned, as before.
+	const fields = url.searchParams.get("fields");
+	if (fields !== null && fields !== "summary") {
+		return NextResponse.json({ error: "Unsupported fields value; use fields=summary or omit it" }, { status: 400 });
+	}
 
 	const db = getDb(env);
 	// Authentication already loaded the key's user and refused a disabled one.
@@ -51,12 +58,10 @@ export async function GET(request: Request) {
 	}
 	if (query) conditions.push(...buildSearchConditions(query, getRequestTimeZone(request, user.timeZone)));
 
-	const rows = await db
-		.select()
-		.from(messages)
-		.where(and(...conditions))
-		.orderBy(desc(messages.createdAt))
-		.limit(limit);
+	const where = and(...conditions);
+	const rows = fields === "summary"
+		? await db.select(getMessageListColumns()).from(messages).where(where).orderBy(desc(messages.createdAt)).limit(limit)
+		: await db.select().from(messages).where(where).orderBy(desc(messages.createdAt)).limit(limit);
 
 	return NextResponse.json({ messages: rows });
 }

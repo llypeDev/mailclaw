@@ -20,33 +20,42 @@ export function getSessionTokenFromRequest(request: Request): string | undefined
 	return undefined;
 }
 
+/**
+ * Who hears about new mail in a mailbox: its owner, the owner of its domain and, for a shared
+ * mailbox, everyone it is shared with. Pure, so a caller that already loaded the mailbox row and
+ * its access list (the inbound consumer does, in one batch) spends no query on it.
+ */
+export function mailboxNotificationUserIds(
+	ownerUserId: string,
+	mailbox: { domainOwnerUserId: string | null; type: string } | null | undefined,
+	accessUserIds: readonly string[],
+): string[] {
+	return [
+		...new Set([
+			ownerUserId,
+			mailbox?.domainOwnerUserId,
+			...(mailbox?.type === "shared" ? accessUserIds : []),
+		].filter((userId): userId is string => !!userId)),
+	];
+}
+
+/** One query: the mailbox, its domain and its access rows, joined. */
 export async function getMailboxNotificationUserIds(
 	env: CloudflareEnv,
 	mailboxId: string,
 	ownerUserId: string,
 ): Promise<string[]> {
-	const db = getDb(env);
-	const mailboxRows = await db
-		.select({ domainOwnerUserId: domains.userId, type: mailboxes.type })
+	const rows = await getDb(env)
+		.select({ domainOwnerUserId: domains.userId, type: mailboxes.type, accessUserId: mailboxAccess.userId })
 		.from(mailboxes)
 		.innerJoin(domains, eq(mailboxes.domainId, domains.id))
-		.where(eq(mailboxes.id, mailboxId))
-		.limit(1);
-	const sharedUserIds = mailboxRows[0]?.type === "shared"
-		? (await db
-			.select({ userId: mailboxAccess.userId })
-			.from(mailboxAccess)
-			.where(eq(mailboxAccess.mailboxId, mailboxId)))
-			.map((access) => access.userId)
-		: [];
-
-	return [
-		...new Set([
-			ownerUserId,
-			mailboxRows[0]?.domainOwnerUserId,
-			...sharedUserIds,
-		].filter((userId): userId is string => !!userId)),
-	];
+		.leftJoin(mailboxAccess, eq(mailboxAccess.mailboxId, mailboxes.id))
+		.where(eq(mailboxes.id, mailboxId));
+	return mailboxNotificationUserIds(
+		ownerUserId,
+		rows[0],
+		rows.map((row) => row.accessUserId).filter((userId): userId is string => !!userId),
+	);
 }
 
 export async function notifyUsersOfNewMessage(
