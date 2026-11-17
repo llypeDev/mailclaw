@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
 	browserSupportsWebAuthn,
 	browserSupportsWebAuthnAutofill,
@@ -27,6 +27,8 @@ import {
 	submitPasskeyMfa,
 } from "./utils";
 
+const subscribeToNothing = () => () => {};
+
 export function LoginClient({ adding = false }: { adding?: boolean }) {
   const { t } = useLanguage();
   const router = useRouter();
@@ -37,6 +39,9 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
   const [challengeToken, setChallengeToken] = useState<string | null>(null);
   const [methods, setMethods] = useState<string[]>([]);
   const [code, setCode] = useState("");
+  // Until React owns the form, a click would submit it natively to /login and the page would just
+  // reload with no message, so the buttons wait for hydration (false on the server, true once hydrated).
+  const hydrated = useSyncExternalStore(subscribeToNothing, () => true, () => false);
   const runningRef = useRef(false);
 
   const finish = useCallback((redirect?: string) => {
@@ -309,7 +314,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
         <Button
           type="submit"
           className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
-          disabled={loading}
+          disabled={loading || !hydrated}
         >
           {loading ? t("auth.signingIn") : t("auth.signIn")}
         </Button>
@@ -318,7 +323,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
           type="button"
           variant="outline"
           className="h-11 w-full rounded-full"
-          disabled={loading}
+          disabled={loading || !hydrated}
           onClick={() => void onPasskey()}
         >
           <KeyRound className="h-4 w-4" />
