@@ -38,7 +38,7 @@ export function startDriveDrag(event: DragEvent, items: DriveItemDto[], label: s
 		// A small "3 selected" chip instead of the browser's snapshot of a single row.
 		const chip = document.createElement("div");
 		chip.textContent = label;
-		chip.style.cssText = "position:fixed;top:-100px;left:0;padding:6px 12px;border-radius:9999px;background:#1d4ed8;color:#fff;font:500 13px system-ui,sans-serif;white-space:nowrap";
+		chip.style.cssText = "position:fixed;top:-100px;left:0;padding:6px 12px;background:var(--or-color-accent);color:var(--or-color-text-on-accent);font:600 13px var(--or-font-display),system-ui,sans-serif;white-space:nowrap";
 		document.body.appendChild(chip);
 		event.dataTransfer.setDragImage(chip, 12, 16);
 		setTimeout(() => chip.remove(), 0);

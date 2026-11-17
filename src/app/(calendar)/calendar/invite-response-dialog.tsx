@@ -41,16 +41,16 @@ export function InviteResponseDialog({ event, onClose, onAnswered }: { event: Ca
 							<DialogTitle className="break-words">{event.title}</DialogTitle>
 							<DialogDescription>{t("invite.pending")}</DialogDescription>
 						</DialogHeader>
-						<div className="space-y-1 text-sm text-neutral-700">
-							<p>{formatEventRange(event)}</p>
-							{event.location && <p className="break-words text-neutral-600">{event.location}</p>}
-							{event.description && <p className="whitespace-pre-wrap break-words text-neutral-600">{event.description}</p>}
+						<div className="space-y-1 text-sm text-fg">
+							<p className="font-mono tabular-nums">{formatEventRange(event)}</p>
+							{event.location && <p className="break-words text-fg-muted">{event.location}</p>}
+							{event.description && <p className="whitespace-pre-wrap break-words text-fg-muted">{event.description}</p>}
 						</div>
 						<div className="flex flex-wrap items-center gap-2">
 							<Button disabled={pending !== null} onClick={() => void respond("accepted")}>{t("invite.accept")}</Button>
 							<Button disabled={pending !== null} onClick={() => void respond("tentative")} variant="outline">{t("invite.maybe")}</Button>
 							<Button disabled={pending !== null} onClick={() => void respond("declined")} variant="outline">{t("invite.decline")}</Button>
-							<a href={`/inbox/${event.inviteMessageId}`} className="text-sm font-medium text-blue-700 hover:underline">{t("invite.openMessage")}</a>
+							<a href={`/inbox/${event.inviteMessageId}`} className="text-sm font-medium text-accent-text underline-offset-2 hover:underline">{t("invite.openMessage")}</a>
 						</div>
 					</>
 				)}

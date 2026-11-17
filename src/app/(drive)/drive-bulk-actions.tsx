@@ -128,7 +128,7 @@ export function DriveBulkActions({ selected, trashView, onDone }: { selected: Dr
 		}
 	}
 
-	const buttonClass = "h-9 gap-2 rounded-full px-3 text-sm";
+	const buttonClass = "h-9 gap-2 px-3 text-sm";
 	return (
 		<div className="flex flex-wrap items-center justify-end gap-1 text-sm">
 			{!trashView && canTrash && (
@@ -139,20 +139,20 @@ export function DriveBulkActions({ selected, trashView, onDone }: { selected: Dr
 							<Button type="button" variant="ghost" className={buttonClass} disabled={busy}><FolderInput size={16} />{t("drive.moveToFolder")}</Button>
 						</DropdownMenu.Trigger>
 						<DropdownMenu.Portal>
-							<DropdownMenu.Content align="end" sideOffset={6} onCloseAutoFocus={(event) => event.preventDefault()} className="z-[200] w-72 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
-								<form onSubmit={(event) => void createAndMove(event)} onKeyDown={(event) => event.stopPropagation()} className="flex items-center gap-1 border-b border-neutral-100 p-1.5 pb-2">
-									<FolderPlus size={16} className="shrink-0 text-neutral-500" />
-									<input ref={inputRef} value={name} onChange={(event) => setName(event.target.value)} maxLength={255} placeholder={t("drive.newFolderPlaceholder")} aria-label={t("drive.newFolderPlaceholder")} className="h-8 min-w-0 flex-1 rounded-md border border-neutral-200 bg-transparent px-2 text-sm placeholder:text-neutral-500 focus:border-blue-600 focus:outline-none" />
+							<DropdownMenu.Content align="end" sideOffset={6} onCloseAutoFocus={(event) => event.preventDefault()} className="z-[200] w-72 border border-line bg-surface-raised p-1 shadow-lg">
+								<form onSubmit={(event) => void createAndMove(event)} onKeyDown={(event) => event.stopPropagation()} className="flex items-center gap-1 border-b border-line-subtle p-1.5 pb-2">
+									<FolderPlus size={16} className="shrink-0 text-fg-subtle" />
+									<input ref={inputRef} value={name} onChange={(event) => setName(event.target.value)} maxLength={255} placeholder={t("drive.newFolderPlaceholder")} aria-label={t("drive.newFolderPlaceholder")} className="h-8 min-w-0 flex-1 border border-line-control bg-surface px-2 text-sm text-fg placeholder:text-fg-subtle focus:border-focus focus:outline-none" />
 									<Button type="submit" size="sm" disabled={busy || !name.trim()} title={t("drive.createAndMove")}>{t("drive.create")}</Button>
 								</form>
 								<div className="max-h-64 overflow-y-auto pt-1">
-									<DropdownMenu.Item onSelect={() => void move(null)} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-neutral-700 outline-none data-[highlighted]:bg-neutral-100"><HardDrive size={16} className="shrink-0" />{t("drive.myDrive")}</DropdownMenu.Item>
+									<DropdownMenu.Item onSelect={() => void move(null)} className="flex cursor-pointer items-center gap-2 px-2.5 py-2 text-sm text-fg outline-none data-[highlighted]:bg-surface-hover"><HardDrive size={16} className="shrink-0" />{t("drive.myDrive")}</DropdownMenu.Item>
 									{rows.map((folder) => (
-										<DropdownMenu.Item key={folder.id} disabled={folder.disabled} onSelect={() => void move(folder.id)} style={{ paddingLeft: 10 + folder.depth * 14 }} className={clsx("flex cursor-pointer items-center gap-2 rounded-lg py-2 pr-2.5 text-sm text-neutral-700 outline-none data-[disabled]:cursor-default data-[disabled]:opacity-40 data-[highlighted]:bg-neutral-100")}>
-											<Folder size={16} className="shrink-0 text-amber-500" /><span className="truncate">{folder.name}</span>
+										<DropdownMenu.Item key={folder.id} disabled={folder.disabled} onSelect={() => void move(folder.id)} style={{ paddingInlineStart: 10 + folder.depth * 14 }} className="flex cursor-pointer items-center gap-2 py-2 pe-2.5 text-sm text-fg outline-none data-[disabled]:cursor-default data-[disabled]:opacity-40 data-[highlighted]:bg-surface-hover">
+											<Folder size={16} className="shrink-0 text-[var(--or-color-viz-3)]" /><span className="truncate">{folder.name}</span>
 										</DropdownMenu.Item>
 									))}
-									{folders && rows.length === 0 && <p className="px-2.5 py-2 text-xs text-neutral-500">{t("drive.noFolders")}</p>}
+									{folders && rows.length === 0 && <p className="px-2.5 py-2 text-xs text-fg-subtle">{t("drive.noFolders")}</p>}
 								</div>
 							</DropdownMenu.Content>
 						</DropdownMenu.Portal>
@@ -162,7 +162,7 @@ export function DriveBulkActions({ selected, trashView, onDone }: { selected: Dr
 			{ownsAll && trashView && (
 				<>
 					<Button type="button" variant="ghost" className={buttonClass} disabled={busy} onClick={() => void run(() => act("restore"), (done) => t("drive.bulkRestored", { count: done }))}><RotateCcw size={16} />{t("drive.restore")}</Button>
-					<Button type="button" variant="ghost" className={clsx(buttonClass, "text-red-600")} disabled={busy} onClick={async () => { if (await confirmDestructive(t("drive.confirmBulkDelete", { count }))) void run(() => act("delete"), (done) => t("drive.bulkDeleted", { count: done })); }}><X size={16} />{t("drive.deleteForever")}</Button>
+					<Button type="button" variant="ghost" className={clsx(buttonClass, "text-danger-text hover:bg-danger-subtle")} disabled={busy} onClick={async () => { if (await confirmDestructive(t("drive.confirmBulkDelete", { count }))) void run(() => act("delete"), (done) => t("drive.bulkDeleted", { count: done })); }}><X size={16} />{t("drive.deleteForever")}</Button>
 				</>
 			)}
 		</div>

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { defaultTranslator, type Translator } from "@/lib/i18n/utils";
 import type { CalendarEvent, CalendarEventTimes, EventGroup, EventResizeEdge } from "./types";
 import type { FolderColor } from "@/lib/folders/types";
@@ -15,27 +16,17 @@ export const WEEKDAY_OPTIONS = [
   { value: 6, label: "Sat" },
 ] as const;
 
-export const EVENT_COLOR_CLASSES: Record<FolderColor, string> = {
-  "#2563eb": "bg-blue-600 text-white",
-  "#7c3aed": "bg-violet-600 text-white",
-  "#db2777": "bg-pink-600 text-white",
-  "#dc2626": "bg-red-600 text-white",
-  "#ea580c": "bg-orange-600 text-white",
-  "#d97706": "bg-amber-600 text-white",
-  "#16a34a": "bg-green-600 text-white",
-  "#0d9488": "bg-teal-600 text-white",
-};
+/**
+ * Events keep the colour the user picked (stored on the event), carried in `--event-color` by
+ * `eventColorStyle`. The block is a tint of that colour over the theme surface with ordinary text, so it
+ * reads in every theme; the solid colour marks the start edge. Past events fade further.
+ */
+export const EVENT_COLOR_CLASSES = "border-s-[3px] border-[color:var(--event-color)] bg-[color-mix(in_oklab,var(--event-color)_18%,var(--or-color-surface))] text-fg";
+export const PAST_EVENT_COLOR_CLASSES = "border-s-[3px] border-[color:color-mix(in_oklab,var(--event-color)_45%,var(--or-color-surface))] bg-[color-mix(in_oklab,var(--event-color)_7%,var(--or-color-surface))] text-fg-muted";
 
-export const PAST_EVENT_COLOR_CLASSES: Record<FolderColor, string> = {
-  "#2563eb": "bg-blue-200 text-blue-900",
-  "#7c3aed": "bg-violet-200 text-violet-900",
-  "#db2777": "bg-pink-200 text-pink-900",
-  "#dc2626": "bg-red-200 text-red-900",
-  "#ea580c": "bg-orange-200 text-orange-900",
-  "#d97706": "bg-amber-200 text-amber-900",
-  "#16a34a": "bg-green-200 text-green-900",
-  "#0d9488": "bg-teal-200 text-teal-900",
-};
+export function eventColorStyle(color: FolderColor): CSSProperties {
+  return { "--event-color": color } as CSSProperties;
+}
 
 function recurringStart(first: Date, repeat: CalendarRepeat, index: number, timeZone: string, anchorDay?: number | null): Date {
   if (index === 0) return new Date(first);
@@ -53,7 +44,7 @@ function recurringStart(first: Date, repeat: CalendarRepeat, index: number, time
 }
 
 /** Pending invitations read as outlined, not filled, so they are not mistaken for confirmed events. */
-export const PENDING_EVENT_CLASSES = "border-2 border-dashed border-blue-600 bg-white text-blue-700";
+export const PENDING_EVENT_CLASSES = "border border-dashed border-accent-border bg-surface text-accent-text";
 
 export function isPendingInvite(event: { responseStatus?: string | null; inviteMessageId?: string | null }): boolean {
   return event.responseStatus === "needs-action" && !!event.inviteMessageId;

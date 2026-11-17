@@ -49,21 +49,21 @@ export function CalendarSubscribeDialog({ open, onOpenChange }: { open: boolean;
 					<DialogDescription>{t("calendar.subscribe.description")}</DialogDescription>
 				</DialogHeader>
 				{url ? (
-					<div className="space-y-4 text-sm text-neutral-700">
+					<div className="space-y-4 text-sm text-fg">
 						<div className="flex items-center gap-2">
-							<input readOnly value={url} aria-label={t("calendar.subscribe.link")} onFocus={(event) => event.currentTarget.select()} className="h-10 min-w-0 flex-1 rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-xs" />
+							<input readOnly value={url} aria-label={t("calendar.subscribe.link")} onFocus={(event) => event.currentTarget.select()} className="h-10 min-w-0 flex-1 border border-line-control bg-canvas-subtle px-3 font-mono text-xs text-fg focus-visible:outline-2 focus-visible:outline-focus" />
 							<Button onClick={() => void copy()} variant="outline" className="shrink-0 px-3"><Copy className="h-4 w-4" />{t("calendar.subscribe.copy")}</Button>
 						</div>
-						<p className="font-medium text-amber-900">{t("calendar.subscribe.once")}</p>
-						<ul className="list-disc space-y-1 pl-5">
+						<p className="border-s-2 border-warning bg-warning-subtle px-3 py-2 font-medium text-warning-text">{t("calendar.subscribe.once")}</p>
+						<ul className="list-disc space-y-1 ps-5 text-fg-muted">
 							<li>{t("calendar.subscribe.google")}</li>
 							<li>{t("calendar.subscribe.outlook")}</li>
 							<li>{t("calendar.subscribe.apple")}</li>
 						</ul>
-						<p className="text-neutral-500">{t("calendar.subscribe.revoke")}</p>
+						<p className="text-fg-subtle">{t("calendar.subscribe.revoke")}</p>
 					</div>
 				) : (
-					<div className="space-y-4 text-sm text-neutral-700">
+					<div className="space-y-4 text-sm text-fg">
 						<p>{t("calendar.subscribe.explain")}</p>
 						<Button disabled={pending} onClick={() => void createLink()}>{t("calendar.subscribe.create")}</Button>
 					</div>

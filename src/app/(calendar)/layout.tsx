@@ -49,31 +49,31 @@ export default function CalendarLayout({ children }: { children: React.ReactNode
             <MailSearchProvider>
               <ShortcutsProvider>
                 <RouteTitle />
-              <div className="grid h-dvh grid-cols-[minmax(0,1fr)] overflow-hidden bg-[#f6f8fc]">
+              <div className="grid h-dvh grid-cols-[minmax(0,1fr)] overflow-hidden bg-canvas">
                 <SkipToContent />
                 <SidebarAside className="md:hidden"><CalendarMobileUpcoming /></SidebarAside>
                 <div className="flex min-h-0 min-w-0 flex-col">
-                  <header className="flex h-16 w-full shrink-0 items-center gap-3 pr-4 text-sm max-md:h-auto max-md:flex-wrap max-md:gap-x-2 max-md:gap-y-2 max-md:pb-2 max-md:pr-2 max-md:pt-1">
-                    <MobileMenuButton className="ml-1" />
+                  <header className="flex h-16 w-full shrink-0 items-center gap-3 pe-4 text-sm max-md:h-auto max-md:flex-wrap max-md:gap-x-2 max-md:gap-y-2 max-md:pb-2 max-md:pe-2 max-md:pt-1">
+                    <MobileMenuButton className="ms-1" />
                     <CalendarLogoBlock />
-                    <div className="min-w-0 flex-1 basis-0 md:hidden"><div className="relative w-fit max-w-full"><Select aria-label={t("calendar.sectionLabel")} value={pathname === "/booking" ? "/booking" : "/calendar"} onChange={(event) => router.push(event.target.value)} containerClassName="contents" className="h-8 w-auto max-w-full rounded-full bg-white pl-3 pr-2 text-sm font-medium text-neutral-700"><option value="/booking">{t("calendar.bookings")}</option><option value="/calendar">{t("calendar.calendar")}</option></Select></div></div>
+                    <div className="min-w-0 flex-1 basis-0 md:hidden"><div className="relative w-fit max-w-full"><Select aria-label={t("calendar.sectionLabel")} value={pathname === "/booking" ? "/booking" : "/calendar"} onChange={(event) => router.push(event.target.value)} containerClassName="contents" className="h-8 w-auto max-w-full bg-surface ps-3 pe-2 text-sm font-medium text-fg"><option value="/booking">{t("calendar.bookings")}</option><option value="/calendar">{t("calendar.calendar")}</option></Select></div></div>
                     <div className="flex min-w-0 flex-1 items-center gap-3 md:overflow-x-auto max-md:contents">
-                      <nav aria-label={t("calendar.sections")} className="flex shrink-0 max-md:hidden items-center rounded-full bg-white p-1">
-                        <Link href="/booking" aria-current={pathname === "/booking" ? "page" : undefined} className={clsx("rounded-full px-4 py-2 text-sm font-medium transition-colors", pathname === "/booking" ? "bg-blue-600 text-white" : "text-neutral-600 hover:bg-neutral-100")}>{t("calendar.bookings")}</Link>
-                        <Link href="/calendar" aria-current={pathname === "/calendar" ? "page" : undefined} className={clsx("rounded-full px-4 py-2 text-sm font-medium transition-colors", pathname === "/calendar" ? "bg-blue-600 text-white" : "text-neutral-600 hover:bg-neutral-100")}>{t("calendar.calendar")}</Link>
+                      <nav aria-label={t("calendar.sections")} className="flex shrink-0 items-stretch border border-line bg-surface max-md:hidden">
+                        <Link href="/booking" aria-current={pathname === "/booking" ? "page" : undefined} className={clsx("px-4 py-2 font-display text-sm font-medium transition-colors", pathname === "/booking" ? "bg-accent-subtle text-accent-text shadow-[inset_0_-2px_0_var(--or-color-accent)]" : "text-fg-muted hover:bg-surface-hover hover:text-fg")}>{t("calendar.bookings")}</Link>
+                        <Link href="/calendar" aria-current={pathname === "/calendar" ? "page" : undefined} className={clsx("border-s border-line px-4 py-2 font-display text-sm font-medium transition-colors", pathname === "/calendar" ? "bg-accent-subtle text-accent-text shadow-[inset_0_-2px_0_var(--or-color-accent)]" : "text-fg-muted hover:bg-surface-hover hover:text-fg")}>{t("calendar.calendar")}</Link>
                       </nav>
-                      <div id="calendar-header-slot" className="flex min-w-0 flex-1 items-center md:min-w-max max-md:order-last max-md:basis-full max-md:pl-3 max-md:empty:hidden" />
+                      <div id="calendar-header-slot" className="flex min-w-0 flex-1 items-center md:min-w-max max-md:order-last max-md:basis-full max-md:ps-3 max-md:empty:hidden" />
                     </div>
-                    {assistantEnabled && <Button type="button" variant="ghost" size="sm" className={assistantOpen ? "bg-blue-50 text-blue-700" : "text-neutral-600"} onClick={() => { setAssistantOpen((current) => !current); setAssistantFullSize(false); }} onPointerEnter={() => void preloadAgentPanel().catch(() => undefined)} onFocus={() => void preloadAgentPanel().catch(() => undefined)} aria-label={assistantOpen ? t("agent.assistant.close") : t("agent.assistant.open")} aria-expanded={assistantOpen} aria-controls="email-assistant-panel"><Sparkles className="h-5 w-5" /></Button>}
+                    {assistantEnabled && <Button type="button" variant="ghost" size="sm" className={assistantOpen ? "bg-accent-subtle text-accent-text" : "text-fg-muted"} onClick={() => { setAssistantOpen((current) => !current); setAssistantFullSize(false); }} onPointerEnter={() => void preloadAgentPanel().catch(() => undefined)} onFocus={() => void preloadAgentPanel().catch(() => undefined)} aria-label={assistantOpen ? t("agent.assistant.close") : t("agent.assistant.open")} aria-expanded={assistantOpen} aria-controls="email-assistant-panel"><Sparkles className="h-5 w-5" /></Button>}
                     <MailboxSelector />
                   </header>
                   <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
                     <AssistantOpenContext.Provider value={assistantVisible}>
-                      <main id="main-content" tabIndex={-1} className="focus:outline-none min-h-0 min-w-0 flex-1 overflow-hidden bg-[#f6f8fc] overscroll-contain scrollbar-gutter-stable" aria-hidden={assistantVisible && assistantFullSize} inert={assistantVisible && assistantFullSize}>
+                      <main id="main-content" tabIndex={-1} className="focus:outline-none min-h-0 min-w-0 flex-1 overflow-hidden bg-canvas overscroll-contain scrollbar-gutter-stable" aria-hidden={assistantVisible && assistantFullSize} inert={assistantVisible && assistantFullSize}>
                         <div key={pathname} className="page-transition-enter h-full min-h-0">{children}</div>
                       </main>
                     </AssistantOpenContext.Provider>
-                    <aside className={clsx(assistantFullSize ? "pl-0" : "pl-4", "min-h-0 min-w-0 shrink-0 overflow-hidden pb-2 pr-2 max-md:p-0 transition-[width] duration-300 ease-in-out motion-reduce:transition-none", assistantVisible ? "" : "opacity-0")} style={{ width: assistantVisible ? assistantFullSize ? "100%" : "min(390px, 100%)" : "0px" }} aria-hidden={!assistantVisible} inert={!assistantVisible}>
+                    <aside className={clsx(assistantFullSize ? "ps-0" : "ps-4", "min-h-0 min-w-0 shrink-0 overflow-hidden pb-2 pe-2 max-md:p-0 transition-[width] duration-300 ease-in-out motion-reduce:transition-none", assistantVisible ? "" : "opacity-0")} style={{ width: assistantVisible ? assistantFullSize ? "100%" : "min(390px, 100%)" : "0px" }} aria-hidden={!assistantVisible} inert={!assistantVisible}>
                       {assistantEnabled && <LazyAgentPanel open={assistantVisible} fullSize={assistantFullSize} onToggleFullSize={() => setAssistantFullSize((current) => !current)} onClose={() => { setAssistantOpen(false); setAssistantFullSize(false); }} />}
                     </aside>
                   </div>

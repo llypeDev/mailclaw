@@ -7,21 +7,21 @@ const PRESENTATION = /presentation|ms-powerpoint/;
 const ARCHIVE = /zip|compressed|x-tar|gzip|rar|7z/;
 const CODE_EXTENSIONS = new Set(["js", "ts", "tsx", "jsx", "json", "html", "css", "py", "rb", "go", "rs", "java", "c", "cpp", "h", "sh", "sql", "yml", "yaml", "xml"]);
 
-// One colour per kind of file. Palette classes, not hex, so the dark theme remaps them.
+// One colour per kind of file, from Orange's categorical data-viz tokens so every theme keeps them legible.
 export function driveIconFor(item: Pick<DriveItemDto, "kind" | "contentType" | "name">) {
-	if (item.kind === "folder") return { Icon: Folder, className: "text-amber-500" };
+	if (item.kind === "folder") return { Icon: Folder, className: "text-[var(--or-color-viz-3)]" };
 	const type = item.contentType;
 	const extension = extensionOf(item.name);
-	if (type.startsWith("image/")) return { Icon: FileImage, className: "text-rose-500" };
-	if (type.startsWith("video/")) return { Icon: FileVideo, className: "text-purple-500" };
-	if (type.startsWith("audio/")) return { Icon: FileAudio, className: "text-orange-500" };
-	if (type === "application/pdf" || extension === "pdf") return { Icon: FileText, className: "text-red-600" };
-	if (SPREADSHEET.test(type) || ["xls", "xlsx", "ods", "csv", "numbers"].includes(extension)) return { Icon: FileSpreadsheet, className: "text-green-600" };
-	if (PRESENTATION.test(type) || ["ppt", "pptx", "odp", "key"].includes(extension)) return { Icon: Presentation, className: "text-orange-600" };
-	if (ARCHIVE.test(type) || ["zip", "rar", "7z", "tar", "gz"].includes(extension)) return { Icon: FileArchive, className: "text-yellow-700" };
-	if (CODE_EXTENSIONS.has(extension) || type === "application/json" || type.includes("javascript") || type.includes("xml")) return { Icon: FileCode, className: "text-teal-500" };
-	if (type.startsWith("text/") || type.includes("word") || type.includes("opendocument.text") || ["doc", "docx", "odt", "rtf", "txt", "md", "pages"].includes(extension)) return { Icon: FileText, className: "text-blue-500" };
-	return { Icon: FileIcon, className: "text-neutral-500" };
+	if (type.startsWith("image/")) return { Icon: FileImage, className: "text-[var(--or-color-viz-5)]" };
+	if (type.startsWith("video/")) return { Icon: FileVideo, className: "text-[var(--or-color-viz-2)]" };
+	if (type.startsWith("audio/")) return { Icon: FileAudio, className: "text-[var(--or-color-viz-4)]" };
+	if (type === "application/pdf" || extension === "pdf") return { Icon: FileText, className: "text-[var(--or-color-viz-5)]" };
+	if (SPREADSHEET.test(type) || ["xls", "xlsx", "ods", "csv", "numbers"].includes(extension)) return { Icon: FileSpreadsheet, className: "text-[var(--or-color-viz-1)]" };
+	if (PRESENTATION.test(type) || ["ppt", "pptx", "odp", "key"].includes(extension)) return { Icon: Presentation, className: "text-[var(--or-color-viz-4)]" };
+	if (ARCHIVE.test(type) || ["zip", "rar", "7z", "tar", "gz"].includes(extension)) return { Icon: FileArchive, className: "text-[var(--or-color-viz-3)]" };
+	if (CODE_EXTENSIONS.has(extension) || type === "application/json" || type.includes("javascript") || type.includes("xml")) return { Icon: FileCode, className: "text-[var(--or-color-viz-1)]" };
+	if (type.startsWith("text/") || type.includes("word") || type.includes("opendocument.text") || ["doc", "docx", "odt", "rtf", "txt", "md", "pages"].includes(extension)) return { Icon: FileText, className: "text-[var(--or-color-viz-2)]" };
+	return { Icon: FileIcon, className: "text-[var(--or-color-viz-other)]" };
 }
 
 export type DriveSortKey = "name" | "owner" | "updatedAt" | "size";

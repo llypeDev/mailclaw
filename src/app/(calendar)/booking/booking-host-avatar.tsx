@@ -15,6 +15,6 @@ export function BookingHostAvatar({ host, currentUserId, size = "medium" }: Book
 	const avatarKey = `${host.id}:${host.hasAvatar}`;
 	const [triedKey, setTriedKey] = useState(avatarKey);
 	if (triedKey !== avatarKey) { setTriedKey(avatarKey); setImageFailed(false); }
-	if (host.hasAvatar && !imageFailed) return <ProgressiveAvatarImage src={imageUrl} alt={t("account.profilePicture", { name: host.name || host.email })} className={`${sizeClass} shrink-0 rounded-full border border-neutral-200 object-cover`} onError={() => setImageFailed(true)} />;
+	if (host.hasAvatar && !imageFailed) return <ProgressiveAvatarImage src={imageUrl} alt={t("account.profilePicture", { name: host.name || host.email })} className={`${sizeClass} shrink-0 rounded-full border border-line object-cover`} onError={() => setImageFailed(true)} />;
 	return <span aria-hidden="true" className={`${sizeClass} flex shrink-0 items-center justify-center rounded-full font-semibold`} style={getAvatarColorStyle(host.email)}>{(host.name || host.email).slice(0, 1).toUpperCase()}</span>;
 }

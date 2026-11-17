@@ -94,7 +94,7 @@ export function ColumnResizeHandle({ column, width, onResize, label }: { column:
 			onKeyDown={onKeyDown}
 			className="group/handle absolute -left-2 top-0 flex h-full w-4 cursor-col-resize touch-none items-center justify-center outline-none"
 		>
-			<span className={clsx("h-5 w-0.5 rounded-full transition-colors", dragging ? "bg-blue-500" : "bg-transparent group-hover/handle:bg-blue-500 group-focus-visible/handle:bg-blue-500")} />
+			<span className={clsx("h-5 w-0.5 transition-colors", dragging ? "bg-accent" : "bg-line group-hover/handle:bg-accent group-focus-visible/handle:bg-focus")} />
 		</div>
 	);
 }

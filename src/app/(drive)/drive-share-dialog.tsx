@@ -7,6 +7,7 @@ import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Eyebrow } from "@orangesys/ui";
 import { authFetch } from "@/lib/auth/client";
 import type { DriveItemDto, DriveShareDto, DriveShareRole } from "@/lib/drive/types";
 import { Select } from "@/components/ui/select";
@@ -74,7 +75,7 @@ export function DriveShareDialog({ item, onClose, onChanged }: { item: DriveItem
 	return (
 		<Dialog open={!!item} onOpenChange={(open) => { if (!open) onClose(); }}>
 			<DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto">
-				<DialogHeader><DialogTitle className="pr-6 truncate">{t("drive.shareTitle", { name: item?.name ?? "" })}</DialogTitle></DialogHeader>
+				<DialogHeader><DialogTitle className="truncate pe-6">{t("drive.shareTitle", { name: item?.name ?? "" })}</DialogTitle></DialogHeader>
 				<form onSubmit={addPerson} className="flex gap-2">
 					<Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder={t("drive.shareEmail")} aria-label={t("drive.shareEmail")} />
 					<Select value={role} onChange={(event) => setRole(event.target.value as DriveShareRole)} className={selectClass} aria-label={t("drive.peopleWithAccess")}>
@@ -83,27 +84,27 @@ export function DriveShareDialog({ item, onClose, onChanged }: { item: DriveItem
 					</Select>
 					<Button type="submit" disabled={busy || !email.trim()}>{t("drive.shareAdd")}</Button>
 				</form>
-				<h3 className="mb-2 mt-6 text-sm font-medium text-neutral-900">{t("drive.peopleWithAccess")}</h3>
-				{shares.length === 0 ? <p className="text-sm text-neutral-500">{t("drive.noPeople")}</p> : (
-					<ul className="space-y-1">
+				<Eyebrow as="h3" className="mb-2 mt-6">{t("drive.peopleWithAccess")}</Eyebrow>
+				{shares.length === 0 ? <p className="text-sm text-fg-muted">{t("drive.noPeople")}</p> : (
+					<ul className="divide-y divide-line-subtle border border-line">
 						{shares.map((share) => (
-							<li key={share.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-neutral-50">
-								<span className="min-w-0 flex-1"><span className="block truncate text-neutral-900">{share.name}</span><span className="block truncate text-xs text-neutral-500">{share.email}</span></span>
-								<span className="shrink-0 text-xs text-neutral-500">{share.role === "edit" ? t("drive.canEdit") : t("drive.canView")}</span>
-								<button type="button" onClick={() => void removePerson(share.id)} disabled={busy} aria-label={t("drive.remove")} className="rounded-full p-1 text-neutral-500 hover:bg-neutral-200"><X size={14} /></button>
+							<li key={share.id} className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-surface-hover">
+								<span className="min-w-0 flex-1"><span className="block truncate text-fg">{share.name}</span><span className="block truncate text-xs text-fg-subtle">{share.email}</span></span>
+								<span className="shrink-0 text-xs text-fg-muted">{share.role === "edit" ? t("drive.canEdit") : t("drive.canView")}</span>
+								<button type="button" onClick={() => void removePerson(share.id)} disabled={busy} aria-label={t("drive.remove")} className="p-1 text-fg-subtle hover:bg-surface-active hover:text-fg"><X size={14} /></button>
 							</li>
 						))}
 					</ul>
 				)}
-				<h3 className="mb-2 mt-6 text-sm font-medium text-neutral-900">{t("drive.generalAccess")}</h3>
-				<div className="flex items-center gap-3 rounded-lg border border-neutral-200 p-3 text-sm">
-					<Link2 size={18} className="shrink-0 text-neutral-500" />
-					<span className="min-w-0 flex-1 text-neutral-700">{linkToken ? t("drive.linkOn") : t("drive.linkOff")}</span>
+				<Eyebrow as="h3" className="mb-2 mt-6">{t("drive.generalAccess")}</Eyebrow>
+				<div className="flex items-center gap-3 border border-line p-3 text-sm">
+					<Link2 size={18} className="shrink-0 text-fg-subtle" />
+					<span className="min-w-0 flex-1 text-fg">{linkToken ? t("drive.linkOn") : t("drive.linkOff")}</span>
 					<Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void toggleLink()}>{linkToken ? t("drive.linkDisable") : t("drive.linkEnable")}</Button>
 				</div>
 				{linkToken && (
 					<div className="mt-2 flex gap-2">
-						<Input readOnly value={linkUrl} onFocus={(event) => event.currentTarget.select()} aria-label={t("drive.copyLink")} />
+						<Input readOnly value={linkUrl} onFocus={(event) => event.currentTarget.select()} aria-label={t("drive.copyLink")} className="font-mono text-xs" />
 						<Button type="button" variant="outline" onClick={() => { void navigator.clipboard.writeText(linkUrl).then(() => toast.success(t("drive.linkCopied"))); }}><Copy size={16} />{t("drive.copyLink")}</Button>
 					</div>
 				)}

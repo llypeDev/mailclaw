@@ -25,28 +25,28 @@ export function DriveTypeFilter({ value: applied, onChange }: { value: DriveCate
 	return (
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger asChild>
-				<button type="button" aria-label={t("drive.typeFilter")} className={clsx("flex h-9 shrink-0 items-center gap-2 rounded-full border px-3 text-sm", active ? "border-blue-200 bg-blue-50 text-blue-800" : "border-neutral-200 text-neutral-700 hover:bg-neutral-100")}>
-					<ListFilter size={16} />{t("drive.typeFilter")}{active && <span className="rounded-full bg-blue-600 px-1.5 text-xs text-white">{value.length}</span>}
+				<button type="button" aria-label={t("drive.typeFilter")} className={clsx("flex h-9 shrink-0 items-center gap-2 border px-3 text-sm", active ? "border-accent-border bg-accent-subtle text-accent-text" : "border-line text-fg-muted hover:bg-surface-hover hover:text-fg")}>
+					<ListFilter size={16} />{t("drive.typeFilter")}{active && <span className="min-w-5 rounded-full bg-accent px-1.5 text-center text-xs tabular-nums text-on-accent">{value.length}</span>}
 				</button>
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Portal>
-				<DropdownMenu.Content align="end" sideOffset={6} className="z-[200] min-w-48 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl">
+				<DropdownMenu.Content align="end" sideOffset={6} className="z-[200] min-w-48 border border-line bg-surface-raised p-1 shadow-lg">
 					{DRIVE_CATEGORIES.map((category) => (
 						<DropdownMenu.CheckboxItem
 							key={category}
 							checked={value.includes(category)}
 							onCheckedChange={(checked) => update(checked ? [...value, category] : value.filter((entry) => entry !== category))}
 							onSelect={(event) => event.preventDefault()}
-							className="relative flex cursor-pointer items-center rounded-lg py-2 pl-8 pr-3 text-sm text-neutral-700 outline-none data-[highlighted]:bg-neutral-100"
+							className="relative flex cursor-pointer items-center py-2 pe-3 ps-8 text-sm text-fg outline-none data-[highlighted]:bg-surface-hover"
 						>
-							<DropdownMenu.ItemIndicator className="absolute left-2.5"><Check size={14} className="text-blue-600" /></DropdownMenu.ItemIndicator>
+							<DropdownMenu.ItemIndicator className="absolute start-2.5"><Check size={14} className="text-accent-text" /></DropdownMenu.ItemIndicator>
 							{labels[category]}
 						</DropdownMenu.CheckboxItem>
 					))}
 					{active && (
 						<>
-							<DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
-							<DropdownMenu.Item onSelect={() => update([])} className="cursor-pointer rounded-lg px-3 py-2 text-sm text-neutral-700 outline-none data-[highlighted]:bg-neutral-100">{t("drive.clearFilter")}</DropdownMenu.Item>
+							<DropdownMenu.Separator className="my-1 h-px bg-line-subtle" />
+							<DropdownMenu.Item onSelect={() => update([])} className="cursor-pointer px-3 py-2 text-sm text-fg outline-none data-[highlighted]:bg-surface-hover">{t("drive.clearFilter")}</DropdownMenu.Item>
 						</>
 					)}
 				</DropdownMenu.Content>
