@@ -43,8 +43,8 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
   // reload with no message, so the buttons wait for hydration (false on the server, true once hydrated).
   const hydrated = useSyncExternalStore(subscribeToNothing, () => true, () => false);
   const runningRef = useRef(false);
-  // The pending conditional-mediation request, if any.
-  const autofillRef = useRef<Promise<void> | null>(null);
+  // The conditional-mediation request of this page, while it runs.
+  const autofillRef = useRef<{ stopped: boolean; done: Promise<void> } | null>(null);
 
   const finish = useCallback((redirect?: string) => {
     router.replace(redirect ?? "/inbox");
@@ -56,16 +56,19 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
   useEffect(() => {
     let cancelled = false;
     if (!browserSupportsWebAuthn()) return;
-    autofillRef.current = (async () => {
+    const run = { stopped: false, done: Promise.resolve() };
+    // Stopped by the effect cleanup or by a passkey button (`stopAutofill`).
+    const ended = () => cancelled || run.stopped;
+    run.done = (async () => {
       try {
         if (!(await browserSupportsWebAuthnAutofill())) return;
         const options = await requestPasskeyLoginOptions();
-        if (cancelled || !options.options || !options.ceremonyToken) return;
+        if (ended() || !options.options || !options.ceremonyToken) return;
         const response = await startAuthentication({
           optionsJSON: options.options as Parameters<typeof startAuthentication>[0]["optionsJSON"],
           useBrowserAutofill: true,
         });
-        if (cancelled || runningRef.current) return;
+        if (ended() || runningRef.current) return;
         runningRef.current = true;
         setLoading(true);
         const { ok, data } = await finishPasskeyLogin(options, response);
@@ -74,9 +77,11 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
         // No credential chosen, a cancelled prompt, or an unavailable
         // autofill surface is not an error on page load.
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!ended()) setLoading(false);
+        if (autofillRef.current === run) autofillRef.current = null;
       }
     })();
+    autofillRef.current = run;
     return () => {
       cancelled = true;
       autofillRef.current = null;
@@ -84,14 +89,16 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
     };
   }, [finish]);
 
-  // A modal passkey request started while the conditional one is still pending can hang until the
-  // browser finishes aborting it, so cancel that one and wait for it to settle first.
+  // A passkey button must not race the conditional request: if that one opened its ceremony after the
+  // button's, it would abort the button's (one WebAuthn call at a time). Stop it from opening one, abort
+  // it if it already has, and give it a moment to settle (it may still be fetching its options).
   async function stopAutofill() {
-    const pending = autofillRef.current;
-    if (!pending) return;
+    const run = autofillRef.current;
+    if (!run) return;
     autofillRef.current = null;
+    run.stopped = true;
     WebAuthnAbortService.cancelCeremony();
-    await pending;
+    await Promise.race([run.done, new Promise((resolve) => setTimeout(resolve, 1000))]);
   }
 
   async function onPasskey() {
