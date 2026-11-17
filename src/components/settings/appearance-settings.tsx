@@ -16,6 +16,8 @@ const OPTIONS: { value: ThemePreference; labelKey: TranslationKey }[] = [
 	{ value: "system", labelKey: "settings.theme.system" },
 	{ value: "light", labelKey: "settings.theme.light" },
 	{ value: "dark", labelKey: "settings.theme.dark" },
+	{ value: "light-hc", labelKey: "settings.theme.lightHc" },
+	{ value: "dark-hc", labelKey: "settings.theme.darkHc" },
 ];
 
 function subscribeThemePreference(onChange: () => void) {
