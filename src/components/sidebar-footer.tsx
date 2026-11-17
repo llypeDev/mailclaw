@@ -1,5 +1,6 @@
 "use client";
 
+import { Kbd } from "@orangesys/ui";
 import packageJson from "../../package.json";
 import { useSidebar } from "./sidebar-state";
 import { useShortcuts } from "./shortcuts";
@@ -18,15 +19,13 @@ export function SidebarFooter() {
         <button
           type="button"
           onClick={openHelpModal}
-          className="flex items-center justify-between w-full px-2.5 py-1.5 text-xs text-neutral-500 hover:text-neutral-800 hover:bg-neutral-200/60 rounded-lg transition-colors"
+          className="flex items-center justify-between w-full px-2.5 py-1.5 text-xs text-fg-subtle hover:text-fg hover:bg-surface-hover transition-colors"
         >
           <span className="flex items-center gap-1.5">
-            <Keyboard className="w-3.5 h-3.5 text-neutral-400" />
+            <Keyboard className="w-3.5 h-3.5" />
             {t("navigation.shortcuts")}
           </span>
-          <kbd className="px-1.5 py-0.5 font-mono text-[10px] bg-white border border-neutral-200 rounded text-neutral-500 shadow-2xs">
-            ?
-          </kbd>
+          <Kbd size="sm">?</Kbd>
         </button>
       )}
       <PoweredBy />
@@ -38,12 +37,12 @@ export function SidebarFooter() {
 export function PoweredBy({ className = "px-1" }: { className?: string }) {
 	const { t } = useLanguage();
 	return (
-      <p className={`${className} text-[11px] text-neutral-500`}>
+      <p className={`${className} font-mono text-[11px] text-fg-subtle`}>
         {t("navigation.poweredBy")}{" "}
         <a
           href={`https://mailclaw.co/?ref=${typeof window !== "undefined" ? location.hostname : ""}&v=${packageJson.version}`}
           target="_blank"
-          className="hover:underline text-neutral-500"
+          className="hover:underline hover:text-fg"
           rel="noreferrer"
         >
           Mailclaw v{packageJson.version}

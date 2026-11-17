@@ -48,7 +48,7 @@ export function ForgotPasswordClient() {
 					: t("auth.forgot.description")
 			}
 			footer={
-				<Link href="/login" className="text-sm text-neutral-500 hover:text-neutral-800">
+				<Link href="/login" className="text-sm text-fg-subtle hover:text-fg">
 					{t("auth.backToSignIn")}
 				</Link>
 			}
@@ -60,10 +60,10 @@ export function ForgotPasswordClient() {
 						<Input id="email" name="email" type="email" autoComplete="email" required autoFocus />
 					</div>
 					{error && (
-						<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>
+						<p role="alert" className="border border-line border-s-[3px] border-s-danger bg-danger-subtle px-4 py-3 text-sm font-medium text-danger-text">{error}</p>
 					)}
 					<TurnstileField resetSignal={turnstileReset} />
-					<Button type="submit" className="h-11 w-full rounded-full px-6 active:scale-[0.98]" disabled={loading}>
+					<Button type="submit" className="h-11 w-full px-6" disabled={loading}>
 						{loading ? t("auth.sending") : t("auth.sendReset")}
 					</Button>
 				</form>

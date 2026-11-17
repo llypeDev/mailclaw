@@ -48,8 +48,8 @@ export default async function HomePage() {
 
   return (
     <HomeAuthProvider initialUser={initialUser}>
-    <div className="min-h-dvh bg-[#f6f8fc] text-neutral-900">
-      <header className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <div className="min-h-dvh bg-canvas text-fg">
+      <header className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between border-b border-line-subtle px-4 sm:px-6 lg:px-8">
         <Link
           href="/"
           className="flex items-center gap-3"
@@ -57,14 +57,14 @@ export default async function HomePage() {
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- branding icon (API route or small static PNG) at a fixed size */}
           <img src={branding.hasCustomIcon ? "/api/branding/icon" : "/icon-96.png"} height={32} width={32} alt="" />
-          <span className="hidden text-base font-semibold tracking-tight sm:inline">
+          <span className="hidden font-display text-lg font-bold tracking-tight sm:inline">
             {branding.appName}
           </span>
         </Link>
 
-        {/* <nav className="hidden items-center gap-6 text-sm font-medium text-neutral-600 md:flex">
+        {/* <nav className="hidden items-center gap-6 text-sm font-medium text-fg-muted md:flex">
 					{landingNavItems.map((item) => (
-						<a key={item.href} href={item.href} className="transition-colors hover:text-neutral-950">
+						<a key={item.href} href={item.href} className="transition-colors hover:text-fg">
 							{item.label}
 						</a>
 					))}
@@ -81,27 +81,29 @@ export default async function HomePage() {
       <main>
         <section className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 pb-12 pt-8 sm:px-6 md:pt-16 lg:grid-cols-[0.86fr_1.14fr] lg:px-8">
           <div className="flex max-w-2xl flex-col justify-center">
-            <div className="mb-6 flex w-fit items-center gap-2 text-sm font-medium text-blue-800">
-              <ShieldCheck className="h-4 w-4" />
+            {/* An eyebrow in the Orange style: square accent marker, uppercase display type. */}
+            <p className="mb-6 flex w-fit items-center gap-2 font-display text-xs font-medium uppercase tracking-[0.14em] text-accent-text">
+              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
               {t("home.badge")}
-            </div>
-            <h1 className="max-w-[12ch] text-5xl font-semibold leading-[0.96] tracking-tight text-neutral-950 sm:text-6xl lg:text-7xl">
+            </p>
+            <h1 className="max-w-[12ch] font-display text-5xl font-semibold leading-[0.96] tracking-tight text-fg sm:text-6xl lg:text-7xl">
               {t("home.headline")}
             </h1>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-neutral-600">
+            <p className="mt-6 max-w-xl text-lg leading-8 text-fg-muted">
               {t("home.subheadline")}
             </p>
             <HomeHeroActions />
           </div>
 
-          <div className="relative min-h-[520px] overflow-hidden rounded-[2rem] border border-neutral-100 shadow-[0_24px_70px_-45px_rgba(30,64,175,0.55)]">
-            <div className="grid h-full min-h-[520px] grid-cols-[176px_1fr] bg-white">
-              <aside className="hidden flex-col gap-2 bg-[#f6f8fc] px-3 py-5 sm:flex">
-                <div className="mb-4 flex items-center gap-3 px-3 text-neutral-700">
+          {/* A static picture of the app, drawn with the same tokens as the real shell. */}
+          <div className="relative min-h-[520px] overflow-hidden border border-line bg-canvas-subtle bg-[linear-gradient(var(--or-color-grid-line)_1px,transparent_1px),linear-gradient(90deg,var(--or-color-grid-line)_1px,transparent_1px)] bg-[size:48px_48px] bg-[position:-1px_-1px]">
+            <div className="grid h-full min-h-[520px] grid-cols-[176px_1fr]">
+              <aside className="hidden flex-col gap-px border-e border-line-subtle bg-canvas py-5 pe-3 sm:flex">
+                <div className="mb-4 flex items-center gap-3 px-4 text-fg">
                   <Inbox className="h-5 w-5" />
-                  <span className="font-semibold">{t("home.mockMail")}</span>
+                  <span className="font-display font-bold">{t("home.mockMail")}</span>
                 </div>
-                <div className="mb-3 flex h-12 w-fit items-center gap-2 rounded-2xl bg-blue-100 px-5 text-sm font-semibold text-blue-950 shadow-sm">
+                <div className="mb-3 ms-3 flex h-12 w-fit items-center gap-2 bg-accent px-5 font-display text-sm font-semibold text-on-accent">
                   <Mail className="h-4 w-4" />
                   {t("navigation.compose")}
                 </div>
@@ -110,10 +112,10 @@ export default async function HomePage() {
                   return (
                     <div
                       key={item.labelKey}
-                      className={`flex h-9 items-center justify-between rounded-r-full px-3 text-sm font-medium ${
+                      className={`relative flex h-9 items-center justify-between ps-4 pe-3 text-sm font-medium ${
                         item.active
-                          ? "bg-blue-100 text-blue-950"
-                          : "text-neutral-600"
+                          ? "bg-accent-subtle font-semibold text-accent-text before:absolute before:inset-y-0 before:start-0 before:w-0.5 before:bg-accent"
+                          : "text-fg-muted"
                       }`}
                     >
                       <span className="flex items-center gap-3">
@@ -121,7 +123,7 @@ export default async function HomePage() {
                         {t(item.labelKey)}
                       </span>
                       {item.count && (
-                        <span className="text-xs text-blue-800">
+                        <span className="text-xs tabular-nums">
                           {item.count}
                         </span>
                       )}
@@ -131,50 +133,50 @@ export default async function HomePage() {
               </aside>
 
               <div className="col-span-2 flex min-w-0 flex-col sm:col-span-1">
-                <div className="flex h-16 items-center gap-3 bg-[#f6f8fc] px-4">
-                  <div className="flex h-12 flex-1 items-center gap-3 rounded-full bg-[#eaf1fb] px-4 text-neutral-600">
+                <div className="flex h-16 items-center gap-3 bg-canvas px-4">
+                  <div className="flex h-11 flex-1 items-center gap-3 border border-line-control bg-surface px-4 text-fg-subtle">
                     <Search className="h-5 w-5" />
                     <span className="text-[15px]">{t("search.mail")}</span>
                   </div>
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-inverse text-fg-inverse">
                     <Mail className="h-4 w-4" />
                   </div>
                 </div>
 
-                <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-3xl bg-white">
-                  <div className="flex h-14 items-center justify-between border-b border-neutral-200 px-6">
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-s border-t border-line-subtle bg-surface">
+                  <div className="flex h-14 items-center justify-between border-b border-line px-6">
                     <div className="flex items-center gap-3">
-                      <h2 className="text-xl font-medium text-neutral-800">
+                      <h2 className="font-display text-xl font-bold tracking-tight text-fg">
                         {t("home.mockPriority")}
                       </h2>
-                      <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600">
+                      <span className="border border-line px-2 py-0.5 font-mono text-xs font-medium tabular-nums text-fg-muted">
                         18
                       </span>
                     </div>
-                    <span className="hidden text-sm font-medium text-neutral-500 md:inline">
+                    <span className="hidden font-mono text-xs text-fg-subtle md:inline">
                       {t("home.mockUpdated")}
                     </span>
                   </div>
-                  <div className="divide-y divide-neutral-100">
+                  <div className="divide-y divide-line-subtle">
                     {heroMessages.map((message) => (
                       <div
                         key={message.sender}
-                        className="grid min-h-14 grid-cols-[28px_minmax(112px,180px)_1fr_auto] items-center gap-3 px-5 text-sm hover:bg-[#f2f6fc]"
+                        className="grid min-h-14 grid-cols-[28px_minmax(112px,180px)_1fr_auto] items-center gap-3 px-5 text-sm"
                       >
-                        <message.icon className="h-4 w-4 text-neutral-300" />
-                        <span className="truncate font-semibold text-neutral-900">
+                        <message.icon className="h-4 w-4 text-fg-disabled" />
+                        <span className="truncate font-semibold text-fg">
                           {message.sender}
                         </span>
-                        <span className="truncate text-neutral-600">
-                          <span className="font-medium text-neutral-900">
+                        <span className="truncate text-fg-muted">
+                          <span className="font-medium text-fg">
                             {t(message.subjectKey)}
                           </span>
-                          <span className="hidden text-neutral-500 md:inline">
+                          <span className="hidden text-fg-subtle md:inline">
                             {" "}
                             - {t(message.previewKey)}
                           </span>
                         </span>
-                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                        <span className="border border-line px-2 py-0.5 font-display text-[11px] font-medium uppercase tracking-[0.08em] text-fg-muted">
                           {t(message.badgeKey)}
                         </span>
                       </div>
@@ -187,30 +189,30 @@ export default async function HomePage() {
         </section>
 
         {/* <section id="workflow" className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 pb-16 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-8">
-					<div id="api" className="rounded-[1.75rem] bg-white p-6 shadow-sm shadow-neutral-200/50">
+					<div id="api" className="border border-line bg-surface p-6">
 						<div className="mb-6 flex items-center justify-between gap-4">
 							<div>
-								<p className="text-sm font-semibold text-blue-700">Operational view</p>
+								<p className="text-sm font-semibold text-accent-text">Operational view</p>
 								<h2 className="mt-1 text-2xl font-semibold tracking-tight">From DNS to delivery in one place.</h2>
 							</div>
-							<Clock3 className="hidden h-6 w-6 text-neutral-400 sm:block" />
+							<Clock3 className="hidden h-6 w-6 text-fg-subtle sm:block" />
 						</div>
 						<div className="grid gap-4 sm:grid-cols-3">
 							{inboxStats.map((stat) => (
-								<div key={stat.label} className="border-t border-neutral-200 pt-4">
-									<p className="no-font-mono text-2xl font-semibold text-neutral-950">{stat.value}</p>
-									<p className="mt-1 text-sm text-neutral-500">{stat.label}</p>
+								<div key={stat.label} className="border-t border-line pt-4">
+									<p className="font-display text-2xl font-semibold text-fg">{stat.value}</p>
+									<p className="mt-1 text-sm text-fg-subtle">{stat.label}</p>
 								</div>
 							))}
 						</div>
 					</div>
 
-					<div id="domains" className="rounded-[1.75rem] bg-white p-6 shadow-sm shadow-neutral-200/50">
-						<p className="text-sm font-semibold text-blue-700">Delivery signals</p>
+					<div id="domains" className="border border-line bg-surface p-6">
+						<p className="text-sm font-semibold text-accent-text">Delivery signals</p>
 						<div className="mt-5 space-y-4">
 							{deliverySignals.map((signal) => (
-								<div key={signal} className="flex items-center gap-3 text-sm font-medium text-neutral-700">
-									<CheckCircle2 className="h-5 w-5 text-blue-600" />
+								<div key={signal} className="flex items-center gap-3 text-sm font-medium text-fg-muted">
+									<CheckCircle2 className="h-5 w-5 text-accent-text" />
 									<span>{signal}</span>
 								</div>
 							))}

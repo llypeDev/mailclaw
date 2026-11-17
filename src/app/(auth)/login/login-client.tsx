@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Divider } from "@orangesys/ui";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
 	browserSupportsWebAuthn,
@@ -224,7 +225,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
             <div className="space-y-4">
               <Button
                 type="button"
-                className="h-11 w-full rounded-full"
+                className="h-11 w-full"
                 disabled={loading}
                 onClick={() => void onPasskeyMfa()}
               >
@@ -232,7 +233,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
                 {t("passkey.usePasskey")}
               </Button>
               {hasCodeMethods && (
-                <p className="text-center text-xs uppercase tracking-wide text-neutral-400">{t("passkey.orCode")}</p>
+                <Divider label={t("passkey.orCode")} spacing={0} />
               )}
             </div>
           )}
@@ -257,22 +258,22 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
                   required={hasCodeMethods}
                 />
               </div>
-              <Button type="submit" className="h-11 w-full rounded-full px-6 active:scale-[0.98]" disabled={loading}>
+              <Button type="submit" className="h-11 w-full px-6" disabled={loading}>
                 {loading ? t("auth.verifying") : t("auth.verify")}
               </Button>
             </>
           )}
           {error && (
-            <p id="mfa-error" role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <p id="mfa-error" role="alert" className="border border-line border-s-[3px] border-s-danger bg-danger-subtle px-4 py-3 text-sm font-medium text-danger-text">
               {error}
             </p>
           )}
           {!hasCodeMethods && (
-            <p className="text-xs leading-5 text-neutral-500">{t("passkey.lostAllHint")}</p>
+            <p className="text-xs leading-5 text-fg-subtle">{t("passkey.lostAllHint")}</p>
           )}
           <button
             type="button"
-            className="w-full text-center text-sm text-neutral-500 hover:text-neutral-800"
+            className="w-full text-center text-sm text-fg-subtle hover:text-fg"
             onClick={() => {
               setChallengeToken(null);
               setMethods([]);
@@ -313,7 +314,7 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="password">{t("auth.password")}</Label>
-            <Link href="/forgot-password" className="text-xs font-medium text-blue-600 hover:underline">
+            <Link href="/forgot-password" className="text-xs font-medium text-accent-text hover:underline">
               {t("auth.forgotPassword")}
             </Link>
           </div>
@@ -328,23 +329,23 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
           />
         </div>
         {error && (
-          <p id="login-error" role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          <p id="login-error" role="alert" className="border border-line border-s-[3px] border-s-danger bg-danger-subtle px-4 py-3 text-sm font-medium text-danger-text">
             {error}
           </p>
         )}
         <TurnstileField resetSignal={turnstileReset} />
         <Button
           type="submit"
-          className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+          className="h-11 w-full px-6"
           disabled={loading || !hydrated}
         >
           {loading ? t("auth.signingIn") : t("auth.signIn")}
         </Button>
-        <p className="text-center text-xs uppercase tracking-wide text-neutral-400">{t("passkey.or")}</p>
+        <Divider label={t("passkey.or")} spacing={0} />
         <Button
           type="button"
           variant="outline"
-          className="h-11 w-full rounded-full"
+          className="h-11 w-full"
           disabled={loading || !hydrated}
           onClick={() => void onPasskey()}
         >
@@ -352,10 +353,10 @@ export function LoginClient({ adding = false }: { adding?: boolean }) {
           {t("passkey.signIn")}
         </Button>
         <details className="text-center">
-          <summary className="cursor-pointer list-none text-xs font-medium text-neutral-500 underline decoration-neutral-300 underline-offset-2 hover:text-neutral-800 [&::-webkit-details-marker]:hidden">
+          <summary className="cursor-pointer list-none text-xs font-medium text-fg-subtle underline decoration-line-strong underline-offset-2 hover:text-fg [&::-webkit-details-marker]:hidden">
             {t("passkey.cantUse")}
           </summary>
-          <p className="mt-2 rounded-2xl border border-neutral-100 bg-neutral-50/60 px-4 py-3 text-left text-xs leading-5 text-neutral-500">
+          <p className="mt-2 border border-line-subtle bg-canvas-subtle px-4 py-3 text-start text-xs leading-5 text-fg-subtle">
             {t("passkey.lostAllHint")}
           </p>
         </details>

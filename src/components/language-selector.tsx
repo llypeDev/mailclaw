@@ -15,7 +15,7 @@ export function LanguageSelector({ variant = "field" }: { variant?: "field" | "t
 
 	if (variant === "text") {
 		return (
-			<Select id={id} aria-label={t("language.label")} value={locale} onChange={(event) => setLocale(resolveLocale(event.target.value))} containerClassName="contents" className="w-auto gap-1 rounded-md py-2 text-sm font-medium text-neutral-600 hover:text-neutral-950">
+			<Select id={id} aria-label={t("language.label")} value={locale} onChange={(event) => setLocale(resolveLocale(event.target.value))} containerClassName="contents" className="w-auto gap-1 py-2 text-sm font-medium text-fg-muted hover:text-fg">
 				{options}
 			</Select>
 		);
@@ -23,8 +23,8 @@ export function LanguageSelector({ variant = "field" }: { variant?: "field" | "t
 
 	return (
 		<div className="flex flex-col gap-1 px-1">
-			<label htmlFor={id} className="text-xs text-neutral-600">{t("language.label")}</label>
-			<Select id={id} value={locale} onChange={(event) => setLocale(resolveLocale(event.target.value))} containerClassName="w-full rounded-lg border-neutral-300 bg-white" className="min-h-11 text-sm text-neutral-800">
+			<label htmlFor={id} className="font-display text-xs font-medium text-fg-muted">{t("language.label")}</label>
+			<Select id={id} value={locale} onChange={(event) => setLocale(resolveLocale(event.target.value))} containerClassName="w-full" className="min-h-11 text-sm text-fg">
 				{options}
 			</Select>
 		</div>

@@ -129,17 +129,17 @@ export function OnboardingClient() {
 				{ label: t("onboarding.stepMailbox"), active: step === 2 },
 			]}
 			footer={
-				<span className="inline-flex items-center gap-2 text-neutral-500">
+				<span className="inline-flex items-center gap-2 text-fg-subtle">
 					{t("onboarding.completesInInbox")}
-					<ArrowRight className="h-4 w-4" />
+					<ArrowRight className="h-4 w-4 rtl:-scale-x-100" />
 				</span>
 			}
 		>
 			<div className="space-y-5">
 				{step === 1 && (
 					<>
-						<p className="rounded-2xl bg-[#eaf1fb] px-4 py-3 text-sm leading-6 text-neutral-700">
-							{t("onboarding.cloudflareDns", { token: "\u0001" }).split("\u0001").flatMap((part, index) => index === 0 ? [part] : [<code key={index} className="no-font-mono text-xs font-semibold text-blue-800">CF_TOKEN</code>, part])}
+						<p className="border border-line border-s-[3px] border-s-info bg-info-subtle px-4 py-3 text-sm leading-6 text-fg">
+							{t("onboarding.cloudflareDns", { token: "\u0001" }).split("\u0001").flatMap((part, index) => index === 0 ? [part] : [<code key={index} className="text-xs font-semibold text-info-text">CF_TOKEN</code>, part])}
 						</p>
 						<div className="space-y-2">
 							<Label htmlFor="domain">{t("onboarding.domain")}</Label>
@@ -158,10 +158,10 @@ export function OnboardingClient() {
 								placeholder="example.com"
 							/>
 						</div>
-						<div className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 px-4 py-3">
+						<div className="flex items-center justify-between gap-4 border border-line-subtle bg-canvas-subtle px-4 py-3">
 							<div>
 								<Label htmlFor="onboarding-skip-dns">{t("setup.skipDns")}</Label>
-								<p className="mt-1 text-xs leading-5 text-neutral-500">
+								<p className="mt-1 text-xs leading-5 text-fg-subtle">
 									{skipDns ? t("setup.skipDnsOn") : t("setup.skipDnsHint")}
 								</p>
 							</div>
@@ -176,10 +176,10 @@ export function OnboardingClient() {
 							/>
 						</div>
 						{!skipDns && (
-						<div className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 px-4 py-3">
+						<div className="flex items-center justify-between gap-4 border border-line-subtle bg-canvas-subtle px-4 py-3">
 							<div>
 								<Label htmlFor="onboarding-enable-sending">{t("setup.enableSending")}</Label>
-								<p className="mt-1 text-xs leading-5 text-neutral-500">
+								<p className="mt-1 text-xs leading-5 text-fg-subtle">
 									{domainChecking
 										? t("setup.checkingCloudflare")
 										: domainCheck
@@ -190,7 +190,7 @@ export function OnboardingClient() {
 								</p>
 							</div>
 							{domainChecking ? (
-								<LoaderCircle className="h-4 w-4 animate-spin text-neutral-500" />
+								<LoaderCircle className="h-4 w-4 animate-spin text-fg-subtle" />
 							) : (
 								<Switch
 									id="onboarding-enable-sending"
@@ -202,13 +202,13 @@ export function OnboardingClient() {
 						</div>
 						)}
 						{domainCheck && !skipDns && (
-							<div className="flex items-center gap-3 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">
+							<div className="flex items-center gap-3 border border-line border-s-[3px] border-s-success bg-success-subtle px-4 py-3 text-sm text-success-text">
 								<CheckCircle2 className="h-4 w-4" />
 								{t("setup.domainFound", { zone: domainCheck.zone.name })}
 							</div>
 						)}
 						{mxConflict && (
-							<div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-900">
+							<div className="space-y-3 border border-line border-s-[3px] border-s-warning bg-warning-subtle px-4 py-4 text-warning-text">
 								<div className="flex items-start gap-3">
 									<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
 									<p className="text-sm leading-6">
@@ -218,7 +218,7 @@ export function OnboardingClient() {
 								<Button
 									onClick={() => void addDomain(true)}
 									disabled={loading}
-									className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+									className="h-11 w-full px-6"
 								>
 									{loading ? t("onboarding.replacingMx") : t("onboarding.deleteMxContinue")}
 								</Button>
@@ -228,7 +228,7 @@ export function OnboardingClient() {
 							<Button
 								onClick={() => void addDomain()}
 								disabled={!hostname || loading || domainChecking}
-								className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+								className="h-11 w-full px-6"
 							>
 								{loading ? t("onboarding.adding") : t("onboarding.addDomain")}
 							</Button>
@@ -246,20 +246,20 @@ export function OnboardingClient() {
 									onChange={(e) => setLocalPart(e.target.value)}
 									className="min-w-0"
 								/>
-								<span className="max-w-36 truncate text-sm font-medium text-neutral-500">@{hostname}</span>
+								<span className="max-w-36 truncate font-mono text-sm font-medium text-fg-subtle">@{hostname}</span>
 							</div>
 						</div>
 						<Button
 							onClick={addMailbox}
 							disabled={!localPart || loading}
-							className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+							className="h-11 w-full px-6"
 						>
 							{loading ? t("setup.creating") : t("onboarding.goToInbox")}
 						</Button>
 					</>
 				)}
 				{error && (
-					<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+					<p role="alert" className="border border-line border-s-[3px] border-s-danger bg-danger-subtle px-4 py-3 text-sm font-medium text-danger-text">
 						{error}
 					</p>
 				)}

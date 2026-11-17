@@ -82,7 +82,7 @@ export function PasskeySetupClient({ token }: { token: string }) {
 	if (!token) {
 		return (
 			<AuthShell icon={KeyRound} title={t("passkey.setupTitle")} description={t("passkey.setupDescription")}>
-				<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+				<p role="alert" className="border border-line border-s-[3px] border-s-danger bg-danger-subtle px-4 py-3 text-sm font-medium text-danger-text">
 					{t("authError.setupInvalid")}
 				</p>
 			</AuthShell>
@@ -106,13 +106,13 @@ export function PasskeySetupClient({ token }: { token: string }) {
 			}
 		>
 			{checking ? (
-				<p className="text-sm text-neutral-500">{t("common.loading")}</p>
+				<p className="text-sm text-fg-subtle">{t("common.loading")}</p>
 			) : linkError ? (
 				<div className="space-y-4">
-					<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+					<p role="alert" className="border border-line border-s-[3px] border-s-danger bg-danger-subtle px-4 py-3 text-sm font-medium text-danger-text">
 						{linkError}
 					</p>
-					<p className="text-sm leading-6 text-neutral-500">{t("passkey.setupLinkHelp")}</p>
+					<p className="text-sm leading-6 text-fg-subtle">{t("passkey.setupLinkHelp")}</p>
 				</div>
 			) : (
 				<form onSubmit={createPasskey} className="space-y-5">
@@ -127,17 +127,17 @@ export function PasskeySetupClient({ token }: { token: string }) {
 							placeholder={t("passkey.namePlaceholder")}
 							autoFocus
 						/>
-						<p className="text-xs leading-5 text-neutral-500">{t("passkey.nameHint")}</p>
+						<p className="text-xs leading-5 text-fg-subtle">{t("passkey.nameHint")}</p>
 					</div>
 					{error && (
-						<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+						<p role="alert" className="border border-line border-s-[3px] border-s-danger bg-danger-subtle px-4 py-3 text-sm font-medium text-danger-text">
 							{error}
 						</p>
 					)}
-					<Button type="submit" className="h-11 w-full rounded-full px-6 active:scale-[0.98]" disabled={loading}>
+					<Button type="submit" className="h-11 w-full px-6" disabled={loading}>
 						{loading ? t("passkey.waiting") : t("passkey.create")}
 					</Button>
-					<p className="text-xs leading-5 text-neutral-500">{t("passkey.createHint")}</p>
+					<p className="text-xs leading-5 text-fg-subtle">{t("passkey.createHint")}</p>
 				</form>
 			)}
 		</AuthShell>

@@ -45,7 +45,7 @@ export function ResetPasswordClient() {
 	if (!token) {
 		return (
 			<AuthShell icon={LockKeyhole} title={t("auth.reset.linkMissing")} description={t("auth.reset.linkMissingDescription")}>
-				<Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+				<Link href="/forgot-password" className="text-sm text-accent-text hover:underline">
 					{t("auth.reset.requestNew")}
 				</Link>
 			</AuthShell>
@@ -63,7 +63,7 @@ export function ResetPasswordClient() {
 			}
 			footer={
 				done ? (
-					<Link href="/login" className="text-sm font-medium text-blue-600 hover:underline">
+					<Link href="/login" className="text-sm font-medium text-accent-text hover:underline">
 						{t("auth.reset.goToSignIn")}
 					</Link>
 				) : undefined
@@ -97,9 +97,9 @@ export function ResetPasswordClient() {
 						/>
 					</div>
 					{error && (
-						<p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>
+						<p role="alert" className="border border-line border-s-[3px] border-s-danger bg-danger-subtle px-4 py-3 text-sm font-medium text-danger-text">{error}</p>
 					)}
-					<Button type="submit" className="h-11 w-full rounded-full px-6 active:scale-[0.98]" disabled={loading}>
+					<Button type="submit" className="h-11 w-full px-6" disabled={loading}>
 						{loading ? t("common.saving") : t("auth.reset.setNew")}
 					</Button>
 				</form>

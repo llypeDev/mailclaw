@@ -148,11 +148,11 @@ export function ReorderableList({ lists, storageKey, enabled = true }: Reorderab
 				);
 			})}
 			{drag && target && createPortal(
-				<div aria-hidden="true" className="pointer-events-none fixed z-[300] h-0.5 rounded-full bg-blue-600" style={{ left: drag.listLeft, width: drag.listWidth, top: target.lineY - 1 }} />,
+				<div aria-hidden="true" className="pointer-events-none fixed z-[300] h-0.5 bg-accent" style={{ left: drag.listLeft, width: drag.listWidth, top: target.lineY - 1 }} />,
 				document.body,
 			)}
 			{drag && createPortal(
-				<div aria-hidden="true" className="pointer-events-none fixed z-[301] cursor-grabbing overflow-hidden rounded-r-full bg-white opacity-90 shadow-lg ring-1 ring-neutral-200" style={{ left: drag.left, width: drag.width, top: drag.pointerY - drag.offsetY }}>
+				<div aria-hidden="true" className="pointer-events-none fixed z-[301] cursor-grabbing overflow-hidden border border-line bg-surface-raised opacity-90 shadow-lg" style={{ left: drag.left, width: drag.width, top: drag.pointerY - drag.offsetY }}>
 					{nodes.get(drag.id)}
 				</div>,
 				document.body,

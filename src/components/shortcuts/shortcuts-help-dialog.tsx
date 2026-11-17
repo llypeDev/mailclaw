@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useId, useRef } from "react";
+import { Eyebrow, Kbd } from "@orangesys/ui";
 import { X, Keyboard } from "@/components/icons";
 import { useLanguage } from "@/components/language-provider";
 import type { TranslationKey } from "@/lib/i18n/types";
@@ -19,7 +20,7 @@ function withKey(text: string, key: string) {
   return (
     <>
       {before}
-      <kbd className="px-1.5 py-0.5 bg-neutral-200 text-neutral-700 rounded font-mono">{key}</kbd>
+      <Kbd size="sm">{key}</Kbd>
       {after}
     </>
   );
@@ -61,7 +62,7 @@ function ShortcutsHelpDialogContent({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 dark:bg-black/55 backdrop-blur-xs animate-in fade-in duration-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay animate-in fade-in duration-100">
       <div
         className="fixed inset-0"
         onClick={onClose}
@@ -77,19 +78,19 @@ function ShortcutsHelpDialogContent({
           event.stopPropagation();
           onClose();
         }}
-        className="relative w-full max-w-2xl bg-white border border-neutral-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10 max-h-[85vh]"
+        className="relative w-full max-w-2xl bg-surface-raised text-fg border border-line shadow-lg overflow-hidden flex flex-col z-10 max-h-[85vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+            <div className="p-1.5 bg-accent-subtle text-accent-text">
               <Keyboard className="w-5 h-5" />
             </div>
             <div>
-              <h2 id={titleId} className="text-base font-semibold text-neutral-900">
+              <h2 id={titleId} className="font-display text-base font-bold text-fg">
                 {t("shortcutsHelp.title")}
               </h2>
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-fg-subtle">
                 {t("shortcutsHelp.subtitle")}
               </p>
             </div>
@@ -99,7 +100,7 @@ function ShortcutsHelpDialogContent({
             type="button"
             onClick={onClose}
             aria-label={t("shortcutsHelp.close")}
-            className="text-neutral-400 hover:text-neutral-700 p-1.5 rounded-lg hover:bg-neutral-100 transition-colors"
+            className="text-fg-subtle hover:text-fg p-1.5 hover:bg-surface-hover transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -109,21 +110,19 @@ function ShortcutsHelpDialogContent({
         <div className="overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           {Object.entries(grouped).map(([category, items]) => (
             <div key={category} className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 border-b border-neutral-100 pb-1.5">
+              <Eyebrow as="h3" className="flex border-b border-line pb-1.5">
                 {t(`shortcut.category.${category}` as TranslationKey)}
-              </h3>
+              </Eyebrow>
               <div className="space-y-2">
                 {items.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between text-sm"
+                    className="flex items-center justify-between gap-3 text-sm"
                   >
-                    <span className="text-neutral-700">
+                    <span className="text-fg-muted">
                       {item.label}
                     </span>
-                    <kbd className="px-2 py-0.5 text-xs font-mono font-medium text-neutral-600 bg-neutral-100 border border-neutral-200 rounded-md shadow-2xs">
-                      {formatKey(item)}
-                    </kbd>
+                    <Kbd size="sm" className="shrink-0">{formatKey(item)}</Kbd>
                   </div>
                 ))}
               </div>
@@ -132,7 +131,7 @@ function ShortcutsHelpDialogContent({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between text-xs text-neutral-500">
+        <div className="px-6 py-3 bg-canvas-subtle border-t border-line flex items-center justify-between text-xs text-fg-subtle">
           <span>{withKey(t("shortcutsHelp.pressToToggle", { key: "{key}" }), "?")}</span>
           <span>{withKey(t("shortcutsHelp.pressToClose", { key: "{key}" }), "ESC")}</span>
         </div>

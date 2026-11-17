@@ -119,7 +119,7 @@ export function LoadingTransition({ children, ready }: LoadingTransitionProps) {
 
 	return (
 		<PageLoadingContext.Provider value={loadingContext}>
-			<div className="relative min-h-dvh bg-[#f6f8fc]">
+			<div className="relative min-h-dvh bg-canvas">
 				<style dangerouslySetInnerHTML={{ __html: SPLASH_GUARD_STYLE }} />
 				<script dangerouslySetInnerHTML={{ __html: SPLASH_GUARD_SCRIPT }} suppressHydrationWarning />
 				{showTopLoadingBar && <RouteLoadingBar />}
@@ -133,7 +133,7 @@ export function LoadingTransition({ children, ready }: LoadingTransitionProps) {
 				)}
 				<div
 					role="status"
-					className={`splash-overlay fixed inset-0 z-[100] flex items-center justify-center bg-[#f6f8fc] transition-opacity duration-300 ${
+					className={`splash-overlay fixed inset-0 z-[100] flex items-center justify-center bg-canvas transition-opacity duration-300 motion-reduce:transition-none ${
 						loaderVisible ? "opacity-100" : "pointer-events-none opacity-0"
 					}`}
 				>
@@ -146,9 +146,9 @@ export function LoadingTransition({ children, ready }: LoadingTransitionProps) {
 							className="h-20 w-20 object-contain"
 						/>
 						<div className="w-full">
-							<div className="h-1.5 overflow-hidden rounded-full bg-blue-100">
+							<div className="h-1 overflow-hidden bg-line-subtle">
 								<div
-									className="h-full rounded-full bg-blue-600 transition-[width] duration-200 ease-out"
+									className="h-full bg-accent transition-[width] duration-200 ease-out motion-reduce:transition-none"
 									style={{ width: `${progress}%` }}
 								/>
 							</div>

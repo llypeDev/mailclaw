@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Kbd } from "@orangesys/ui";
 import type { CommandItem } from "./types";
 
 interface CommandPaletteItemProps {
@@ -29,10 +30,10 @@ export function CommandPaletteItem({
       tabIndex={-1}
       onClick={onSelect}
       onMouseEnter={onHover}
-      className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between transition-colors ${
+      className={`relative w-full text-start px-3 py-2.5 flex items-center justify-between transition-colors ${
         isActive
-          ? "bg-blue-600 text-white"
-          : "text-neutral-800 hover:bg-neutral-100"
+          ? "bg-accent-subtle text-accent-text before:absolute before:inset-y-0 before:start-0 before:w-0.5 before:bg-accent"
+          : "text-fg hover:bg-surface-hover"
       }`}
     >
       <div className="flex items-center gap-3 min-w-0">
@@ -40,8 +41,8 @@ export function CommandPaletteItem({
           <Icon
             className={`w-4 h-4 shrink-0 ${
               isActive
-                ? "text-white"
-                : "text-neutral-500"
+                ? "text-accent-text"
+                : "text-fg-subtle"
             }`}
           />
         )}
@@ -49,10 +50,10 @@ export function CommandPaletteItem({
           <span className="text-sm font-medium">{item.title}</span>
           {item.subtitle && (
             <span
-              className={`ml-2 text-xs truncate ${
+              className={`ms-2 text-xs truncate ${
                 isActive
-                  ? "text-white"
-                  : "text-neutral-500"
+                  ? "text-accent-text"
+                  : "text-fg-subtle"
               }`}
             >
               {item.subtitle}
@@ -61,15 +62,7 @@ export function CommandPaletteItem({
         </div>
       </div>
       {item.shortcut && (
-        <kbd
-          className={`text-xs px-2 py-0.5 rounded-md font-mono font-medium shrink-0 ${
-            isActive
-              ? "bg-blue-700 text-white"
-              : "bg-neutral-100 text-neutral-500 border border-neutral-200"
-          }`}
-        >
-          {item.shortcut}
-        </kbd>
+        <Kbd size="sm" className="shrink-0">{item.shortcut}</Kbd>
       )}
     </button>
   );

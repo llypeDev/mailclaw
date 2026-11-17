@@ -17,14 +17,14 @@ export function ErrorScreen({ icon, title, description, digest, fullPage, childr
 			role="alert"
 			className={cn(
 				"flex w-full flex-col items-center justify-center px-6 py-16 text-center",
-				fullPage ? "min-h-dvh bg-white" : "h-full min-h-[50vh]",
+				fullPage ? "min-h-dvh bg-canvas" : "h-full min-h-[50vh]",
 			)}
 		>
-			<div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-500">{icon}</div>
-			<h1 className="text-xl font-semibold text-neutral-900">{title}</h1>
-			<p className="mt-2 max-w-sm text-sm text-neutral-500">{description}</p>
+			<div className="mb-5 flex h-12 w-12 items-center justify-center border border-line bg-surface text-fg-subtle">{icon}</div>
+			<h1 className="font-display text-xl font-bold tracking-tight text-fg">{title}</h1>
+			<p className="mt-2 max-w-sm text-sm text-fg-muted">{description}</p>
 			{children && <div className="mt-6 flex flex-wrap items-center justify-center gap-2">{children}</div>}
-			{digest && <p className="mt-8 font-mono text-xs text-neutral-400">{t("errorPage.reference", { digest })}</p>}
+			{digest && <p className="mt-8 font-mono text-xs text-fg-subtle">{t("errorPage.reference", { digest })}</p>}
 		</div>
 	);
 }

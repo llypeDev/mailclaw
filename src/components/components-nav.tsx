@@ -39,15 +39,18 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
   const Icon = link.icon;
   if (!Icon) return null;
   const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+  // Square rows; the current page is accent-subtle with a 2px accent bar on the start edge.
   const classes = cn(
-    "flex h-9 items-center gap-3 rounded-r-full text-sm text-neutral-700 transition-colors max-md:min-h-11 max-md:text-base",
-    minimal && "relative mx-auto w-10 justify-center rounded-full px-0",
-    active ? "bg-blue-100 text-blue-900 font-semibold" : "hover:bg-neutral-200/60",
-    dragOver && "bg-blue-50 text-blue-900 ring-1 ring-blue-200",
+    "relative flex h-9 items-center gap-3 text-sm text-fg-muted transition-colors max-md:min-h-11 max-md:text-base",
+    minimal && "mx-auto w-10 justify-center px-0",
+    active
+      ? "bg-accent-subtle font-semibold text-accent-text before:absolute before:inset-y-0 before:start-0 before:w-0.5 before:bg-accent"
+      : "hover:bg-surface-hover hover:text-fg",
+    dragOver && "bg-accent-subtle text-accent-text ring-1 ring-inset ring-accent-border",
     link.primary &&
-    "mb-3 h-12 w-fit rounded-2xl bg-blue-100 px-5 text-blue-950 shadow-sm hover:bg-blue-200",
+    "mb-3 h-12 w-fit bg-accent px-5 font-display font-semibold text-on-accent before:hidden hover:bg-accent-hover hover:text-on-accent",
     link.count && "font-semibold",
-    link.primary && minimal && "h-11 w-11 rounded-2xl px-0",
+    link.primary && minimal && "h-11 w-11 px-0",
     wrap && !minimal && "h-auto min-h-9 items-start py-2",
   );
   const dropProps = link.onMessageDrop
@@ -73,7 +76,7 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
       <button
         type="button"
         onClick={() => openComposer()}
-        className={cn(!minimal && "ml-3", classes)}
+        className={cn(!minimal && "ms-3", classes)}
         aria-label={minimal ? link.label : undefined}
         {...dropProps}
       >
@@ -85,12 +88,12 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
         />
         {!minimal && <span className={cn("flex-1", typeof link.count === "number" && link.count > 0 && "font-semibold")}>{link.label}</span>}
         {!minimal && typeof link.count === "number" && link.count > 0 && (
-          <span className="ml-auto mr-3 rounded-full px-2 py-0.5 text-sm font-semibold text-neutral-700">
+          <span className="ms-auto me-3 px-2 py-0.5 text-sm font-semibold tabular-nums">
             {link.count > 99 ? "99+" : link.count}
           </span>
         )}
         {minimal && typeof link.count === "number" && link.count > 0 && (
-          <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-blue-600 px-1 text-center text-[10px] font-semibold leading-4 text-white">
+          <span className="absolute -end-1 -top-1 min-w-4 rounded-full bg-accent px-1 text-center text-[10px] font-semibold leading-4 tabular-nums text-on-accent">
             {link.count > 99 ? "99+" : link.count}
           </span>
         )}
@@ -115,7 +118,7 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
       onPointerEnter={prefetch}
       onFocus={prefetch}
       aria-label={minimal ? link.label : undefined}
-      className={cn(!minimal && "pl-6", classes)}
+      className={cn(!minimal && "ps-6", classes)}
       {...dropProps}
     >
       <Icon
@@ -127,12 +130,12 @@ export function NavItem({ link, iconClassName, labelClassName, wrap }: Props) {
       />
       {!minimal && <span className={cn("flex-1", wrap && "min-w-0 break-words leading-5 max-md:leading-6", labelClassName, typeof link.count === "number" && link.count > 0 && "font-semibold")}>{link.label}</span>}
       {!minimal && typeof link.count === "number" && link.count > 0 && (
-        <span className={cn("ml-auto mr-3 rounded-full px-2 py-0.5 text-sm font-semibold text-neutral-700", wrap && "shrink-0 py-0 leading-5")}>
+        <span className={cn("ms-auto me-3 px-2 py-0.5 text-sm font-semibold tabular-nums", wrap && "shrink-0 py-0 leading-5")}>
           {link.count > 99 ? "99+" : link.count}
         </span>
       )}
       {minimal && typeof link.count === "number" && link.count > 0 && (
-        <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-blue-600 px-1 text-center text-[10px] font-semibold leading-4 text-white">
+        <span className="absolute -end-1 -top-1 min-w-4 rounded-full bg-accent px-1 text-center text-[10px] font-semibold leading-4 tabular-nums text-on-accent">
           {link.count > 99 ? "99+" : link.count}
         </span>
       )}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Check, ChevronDown, LogOut, Settings, ShieldCheck, UserPlus, UserRound, UsersRound } from "@/components/icons";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Eyebrow } from "@orangesys/ui";
 import { useDismissible } from "@/components/use-dismissible";
 import { AppsMenu } from "@/components/apps-menu";
 import { useLanguage } from "@/components/language-provider";
@@ -69,7 +70,7 @@ function AccountAvatar({
 			<ProgressiveAvatarImage
 				src={avatarUrl}
 				alt={t("account.profilePicture", { name })}
-				className={`${sizeClass} shrink-0 rounded-full border border-neutral-200 object-cover`}
+				className={`${sizeClass} shrink-0 rounded-full border border-line-subtle object-cover`}
 				skipPreview={size === "small"}
 				onError={() => {
 					setImageFailed(true);
@@ -84,7 +85,7 @@ function AccountAvatar({
 	if (placeholder) {
 		return (
 			<div
-				className={`${sizeClass} flex shrink-0 items-center justify-center rounded-full bg-neutral-200 text-neutral-500`}
+				className={`${sizeClass} flex shrink-0 items-center justify-center rounded-full bg-surface-active text-fg-subtle`}
 				aria-hidden="true"
 			>
 				<UserRound className={iconClass} />
@@ -94,7 +95,7 @@ function AccountAvatar({
 
 	return (
 		<div
-			className={`${sizeClass} flex shrink-0 items-center justify-center rounded-full bg-blue-600 font-semibold text-white`}
+			className={`${sizeClass} flex shrink-0 items-center justify-center rounded-full bg-surface-active font-display font-semibold text-fg`}
 			style={getAvatarColorStyle(colorSeed)}
 			aria-hidden="true"
 		>
@@ -111,7 +112,7 @@ function MailboxAccountRow({ mailbox, unread, avatarUrl, onSelect }: MailboxAcco
 		<button
 			type="button"
 			onClick={onSelect}
-			className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-blue-50 active:bg-blue-50"
+			className="flex w-full items-center gap-3 px-4 py-3 text-start transition-colors hover:bg-surface-hover active:bg-surface-active"
 		>
 			<AccountAvatar
 				name={name}
@@ -121,19 +122,19 @@ function MailboxAccountRow({ mailbox, unread, avatarUrl, onSelect }: MailboxAcco
 			/>
 			<div className="min-w-0 flex-1">
 				<div className="flex items-center gap-1.5">
-					<p className="truncate text-sm font-semibold text-neutral-900">{name}</p>
+					<p className="truncate text-sm font-semibold text-fg">{name}</p>
 					{mailbox.type === "shared" && (
 						<Tooltip label={t("account.sharedInbox")}>
-							<span title={t("account.sharedInbox")} aria-label={t("account.sharedInbox")} className="shrink-0 text-blue-600">
+							<span title={t("account.sharedInbox")} aria-label={t("account.sharedInbox")} className="shrink-0 text-fg-subtle">
 								<UsersRound className="h-3.5 w-3.5" />
 							</span>
 						</Tooltip>
 					)}
 				</div>
-				<p className="truncate text-xs text-neutral-500">{getMailboxAddress(mailbox)}</p>
+				<p className="truncate text-xs text-fg-subtle">{getMailboxAddress(mailbox)}</p>
 			</div>
 			{unread > 0 && (
-				<span className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+				<span className="min-w-5 rounded-full bg-accent-subtle px-2 py-0.5 text-center text-[11px] font-semibold tabular-nums text-accent-text">
 					{unread > 99 ? "99+" : unread}
 				</span>
 			)}
@@ -301,7 +302,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 				<button
 					type="button"
 					onClick={() => setOpen((value) => !value)}
-					className="rounded-full p-1 transition-colors hover:bg-neutral-200"
+					className="rounded-full p-1 transition-colors hover:bg-surface-hover"
 					aria-label={t("account.openMenu")}
 					aria-expanded={open}
 				>
@@ -310,7 +311,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 			) : (
 				<Link
 					href="/inbox"
-					className="inline-flex rounded-full p-1 transition-colors hover:bg-neutral-200"
+					className="inline-flex rounded-full p-1 transition-colors hover:bg-surface-hover"
 					aria-label={t("navigation.inbox")}
 				>
 					{triggerAvatar}
@@ -318,12 +319,12 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 			)}
 
 			{open && (
-				<div className="absolute right-0 top-14 w-[360px] overflow-hidden rounded-[28px] border border-neutral-200 bg-[#eef3fb] p-3 shadow-2xl shadow-neutral-900/20 max-h-[82vh] overflow-y-auto z-90">
-					<div className="rounded-[22px] bg-white px-2 py-2">
+				<div className="absolute end-0 top-14 z-90 max-h-[82vh] w-[360px] max-w-[calc(100vw-1rem)] overflow-y-auto border border-line bg-surface-raised shadow-lg">
+					<div className="p-2">
 						<Link
 							href="/inbox"
 							onClick={() => setOpen(false)}
-							className="flex items-center gap-4 rounded-2xl px-3 py-3 transition-colors hover:bg-blue-50 active:bg-blue-50"
+							className="flex items-center gap-4 px-3 py-3 transition-colors hover:bg-surface-hover active:bg-surface-active"
 						>
 							<AccountAvatar
 								name={selectedName}
@@ -338,31 +339,31 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 							/>
 							<div className="min-w-0 flex-1">
 								<div className="flex items-center gap-2">
-									<p className="truncate text-lg font-semibold text-neutral-900">{selectedName}</p>
+									<p className="truncate font-display text-lg font-semibold text-fg">{selectedName}</p>
 									{selectedMailbox?.type === "shared" && (
 										<Tooltip label={t("account.sharedInbox")}>
-											<span title={t("account.sharedInbox")} aria-label={t("account.sharedInbox")} className="shrink-0 text-blue-600">
+											<span title={t("account.sharedInbox")} aria-label={t("account.sharedInbox")} className="shrink-0 text-fg-subtle">
 												<UsersRound className="h-4 w-4" />
 											</span>
 										</Tooltip>
 									)}
 								</div>
-								<p className="truncate text-sm text-neutral-500">
+								<p className="truncate text-sm text-fg-subtle">
 									{selectedEmail}
 								</p>
 							</div>
-							<Check className="h-5 w-5 shrink-0 text-blue-600" />
+							<Check className="h-5 w-5 shrink-0 text-accent-text" />
 						</Link>
 						{otherMailboxes.length > 0 && (
-							<div className="mt-3 border-t border-neutral-100 pt-2">
+							<div className="mt-2 border-t border-line-subtle pt-2">
 								<button
 									type="button"
 									onClick={() => setInboxesOpen((value) => !value)}
 									aria-expanded={inboxesOpen}
-									className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 hover:bg-[#f2f6fc]"
+									className="flex w-full items-center justify-between px-3 py-2 text-fg-subtle hover:bg-surface-hover hover:text-fg"
 								>
-									{t("account.inboxes", { count: otherMailboxes.length })}
-									<ChevronDown size={16} className={`transition-transform ${inboxesOpen ? "rotate-180" : ""}`} />
+									<Eyebrow as="span" className="text-inherit">{t("account.inboxes", { count: otherMailboxes.length })}</Eyebrow>
+									<ChevronDown size={16} className={`transition-transform motion-reduce:transition-none ${inboxesOpen ? "rotate-180" : ""}`} />
 								</button>
 								{inboxesOpen && otherMailboxes.map((mailbox) => {
 									const mailboxCount = counts.mailboxes.find((count) => count.mailboxId === mailbox.id);
@@ -384,22 +385,22 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 						)}
 					</div>
 
-					<div className={`mt-2 rounded-[22px] ${otherAccounts.length > 0 ? "bg-white/55 p-1" : ""}`}>
+					<div className="border-t border-line">
 						{otherAccounts.length > 0 && (
-							<p className="px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+							<Eyebrow className="px-4 pb-1 pt-3">
 								{t("account.otherAccounts")}
-							</p>
+							</Eyebrow>
 						)}
-						<div className="divide-y divide-neutral-100 overflow-hidden rounded-[18px] bg-white">
+						<div className="divide-y divide-line-subtle">
 							{otherAccounts.map((account) => (
 								<div
 									key={account.userId}
-									className="group flex items-center transition-colors hover:bg-blue-50 focus-within:bg-blue-50"
+									className="group flex items-center transition-colors hover:bg-surface-hover focus-within:bg-surface-hover"
 								>
 									<button
 										type="button"
 										onClick={() => void switchAccount(account.userId)}
-										className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left"
+										className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-start"
 									>
 										<AccountAvatar
 											name={account.name}
@@ -408,15 +409,15 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 											avatarUrl={`/api/auth/accounts/${account.userId}/avatar`}
 										/>
 										<div className="min-w-0 flex-1">
-											<p className="truncate text-sm font-semibold text-neutral-900">{account.name}</p>
-											<p className="truncate text-xs text-neutral-500">{account.email}</p>
+											<p className="truncate text-sm font-semibold text-fg">{account.name}</p>
+											<p className="truncate text-xs text-fg-subtle">{account.email}</p>
 										</div>
 									</button>
 									<Tooltip label={t("account.signOut")}>
 										<button
 											type="button"
 											onClick={() => void signOutAccount(account)}
-											className="mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-500 opacity-0 transition-opacity hover:bg-white hover:text-neutral-900 focus-visible:opacity-100 group-hover:opacity-100"
+											className="me-3 flex h-8 w-8 shrink-0 items-center justify-center text-fg-subtle opacity-0 transition-opacity hover:bg-surface-active hover:text-fg focus-visible:opacity-100 group-hover:opacity-100"
 											aria-label={t("account.signOut")}
 										>
 											<LogOut size={16} />
@@ -427,40 +428,40 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 							<Link
 								href="/login?add=1"
 								onClick={() => setOpen(false)}
-								className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-blue-50 active:bg-blue-50"
+								className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-fg transition-colors hover:bg-surface-hover active:bg-surface-active"
 							>
-								<UserPlus size={18} className="text-neutral-600" />
+								<UserPlus size={18} className="text-fg-muted" />
 								{t("account.addAnother")}
 							</Link>
 						</div>
 					</div>
 
-					<div className="mt-2 overflow-hidden rounded-[22px] bg-white">
+					<div className="border-t border-line">
 						<Link
 							href="/settings/account"
 							onClick={() => setOpen(false)}
-							className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-[#f2f6fc]"
+							className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-fg hover:bg-surface-hover"
 						>
-							<Settings size={18} className="text-neutral-600" />
+							<Settings size={18} className="text-fg-muted" />
 							{t("account.settings")}
 						</Link>
 						{user?.role === "admin" && (
 							<Link
 								href="/admin"
 								onClick={() => setOpen(false)}
-								className={`flex items-center gap-3 border-t border-neutral-100 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-[#f2f6fc] ${adminActive ? "bg-blue-50" : ""}`}
+								className={`relative flex items-center gap-3 border-t border-line-subtle px-5 py-4 text-sm font-medium ${adminActive ? "bg-accent-subtle text-accent-text before:absolute before:inset-y-0 before:start-0 before:w-0.5 before:bg-accent" : "text-fg hover:bg-surface-hover"}`}
 							>
-								<ShieldCheck size={18} className="text-neutral-600" />
+								<ShieldCheck size={18} className={adminActive ? undefined : "text-fg-muted"} />
 								{t("account.admin")}
-								{adminActive && <Check className="ml-auto h-4 w-4 text-blue-600" />}
+								{adminActive && <Check className="ms-auto h-4 w-4" />}
 							</Link>
 						)}
 						<button
 							type="button"
 							onClick={logout}
-							className="flex w-full items-center gap-3 border-t border-neutral-100 px-5 py-4 text-left text-sm font-medium text-neutral-800 hover:bg-[#f2f6fc]"
+							className="flex w-full items-center gap-3 border-t border-line-subtle px-5 py-4 text-start text-sm font-medium text-fg hover:bg-surface-hover"
 						>
-							<LogOut size={18} className="text-neutral-600" />
+							<LogOut size={18} className="text-fg-muted" />
 							{t("account.signOut")}
 						</button>
 					</div>

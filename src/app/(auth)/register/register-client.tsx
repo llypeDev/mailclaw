@@ -263,17 +263,17 @@ export function RegisterClient() {
             className="inline-flex items-center gap-2 hover:underline"
           >
             {t("setup.signInInstead")}
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight className="h-4 w-4 rtl:-scale-x-100" />
           </Link>
         }
       >
         <div className="space-y-5">
-          <p className="text-sm leading-6 text-neutral-600">
+          <p className="text-sm leading-6 text-fg-muted">
             {t("setup.alreadyHasAccount", { domain: primaryDomain ?? t("setup.thisWorkspace") })}
           </p>
           <Button
             type="button"
-            className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+            className="h-11 w-full px-6"
             onClick={() => router.push("/login")}
           >
             {t("setup.goToLogin")}
@@ -302,45 +302,45 @@ export function RegisterClient() {
     >
       {step === 1 ? (
         <div className="space-y-5">
-          <p className="text-sm leading-6 text-neutral-600">
+          <p className="text-sm leading-6 text-fg-muted">
             {t("setup.prepareIntro")}
           </p>
           <div className="space-y-2">
             {loading && checks.length === 0 && (
-              <div className="flex items-center gap-3 rounded-2xl bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
+              <div className="flex items-center gap-3 border border-line-subtle bg-canvas-subtle px-4 py-3 text-sm text-fg-muted">
                 <LoaderCircle className="h-4 w-4 animate-spin" />
                 {t("setup.checking")}
               </div>
             )}
             {checks.map((check) => (
-              <div key={check.key} className="flex items-start gap-3 rounded-2xl bg-neutral-50 px-4 py-3">
+              <div key={check.key} className="flex items-start gap-3 border border-line-subtle bg-canvas-subtle px-4 py-3">
                 {check.configured ? (
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
                 ) : (
-                  <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+                  <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
                 )}
                 <div>
-                  <p className="text-sm font-medium text-neutral-800">{check.key}</p>
-                  {!check.configured && <p className="mt-1 text-xs leading-5 text-neutral-500">{check.message}</p>}
+                  <p className="text-sm font-medium text-fg">{check.key}</p>
+                  {!check.configured && <p className="mt-1 text-xs leading-5 text-fg-subtle">{check.message}</p>}
                 </div>
               </div>
             ))}
             {preparationComplete && (
-              <div className="flex items-center gap-3 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">
+              <div className="flex items-center gap-3 border border-line border-s-[3px] border-s-success bg-success-subtle px-4 py-3 text-sm text-success-text">
                 <CheckCircle2 className="h-4 w-4" />
                 {databaseMigrated ? t("setup.migrated") : t("setup.schemaReady")}
               </div>
             )}
           </div>
           {error && (
-            <p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <p role="alert" className="border border-line border-s-[3px] border-s-danger bg-danger-subtle px-4 py-3 text-sm font-medium text-danger-text">
               {error}
             </p>
           )}
           {preparationComplete ? (
             <Button
               type="button"
-              className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+              className="h-11 w-full px-6"
               onClick={() => setStep(hasPrimaryDomain ? 3 : 2)}
             >
               {t("common.continue")}
@@ -349,7 +349,7 @@ export function RegisterClient() {
             <Button
               type="button"
               variant="outline"
-              className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+              className="h-11 w-full px-6"
               disabled={loading}
               onClick={() => void runPreparation()}
             >
@@ -375,14 +375,14 @@ export function RegisterClient() {
                 }
               }}
             />
-            <p className="text-xs leading-5 text-neutral-500">
+            <p className="text-xs leading-5 text-fg-subtle">
               {t("setup.zoneHint")}
             </p>
           </div>
-          <div className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 px-4 py-3">
+          <div className="flex items-center justify-between gap-4 border border-line-subtle bg-canvas-subtle px-4 py-3">
             <div>
               <Label htmlFor="setup-skip-dns">{t("setup.skipDns")}</Label>
-              <p className="mt-1 text-xs leading-5 text-neutral-500">
+              <p className="mt-1 text-xs leading-5 text-fg-subtle">
                 {skipDns ? t("setup.skipDnsOn") : t("setup.skipDnsHint")}
               </p>
             </div>
@@ -396,10 +396,10 @@ export function RegisterClient() {
             />
           </div>
           {!skipDns && (
-          <div className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 px-4 py-3">
+          <div className="flex items-center justify-between gap-4 border border-line-subtle bg-canvas-subtle px-4 py-3">
             <div>
               <Label htmlFor="setup-enable-sending">{t("setup.enableSending")}</Label>
-              <p className="mt-1 text-xs leading-5 text-neutral-500">
+              <p className="mt-1 text-xs leading-5 text-fg-subtle">
                 {domainChecking
                   ? t("setup.checkingCloudflare")
                   : domainCheck
@@ -418,19 +418,19 @@ export function RegisterClient() {
           </div>
           )}
           {domainCheck && !skipDns && (
-            <div className="flex items-center gap-3 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">
+            <div className="flex items-center gap-3 border border-line border-s-[3px] border-s-success bg-success-subtle px-4 py-3 text-sm text-success-text">
               <CheckCircle2 className="h-4 w-4" />
               {t("setup.domainFound", { zone: domainCheck.zone.name })}
             </div>
           )}
           {error && (
-            <p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <p role="alert" className="border border-line border-s-[3px] border-s-danger bg-danger-subtle px-4 py-3 text-sm font-medium text-danger-text">
               {error}
             </p>
           )}
           <Button
             type="submit"
-            className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+            className="h-11 w-full px-6"
             disabled={loading || domainChecking}
           >
             {loading ? t("setup.addingDomain") : t("common.continue")}
@@ -438,13 +438,13 @@ export function RegisterClient() {
         </form>
       ) : receiveOnlyRedirect !== null ? (
         <div className="space-y-5">
-          <div role="status" className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
+          <div role="status" className="flex items-start gap-3 border border-line border-s-[3px] border-s-warning bg-warning-subtle px-4 py-4 text-sm leading-6 text-warning-text">
             <AlertTriangle className="mt-1 h-4 w-4 shrink-0" />
             <span>{t("setup.sendingUnavailable", { domain: accountDomain ?? t("setup.thisWorkspace") })}</span>
           </div>
           <Button
             type="button"
-            className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+            className="h-11 w-full px-6"
             onClick={() => window.location.assign(receiveOnlyRedirect)}
           >
             {t("common.continue")}
@@ -453,19 +453,19 @@ export function RegisterClient() {
       ) : (
         <form method="post" onSubmit={onSubmit} className="space-y-5">
 					{mxChecking && (
-						<div className="flex items-center gap-3 rounded-2xl bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
+						<div className="flex items-center gap-3 border border-line-subtle bg-canvas-subtle px-4 py-3 text-sm text-fg-muted">
 							<LoaderCircle className="h-4 w-4 animate-spin" />
 							{t("setup.checkingMx")}
 						</div>
 					)}
 					{mxRecordsExist === false && !setupSkipDns && (
-						<div className="flex items-center gap-3 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">
+						<div className="flex items-center gap-3 border border-line border-s-[3px] border-s-success bg-success-subtle px-4 py-3 text-sm text-success-text">
 							<CheckCircle2 className="h-4 w-4" />
 							{t("setup.noMx")}
 						</div>
 					)}
 					{mxRecordsExist === true && (
-						<label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-900">
+						<label className="flex cursor-pointer items-start gap-3 border border-line border-s-[3px] border-s-warning bg-warning-subtle px-4 py-4 text-warning-text">
 							<Checkbox
 								checked={replaceMxRecords}
 								onChange={(event) => setReplaceMxRecords(event.target.checked)}
@@ -491,14 +491,14 @@ export function RegisterClient() {
                 placeholder={t("setup.usernamePlaceholder")}
                 autoComplete="username"
                 required
-								className="pr-34"
+								className="pe-34"
               />
-              <span className="max-w-36 truncate text-sm font-medium text-neutral-500 absolute top-2.5 right-5">
+              <span className="max-w-36 truncate text-sm font-medium text-fg-subtle absolute top-2.5 end-5">
                 @{accountDomain ?? t("setup.domainFallback")}
               </span>
             </div>
           </div>
-          <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-neutral-50 px-4 py-3">
+          <label className="flex cursor-pointer items-start gap-3 border border-line-subtle bg-canvas-subtle px-4 py-3">
             <Checkbox
               name="usePasskey"
               checked={usePasskey}
@@ -506,8 +506,8 @@ export function RegisterClient() {
               className="mt-1"
             />
             <span>
-              <span className="block text-sm font-medium text-neutral-800">{t("auth.usePasskeyInstead")}</span>
-              <span className="mt-1 block text-xs leading-5 text-neutral-500">{t("auth.usePasskeyInsteadHint")}</span>
+              <span className="block text-sm font-medium text-fg">{t("auth.usePasskeyInstead")}</span>
+              <span className="mt-1 block text-xs leading-5 text-fg-subtle">{t("auth.usePasskeyInsteadHint")}</span>
             </span>
           </label>
           {!usePasskey && (
@@ -534,11 +534,11 @@ export function RegisterClient() {
               placeholder="you@gmail.com"
               required
             />
-            {/* <p className="text-xs leading-5 text-neutral-500">Used later for password reset.</p> */}
+            {/* <p className="text-xs leading-5 text-fg-subtle">Used later for password reset.</p> */}
           </div>
 
           {error && (
-            <p role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <p role="alert" className="border border-line border-s-[3px] border-s-danger bg-danger-subtle px-4 py-3 text-sm font-medium text-danger-text">
               {error}
             </p>
           )}
@@ -546,7 +546,7 @@ export function RegisterClient() {
 						<Button
 							type="button"
 							variant="outline"
-							className="h-11 w-full rounded-full px-6 active:scale-[0.98]"
+							className="h-11 w-full px-6"
 							onClick={() => setMxCheckRevision((value) => value + 1)}
 						>
 							{t("setup.checkMxAgain")}
@@ -555,7 +555,7 @@ export function RegisterClient() {
           <TurnstileField resetSignal={turnstileReset} />
 					<Button
 						type="submit"
-						className="h-11 w-full rounded-full px-6 active:scale-[0.98] mt-8"
+						className="h-11 w-full px-6 mt-8"
 						disabled={loading || mxChecking || mxRecordsExist === null || (mxRecordsExist && !replaceMxRecords) || hasAdminAccount === null || hasPrimaryDomain === null}
 					>
 						{loading ? t("setup.creating") : t("setup.createAccount")}
