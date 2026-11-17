@@ -85,6 +85,20 @@
       "when": 1793280382891,
       "tag": "0011_message_invite_response",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1793280383891,
+      "tag": "0012_list_indexes_reminders_mfa_attempts",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1793280384891,
+      "tag": "0013_message_counters",
+      "breakpoints": true
     }
   ]
 }

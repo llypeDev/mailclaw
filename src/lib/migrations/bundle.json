@@ -800,6 +800,32 @@
       "statements": [
         "ALTER TABLE `messages` ADD `invite_response` text;"
       ]
+    },
+    {
+      "name": "0088_list_indexes_reminders_mfa_attempts.sql",
+      "statements": [
+        "CREATE INDEX IF NOT EXISTS `messages_status_page_idx` ON `messages` (`mailbox_id`, `status`, `created_at` DESC, `id` DESC);",
+        "CREATE INDEX IF NOT EXISTS `messages_starred_page_idx` ON `messages` (`mailbox_id`, `starred`, `created_at` DESC, `id` DESC);",
+        "DROP INDEX IF EXISTS `messages_raw_r2_key_idx`;",
+        "CREATE INDEX IF NOT EXISTS `messages_raw_r2_key_idx` ON `messages` (`raw_r2_key`, `mailbox_id`);",
+        "DROP INDEX IF EXISTS `messages_mailbox_idx`;",
+        "DROP INDEX IF EXISTS `messages_inbox_page_idx`;",
+        "CREATE INDEX IF NOT EXISTS `calendar_events_reminder_idx` ON `calendar_events` (`repeat`, `starts_at`);",
+        "ALTER TABLE `login_challenges` ADD `attempts` integer DEFAULT 0 NOT NULL;"
+      ]
+    },
+    {
+      "name": "0089_add_message_counters.sql",
+      "statements": [
+        "CREATE TABLE `message_counters` (\n\t`mailbox_id` text NOT NULL,\n\t`folder_key` text NOT NULL,\n\t`direction` text NOT NULL,\n\t`status` text NOT NULL,\n\t`read` integer NOT NULL,\n\t`starred` integer NOT NULL,\n\t`total` integer DEFAULT 0 NOT NULL\n);",
+        "CREATE UNIQUE INDEX `message_counters_key_idx` ON `message_counters` (`mailbox_id`,`folder_key`,`direction`,`status`,`read`,`starred`);",
+        "CREATE INDEX `messages_mailbox_snoozed_idx` ON `messages` (`mailbox_id`,`snoozed_until`,`folder_id`,`direction`,`status`,`read`,`starred`);",
+        "INSERT INTO `message_counters` (`mailbox_id`, `folder_key`, `direction`, `status`, `read`, `starred`, `total`)\nSELECT `mailbox_id`, coalesce(`folder_id`, ''), `direction`, `status`, `read`, `starred`, count(*)\nFROM `messages`\nWHERE `mailbox_id` IS NOT NULL\nGROUP BY `mailbox_id`, coalesce(`folder_id`, ''), `direction`, `status`, `read`, `starred`;",
+        "CREATE TRIGGER `message_counters_ai` AFTER INSERT ON `messages`\nWHEN NEW.mailbox_id IS NOT NULL BEGIN\n\tINSERT INTO message_counters (mailbox_id, folder_key, direction, status, `read`, starred, total)\n\tVALUES (NEW.mailbox_id, coalesce(NEW.folder_id, ''), NEW.direction, NEW.status, NEW.`read`, NEW.starred, 1)\n\tON CONFLICT (mailbox_id, folder_key, direction, status, `read`, starred) DO UPDATE SET total = total + 1;\nEND;",
+        "CREATE TRIGGER `message_counters_au_old` AFTER UPDATE OF mailbox_id, folder_id, direction, status, `read`, starred ON `messages`\nWHEN OLD.mailbox_id IS NOT NULL AND (\n\tOLD.mailbox_id IS NOT NEW.mailbox_id OR OLD.folder_id IS NOT NEW.folder_id OR OLD.direction IS NOT NEW.direction\n\tOR OLD.status IS NOT NEW.status OR OLD.`read` IS NOT NEW.`read` OR OLD.starred IS NOT NEW.starred\n) BEGIN\n\tINSERT INTO message_counters (mailbox_id, folder_key, direction, status, `read`, starred, total)\n\tVALUES (OLD.mailbox_id, coalesce(OLD.folder_id, ''), OLD.direction, OLD.status, OLD.`read`, OLD.starred, -1)\n\tON CONFLICT (mailbox_id, folder_key, direction, status, `read`, starred) DO UPDATE SET total = total - 1;\nEND;",
+        "CREATE TRIGGER `message_counters_au_new` AFTER UPDATE OF mailbox_id, folder_id, direction, status, `read`, starred ON `messages`\nWHEN NEW.mailbox_id IS NOT NULL AND (\n\tOLD.mailbox_id IS NOT NEW.mailbox_id OR OLD.folder_id IS NOT NEW.folder_id OR OLD.direction IS NOT NEW.direction\n\tOR OLD.status IS NOT NEW.status OR OLD.`read` IS NOT NEW.`read` OR OLD.starred IS NOT NEW.starred\n) BEGIN\n\tINSERT INTO message_counters (mailbox_id, folder_key, direction, status, `read`, starred, total)\n\tVALUES (NEW.mailbox_id, coalesce(NEW.folder_id, ''), NEW.direction, NEW.status, NEW.`read`, NEW.starred, 1)\n\tON CONFLICT (mailbox_id, folder_key, direction, status, `read`, starred) DO UPDATE SET total = total + 1;\nEND;",
+        "CREATE TRIGGER `message_counters_ad` AFTER DELETE ON `messages`\nWHEN OLD.mailbox_id IS NOT NULL BEGIN\n\tINSERT INTO message_counters (mailbox_id, folder_key, direction, status, `read`, starred, total)\n\tVALUES (OLD.mailbox_id, coalesce(OLD.folder_id, ''), OLD.direction, OLD.status, OLD.`read`, OLD.starred, -1)\n\tON CONFLICT (mailbox_id, folder_key, direction, status, `read`, starred) DO UPDATE SET total = total - 1;\nEND;"
+      ]
     }
   ]
 }

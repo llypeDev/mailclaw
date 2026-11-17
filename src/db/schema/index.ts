@@ -12,7 +12,7 @@ export const users = sqliteTable("users", {
 	resetEmail: text("reset_email"),
 	forwardingEmail: text("forwarding_email"),
 	/**
-	 * A bcrypt hash, or PASSWORDLESS_PASSWORD_HASH when the account signs in only
+	 * A scrypt hash (legacy bcrypt until the next sign-in), or PASSWORDLESS_PASSWORD_HASH when the account signs in only
 	 * with passkeys. Kept NOT NULL so the column needs no lossy table rebuild on
 	 * SQLite; every password check goes through password.ts, which rejects the
 	 * sentinel.
@@ -351,19 +351,25 @@ export const messages = sqliteTable(
 	},
 	(t) => [
 		index("messages_user_created_idx").on(t.userId, t.createdAt),
-		index("messages_mailbox_idx").on(t.mailboxId),
+		// No index on mailbox_id alone: every index below that starts with it
+		// serves the foreign key and plain mailbox lookups (migration 0088).
 		index("messages_folder_idx").on(t.folderId),
 		index("messages_thread_idx").on(t.mailboxId, t.threadId),
 		index("messages_provider_message_idx").on(t.mailboxId, t.providerMessageId),
-		index("messages_raw_r2_key_idx").on(t.rawR2Key),
+		// mailbox_id rides along so the inbound duplicate check matches two
+		// columns here and wins over the wide mailbox indexes even without
+		// planner statistics.
+		index("messages_raw_r2_key_idx").on(t.rawR2Key, t.mailboxId),
 		index("messages_trashed_at_idx").on(t.trashedAt),
-		index("messages_inbox_page_idx").on(
-			t.mailboxId,
-			t.status,
-			t.folderId,
-			desc(t.createdAt),
-			desc(t.id),
-		),
+		// Sent, Archived, Spam and Trash filter on status without folder_id, so
+		// created_at must follow status directly for the page to come off the
+		// index in order instead of sorting the whole folder.
+		index("messages_status_page_idx").on(t.mailboxId, t.status, desc(t.createdAt), desc(t.id)),
+		// Starred spans every status. An index of (mailbox_id, created_at)
+		// would serve it too, but without statistics SQLite then walks the
+		// whole mailbox in date order for `thread_id = ? ORDER BY created_at`
+		// (opening a conversation) instead of using messages_thread_idx.
+		index("messages_starred_page_idx").on(t.mailboxId, t.starred, desc(t.createdAt), desc(t.id)),
 		index("messages_thread_key_idx").on(
 			t.mailboxId,
 			t.status,
@@ -372,6 +378,8 @@ export const messages = sqliteTable(
 			t.createdAt,
 		),
 		index("messages_mailbox_thread_key_idx").on(t.mailboxId, sql`coalesce(${t.threadId}, ${t.id})`),
+		// Also the inbox and folder page index: its first five columns were
+		// messages_inbox_page_idx, dropped as a duplicate in migration 0088.
 		index("messages_nav_cover_idx").on(
 			t.mailboxId,
 			t.status,
@@ -383,9 +391,10 @@ export const messages = sqliteTable(
 			t.threadId,
 			t.snoozedUntil,
 		),
-		// Covering index for the folder-counts GROUP BY: lets the counts
-		// endpoint stream grouped rows straight off the index instead of
-		// sorting the whole table.
+		// Built for the folder-counts GROUP BY, which message_counters replaced
+		// (migration 0089). Kept because list totals (`count=only`, above all
+		// the inbox and its unread filter) and JMAP Email/query on a folder or
+		// by $seen still seek on it.
 		index("messages_counts_cover_idx").on(
 			t.mailboxId,
 			t.folderId,
@@ -408,6 +417,11 @@ export const messages = sqliteTable(
 			t.id,
 			t.snoozedUntil,
 		),
+		// The sidebar counts read totals from message_counters and only count
+		// currently snoozed messages live, as a range on this index (migration
+		// 0089). It covers the grouped columns: otherwise SQLite prefers the
+		// covering messages_counts_cover_idx and walks the whole mailbox.
+		index("messages_mailbox_snoozed_idx").on(t.mailboxId, t.snoozedUntil, t.folderId, t.direction, t.status, t.read, t.starred),
 	],
 );
 
@@ -666,6 +680,9 @@ export const calendarEvents = sqliteTable(
 	(t) => [
 		index("calendar_events_user_starts_idx").on(t.userId, t.startsAt),
 		index("calendar_events_mailbox_idx").on(t.mailboxId),
+		// The reminder cron: one-off events in the coming week, and recurring
+		// events, without reading every past event of every user.
+		index("calendar_events_reminder_idx").on(t.repeat, t.startsAt),
 	],
 );
 
@@ -913,6 +930,8 @@ export const loginChallenges = sqliteTable("login_challenges", {
 		.references(() => users.id, { onDelete: "cascade" }),
 	tokenHash: text("token_hash").notNull().unique(),
 	expiresAt: timestamp("expires_at").notNull(),
+	/** Second-factor codes tried against this challenge; it stops working at the limit (migration 0088). */
+	attempts: integer("attempts").notNull().default(0),
 	createdAt: timestamp("created_at")
 		.notNull()
 		.$defaultFn(() => new Date()),
@@ -1291,6 +1310,31 @@ export const importJobs = sqliteTable("import_jobs", {
 	finishedAt: timestamp("finished_at"),
 }, (t) => [index("import_jobs_user_idx").on(t.userId, t.createdAt), index("import_jobs_status_idx").on(t.status, t.updatedAt)]);
 
+/**
+ * Message tallies for the sidebar counts and JMAP Mailbox/get, written only by
+ * the `message_counters_*` triggers of migration 0089 (PostgreSQL and MySQL:
+ * 0013): every insert, delete or change of a counted column on `messages` moves
+ * one unit between keys. Messages without a mailbox are not counted. `folder_key`
+ * is the folder id, or '' for none, so the unique key has no NULLs. On MySQL,
+ * whose FK actions fire no triggers, a deleted folder leaves its key behind and
+ * later changes to its messages drive folder '' below zero; readers merge keys
+ * naming a missing folder into '', which nets out exactly.
+ * Derived like `jmap_changes`, so excluded from backups.
+ */
+export const messageCounters = sqliteTable(
+	"message_counters",
+	{
+		mailboxId: text("mailbox_id").notNull(),
+		folderKey: text("folder_key").notNull(),
+		direction: text("direction", { enum: ["inbound", "outbound"] }).notNull(),
+		status: text("status").notNull(),
+		read: bool("read").notNull(),
+		starred: bool("starred").notNull(),
+		total: integer("total").notNull().default(0),
+	},
+	(t) => [uniqueIndex("message_counters_key_idx").on(t.mailboxId, t.folderKey, t.direction, t.status, t.read, t.starred)],
+);
+
 export const schema = {
 	users,
 	domains,
@@ -1332,4 +1376,5 @@ export const schema = {
 	agentSendApprovals,
 	mcpKeyMailboxes,
 	importJobs,
+	messageCounters,
 };

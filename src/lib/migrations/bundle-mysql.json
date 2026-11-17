@@ -335,6 +335,30 @@
       "statements": [
         "ALTER TABLE `messages` ADD `invite_response` text;"
       ]
+    },
+    {
+      "name": "0012_list_indexes_reminders_mfa_attempts.sql",
+      "statements": [
+        "CREATE INDEX `messages_status_page_idx` ON `messages` (`mailbox_id`,`status`,`created_at`,`id`);",
+        "CREATE INDEX `messages_starred_page_idx` ON `messages` (`mailbox_id`,`starred`,`created_at`,`id`);",
+        "DROP INDEX `messages_raw_r2_key_idx` ON `messages`;",
+        "CREATE INDEX `messages_raw_r2_key_idx` ON `messages` (`raw_r2_key`,`mailbox_id`);",
+        "DROP INDEX `messages_mailbox_idx` ON `messages`;",
+        "DROP INDEX `messages_inbox_page_idx` ON `messages`;",
+        "CREATE INDEX `calendar_events_reminder_idx` ON `calendar_events` (`repeat`,`starts_at`);",
+        "ALTER TABLE `login_challenges` ADD `attempts` bigint NOT NULL DEFAULT 0;"
+      ]
+    },
+    {
+      "name": "0013_message_counters.sql",
+      "statements": [
+        "CREATE TABLE `message_counters` (\n\t`mailbox_id` varchar(191) NOT NULL,\n\t`folder_key` varchar(191) NOT NULL,\n\t`direction` varchar(64) NOT NULL,\n\t`status` varchar(191) NOT NULL,\n\t`read` boolean NOT NULL,\n\t`starred` boolean NOT NULL,\n\t`total` bigint NOT NULL DEFAULT 0,\n\tCONSTRAINT `message_counters_key_idx` UNIQUE(`mailbox_id`,`folder_key`,`direction`,`status`,`read`,`starred`)\n);",
+        "CREATE INDEX `messages_mailbox_snoozed_idx` ON `messages` (`mailbox_id`,`snoozed_until`,`folder_id`,`direction`,`status`,`read`,`starred`);",
+        "INSERT INTO message_counters (mailbox_id, folder_key, direction, status, `read`, starred, total)\nSELECT mailbox_id, coalesce(folder_id, ''), direction, status, `read`, starred, count(*)\nFROM messages\nWHERE mailbox_id IS NOT NULL\nGROUP BY mailbox_id, coalesce(folder_id, ''), direction, status, `read`, starred;",
+        "CREATE TRIGGER message_counters_ai AFTER INSERT ON messages FOR EACH ROW\nBEGIN\n\tIF NEW.mailbox_id IS NOT NULL THEN\n\t\tINSERT INTO message_counters (mailbox_id, folder_key, direction, status, `read`, starred, total)\n\t\tVALUES (NEW.mailbox_id, coalesce(NEW.folder_id, ''), NEW.direction, NEW.status, NEW.`read`, NEW.starred, 1)\n\t\tON DUPLICATE KEY UPDATE total = total + 1;\n\tEND IF;\nEND;",
+        "CREATE TRIGGER message_counters_au AFTER UPDATE ON messages FOR EACH ROW\nBEGIN\n\tIF NOT (OLD.mailbox_id <=> NEW.mailbox_id AND OLD.folder_id <=> NEW.folder_id AND OLD.direction <=> NEW.direction\n\t\tAND OLD.status <=> NEW.status AND OLD.`read` <=> NEW.`read` AND OLD.starred <=> NEW.starred) THEN\n\t\tIF OLD.mailbox_id IS NOT NULL THEN\n\t\t\tINSERT INTO message_counters (mailbox_id, folder_key, direction, status, `read`, starred, total)\n\t\t\tVALUES (OLD.mailbox_id, coalesce(OLD.folder_id, ''), OLD.direction, OLD.status, OLD.`read`, OLD.starred, -1)\n\t\t\tON DUPLICATE KEY UPDATE total = total - 1;\n\t\tEND IF;\n\t\tIF NEW.mailbox_id IS NOT NULL THEN\n\t\t\tINSERT INTO message_counters (mailbox_id, folder_key, direction, status, `read`, starred, total)\n\t\t\tVALUES (NEW.mailbox_id, coalesce(NEW.folder_id, ''), NEW.direction, NEW.status, NEW.`read`, NEW.starred, 1)\n\t\t\tON DUPLICATE KEY UPDATE total = total + 1;\n\t\tEND IF;\n\tEND IF;\nEND;",
+        "CREATE TRIGGER message_counters_ad AFTER DELETE ON messages FOR EACH ROW\nBEGIN\n\tIF OLD.mailbox_id IS NOT NULL THEN\n\t\tINSERT INTO message_counters (mailbox_id, folder_key, direction, status, `read`, starred, total)\n\t\tVALUES (OLD.mailbox_id, coalesce(OLD.folder_id, ''), OLD.direction, OLD.status, OLD.`read`, OLD.starred, -1)\n\t\tON DUPLICATE KEY UPDATE total = total - 1;\n\tEND IF;\nEND;"
+      ]
     }
   ]
 }

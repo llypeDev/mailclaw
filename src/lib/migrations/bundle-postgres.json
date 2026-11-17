@@ -360,6 +360,31 @@
       "statements": [
         "ALTER TABLE \"messages\" ADD COLUMN \"invite_response\" text;"
       ]
+    },
+    {
+      "name": "0012_list_indexes_reminders_mfa_attempts.sql",
+      "statements": [
+        "CREATE INDEX IF NOT EXISTS \"messages_status_page_idx\" ON \"messages\" USING btree (\"mailbox_id\",\"status\",\"created_at\" desc,\"id\" desc);",
+        "CREATE INDEX IF NOT EXISTS \"messages_starred_page_idx\" ON \"messages\" USING btree (\"mailbox_id\",\"starred\",\"created_at\" desc,\"id\" desc);",
+        "DROP INDEX IF EXISTS \"messages_raw_r2_key_idx\";",
+        "CREATE INDEX IF NOT EXISTS \"messages_raw_r2_key_idx\" ON \"messages\" USING btree (\"raw_r2_key\",\"mailbox_id\");",
+        "DROP INDEX IF EXISTS \"messages_mailbox_idx\";",
+        "DROP INDEX IF EXISTS \"messages_inbox_page_idx\";",
+        "CREATE INDEX IF NOT EXISTS \"calendar_events_reminder_idx\" ON \"calendar_events\" USING btree (\"repeat\",\"starts_at\");",
+        "ALTER TABLE \"login_challenges\" ADD COLUMN \"attempts\" bigint DEFAULT 0 NOT NULL;"
+      ]
+    },
+    {
+      "name": "0013_message_counters.sql",
+      "statements": [
+        "CREATE TABLE \"message_counters\" (\n\t\"mailbox_id\" text NOT NULL,\n\t\"folder_key\" text NOT NULL,\n\t\"direction\" text NOT NULL,\n\t\"status\" text NOT NULL,\n\t\"read\" boolean NOT NULL,\n\t\"starred\" boolean NOT NULL,\n\t\"total\" bigint DEFAULT 0 NOT NULL\n);",
+        "CREATE UNIQUE INDEX \"message_counters_key_idx\" ON \"message_counters\" USING btree (\"mailbox_id\",\"folder_key\",\"direction\",\"status\",\"read\",\"starred\");",
+        "CREATE INDEX \"messages_mailbox_snoozed_idx\" ON \"messages\" USING btree (\"mailbox_id\",\"snoozed_until\",\"folder_id\",\"direction\",\"status\",\"read\",\"starred\");",
+        "INSERT INTO message_counters (mailbox_id, folder_key, direction, status, \"read\", starred, total)\nSELECT mailbox_id, coalesce(folder_id, ''), direction, status, \"read\", starred, count(*)\nFROM messages\nWHERE mailbox_id IS NOT NULL\nGROUP BY mailbox_id, coalesce(folder_id, ''), direction, status, \"read\", starred;",
+        "CREATE FUNCTION mailclaw_count_message(p_mailbox text, p_folder text, p_direction text, p_status text, p_read boolean, p_starred boolean, p_delta bigint) RETURNS void AS $$\nBEGIN\n\tINSERT INTO message_counters (mailbox_id, folder_key, direction, status, \"read\", starred, total)\n\tVALUES (p_mailbox, coalesce(p_folder, ''), p_direction, p_status, p_read, p_starred, p_delta)\n\tON CONFLICT (mailbox_id, folder_key, direction, status, \"read\", starred)\n\tDO UPDATE SET total = message_counters.total + excluded.total;\nEND;\n$$ LANGUAGE plpgsql;",
+        "CREATE FUNCTION mailclaw_messages_counted() RETURNS trigger AS $$\nBEGIN\n\tIF TG_OP = 'UPDATE' THEN\n\t\tIF OLD.mailbox_id IS NOT DISTINCT FROM NEW.mailbox_id\n\t\t\tAND OLD.folder_id IS NOT DISTINCT FROM NEW.folder_id\n\t\t\tAND OLD.direction IS NOT DISTINCT FROM NEW.direction\n\t\t\tAND OLD.status IS NOT DISTINCT FROM NEW.status\n\t\t\tAND OLD.\"read\" IS NOT DISTINCT FROM NEW.\"read\"\n\t\t\tAND OLD.starred IS NOT DISTINCT FROM NEW.starred THEN\n\t\t\tRETURN NULL;\n\t\tEND IF;\n\tEND IF;\n\tIF TG_OP IN ('UPDATE', 'DELETE') THEN\n\t\tIF OLD.mailbox_id IS NOT NULL THEN\n\t\t\tPERFORM mailclaw_count_message(OLD.mailbox_id, OLD.folder_id, OLD.direction, OLD.status, OLD.\"read\", OLD.starred, -1);\n\t\tEND IF;\n\tEND IF;\n\tIF TG_OP IN ('INSERT', 'UPDATE') THEN\n\t\tIF NEW.mailbox_id IS NOT NULL THEN\n\t\t\tPERFORM mailclaw_count_message(NEW.mailbox_id, NEW.folder_id, NEW.direction, NEW.status, NEW.\"read\", NEW.starred, 1);\n\t\tEND IF;\n\tEND IF;\n\tRETURN NULL;\nEND;\n$$ LANGUAGE plpgsql;",
+        "CREATE TRIGGER messages_counted AFTER INSERT OR DELETE OR UPDATE OF mailbox_id, folder_id, direction, status, \"read\", starred ON messages\nFOR EACH ROW EXECUTE FUNCTION mailclaw_messages_counted();"
+      ]
     }
   ]
 }
