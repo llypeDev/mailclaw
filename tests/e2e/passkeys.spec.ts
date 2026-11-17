@@ -126,9 +126,19 @@ function base32Decode(input: string): Buffer {
 	return Buffer.from(bytes);
 }
 
-/** RFC 6238, the same profile the app's authenticator flow expects. */
-function totpCode(secret: string): string {
-	const counter = Math.floor(Date.now() / 1000 / 30);
+let lastTotpStep = -1;
+
+/**
+ * RFC 6238, the same profile the app's authenticator flow expects. The app accepts each time step once
+ * (`users.totp_last_step`), so a second code in the same 30 s window waits for the next step.
+ */
+async function totpCode(secret: string): Promise<string> {
+	let counter = Math.floor(Date.now() / 1000 / 30);
+	if (counter <= lastTotpStep) {
+		await new Promise((resolve) => setTimeout(resolve, (lastTotpStep + 1) * 30_000 - Date.now() + 250));
+		counter = Math.floor(Date.now() / 1000 / 30);
+	}
+	lastTotpStep = counter;
 	const message = Buffer.alloc(8);
 	message.writeBigUInt64BE(BigInt(counter));
 	const digest = createHmac("sha1", base32Decode(secret)).update(message).digest();
@@ -153,7 +163,7 @@ async function completeStepUp(page: Page, options: { title?: string; next?: stri
 	} else {
 		await dialog.getByLabel("Password").fill(PASSWORD);
 		const code = dialog.getByLabel("Code", { exact: true });
-		if (await code.count()) await code.fill(totpCode(totpSecret));
+		if (await code.count()) await code.fill(await totpCode(totpSecret));
 		await dialog.getByRole("button", { name: "Continue" }).click();
 	}
 	if (options.next) await expect(page.getByRole("dialog", { name: options.next })).toBeVisible({ timeout: 30_000 });
@@ -190,7 +200,9 @@ async function enrollAuthenticator(page: Page) {
 	const dialog = page.getByRole("dialog", { name: "Scan the code" });
 	await expect(dialog).toBeVisible({ timeout: 30_000 });
 	totpSecret = ((await dialog.locator("code").first().textContent()) ?? "").trim();
-	await dialog.getByLabel("6-digit code").fill(totpCode(totpSecret));
+	// A new secret starts its own step history on the server.
+	lastTotpStep = -1;
+	await dialog.getByLabel("6-digit code").fill(await totpCode(totpSecret));
 	await dialog.getByRole("button", { name: "Verify and turn on" }).click();
 	const codes = page.getByRole("dialog", { name: "Save your recovery codes" });
 	await expect(codes).toBeVisible({ timeout: 30_000 });
@@ -488,7 +500,7 @@ test("removing the last passkey preserves authenticator two-step verification", 
 	await page.getByLabel("Email").fill(EMAIL);
 	await page.getByLabel("Password").fill(PASSWORD);
 	await page.getByRole("button", { name: "Sign in", exact: true }).click();
-	await page.getByLabel("Authenticator code or recovery code", { exact: true }).fill(totpCode(totpSecret));
+	await page.getByLabel("Authenticator code or recovery code", { exact: true }).fill(await totpCode(totpSecret));
 	await page.getByRole("button", { name: "Verify", exact: true }).click();
 	await page.waitForURL("**/inbox", { timeout: 30_000 });
 });
